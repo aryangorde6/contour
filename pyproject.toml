@@ -13,6 +13,15 @@ dependencies = [
     "tenacity",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Explicit, because flat-layout auto-discovery also finds journal/ and tests/
+# and refuses to guess between them.
+[tool.setuptools]
+packages = ["contour"]
+
 [project.optional-dependencies]
 dev = ["pytest"]
 
