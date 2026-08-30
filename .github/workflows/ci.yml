@@ -1,0 +1,51 @@
+name: ci
+
+# Runs on PRs, so it is deliberately given NO secrets. The trading credentials
+# live only in the agent workflow, which never runs on a pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -e '.[dev]'
+
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Block account-wide destructive commands
+        # `alpaca position close-all` and `alpaca order cancel-all` take no
+        # confirmation. Wired into an autonomous retry path, one error loop
+        # flattens the entire account. Exits are always per-position.
+        run: |
+          if grep -rn --include='*.py' -E '\b(close-all|cancel-all|close_all_positions|cancel_all_orders)\b' contour/; then
+            echo "::error::account-wide destructive command found in contour/ -- exits must be per-position"
+            exit 1
+          fi
+          echo "ok: no account-wide destructive commands"
+
+      - name: Journal chain must verify from a clean checkout
+        run: python -m contour --verify
+
+      - name: Package imports without credentials present
+        # A judge cloning this repo has no Alpaca keys. Importing must not
+        # explode, and --verify must work with nothing configured.
+        run: |
+          env -u ALPACA_API_KEY -u ALPACA_SECRET_KEY \
+            python -c "import contour.loop, contour.execute, contour.manage; print('imports clean without credentials')"

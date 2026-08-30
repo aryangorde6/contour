@@ -1,0 +1,107 @@
+name: contour agent
+
+# schedule + manual only. NEVER add pull_request or pull_request_target: this
+# repo is public and this workflow holds live trading credentials, so a PR from
+# a fork would be able to exfiltrate them.
+on:
+  schedule:
+    # Times are UTC. EDT is UTC-4, so 13:30-20:00 UTC is the 09:30-16:00 ET
+    # session. Cron here is best-effort and routinely runs late under load --
+    # every cycle is idempotent and resolves its own phase from the market
+    # clock rather than trusting when it fired.
+    - cron: "20 13 * * 1-5"      # 09:20 ET  pre-open: parse event blackouts
+    - cron: "*/15 14-19 * * 1-5" # 10:00-15:45 ET  the trading cycle
+    - cron: "50 19 * * 4"        # 15:50 ET Thu  flatten escalation to market
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "measure and gate, but submit nothing"
+        type: boolean
+        default: true
+      dev:
+        description: "use the throwaway account instead of the judged one"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# Single writer. Queue overlapping runs rather than cancelling, so a slow cycle
+# can never race a new one and fork the journal's hash chain.
+concurrency:
+  group: contour-agent
+  cancel-in-progress: false
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Cache the Alpaca CLI
+        id: cli-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/alpaca
+          key: alpaca-cli-v0.0.14
+
+      - name: Install the Alpaca CLI
+        if: steps.cli-cache.outputs.cache-hit != 'true'
+        run: go install github.com/alpacahq/cli/cmd/alpaca@latest
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -e .
+
+      - name: Restore journal and state from the agent-state branch
+        run: |
+          git fetch origin agent-state --depth=1 || echo "agent-state does not exist yet"
+          if git rev-parse --verify origin/agent-state >/dev/null 2>&1; then
+            git checkout origin/agent-state -- journal state 2>/dev/null || true
+          fi
+          mkdir -p journal state
+
+      - name: Run one cycle
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_DEV_API_KEY: ${{ secrets.ALPACA_DEV_API_KEY }}
+          ALPACA_DEV_SECRET_KEY: ${{ secrets.ALPACA_DEV_SECRET_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ARGS="--once"
+          [ "${{ inputs.dry }}" = "true" ] && ARGS="$ARGS --dry"
+          [ "${{ inputs.dev }}" = "true" ] && ARGS="$ARGS --dev"
+          echo "running: python -m contour $ARGS"
+          python -m contour $ARGS
+
+      - name: Verify the hash chain before publishing
+        run: python -m contour --verify
+
+      - name: Publish journal and state to the agent-state branch
+        run: |
+          git config user.name "contour-agent"
+          git config user.email "aryangorde6@gmail.com"
+          git stash push --include-untracked journal state 2>/dev/null || true
+          git fetch origin agent-state --depth=1 2>/dev/null || true
+          if git rev-parse --verify origin/agent-state >/dev/null 2>&1; then
+            git checkout -B agent-state origin/agent-state
+          else
+            git checkout --orphan agent-state
+            git rm -rf --cached . >/dev/null 2>&1 || true
+            rm -rf contour tests .github fixtures ops dashboard 2>/dev/null || true
+          fi
+          git stash pop 2>/dev/null || true
+          git add -f journal state
+          git diff --cached --quiet || git commit -m "cycle $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin agent-state
