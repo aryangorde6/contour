@@ -105,3 +105,23 @@ class Context:
     llm_no_new_entries_after: datetime | None = None
     client_order_id: str | None = None
     seen_client_order_ids: frozenset[str] = field(default_factory=frozenset)
+
+
+@dataclass(frozen=True)
+class Measurement:
+    """What the surface looks like for one underlying, right now."""
+    underlying: str
+    spot: float
+    atm_iv: float
+    rv10: float
+    vrp_ratio: float
+    skew25: float
+    skew_z: float
+
+    def as_dict(self) -> dict:
+        return {
+            "underlying": self.underlying, "spot": round(self.spot, 2),
+            "atm_iv": round(self.atm_iv, 4), "rv10": round(self.rv10, 4),
+            "vrp_ratio": round(self.vrp_ratio, 3),
+            "skew25": round(self.skew25, 3), "skew_z": round(self.skew_z, 3),
+        }

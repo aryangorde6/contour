@@ -35,8 +35,11 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/models.py` — the data the gates reason over
 - [x] `contour/gates.py` — G1–G12, twelve pure functions, zero I/O
 - [x] `contour/journal.py` — append-only SHA-256 hash chain
-- [x] `tests/` — 14 passing
-- [ ] `surface.py` · `select.py` · `structures.py` · `execute.py` · `manage.py` · `loop.py`
+- [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
+- [x] `contour/select.py` — the four-branch structure map
+- [x] `contour/structures.py` — strike selection, sizing, signed limit price
+- [x] `tests/` — 32 passing
+- [ ] `execute.py` · `manage.py` · `loop.py`
 - [ ] dashboard, GitHub Actions cron, `--replay`
 
 ## Quickstart
