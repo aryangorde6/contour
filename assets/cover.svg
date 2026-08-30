@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0B0B0C"/><stop offset="1" stop-color="#17171A"/>
+  </linearGradient>
+  <radialGradient id="glow" cx="0.82" cy="0.12" r="0.6">
+    <stop offset="0" stop-color="#FFD426" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#FFD426" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFD426" stop-opacity="0.20"/>
+    <stop offset="1" stop-color="#FFD426" stop-opacity="0"/>
+  </linearGradient>
+</defs>
+
+<rect width="1600" height="900" fill="url(#bg)"/>
+<rect width="1600" height="900" fill="url(#glow)"/>
+
+<!-- chart -->
+<polygon points="690.0,690 690.0,119.1 698.4,142.7 706.9,159.0 715.3,165.8 723.8,167.9 732.2,182.1 740.6,206.8 749.1,214.1 757.5,217.8 765.9,240.9 774.4,244.6 782.8,261.9 791.2,265.6 799.7,278.2 808.1,295.0 816.6,301.8 825.0,305.5 833.4,318.1 841.9,329.7 850.3,345.4 858.8,345.4 867.2,354.4 875.6,360.7 884.1,370.1 892.5,383.3 900.9,391.7 909.4,400.1 917.8,409.5 926.2,417.4 934.7,425.8 943.1,436.3 951.6,446.3 960.0,454.2 968.4,458.9 976.9,474.6 985.3,483.6 993.8,484.6 1002.2,492.5 1010.6,500.4 1019.1,513.5 1027.5,514.6 1035.9,532.4 1044.4,536.1 1052.8,539.8 1061.2,551.3 1069.7,554.0 1078.1,560.3 1086.6,561.3 1095.0,577.1 1103.4,578.6 1111.9,579.7 1120.3,584.4 1128.8,603.9 1137.2,603.9 1145.6,608.1 1154.1,609.1 1162.5,613.8 1170.9,621.2 1179.4,624.9 1187.8,633.3 1196.2,633.8 1204.7,642.2 1213.1,645.9 1221.6,645.9 1230.0,649.0 1238.4,649.0 1246.9,652.2 1255.3,655.9 1263.8,664.8 1272.2,664.8 1280.6,652.2 1289.1,650.1 1297.5,650.1 1305.9,649.0 1314.4,649.0 1322.8,649.0 1331.2,639.6 1339.7,639.6 1348.1,630.1 1356.6,616.5 1365.0,630.1 1373.4,596.0 1381.9,577.1 1390.3,577.1 1398.8,587.1 1407.2,587.1 1415.6,546.1 1424.1,546.1 1432.5,532.9 1440.9,580.7 1449.4,514.6 1457.8,514.6 1466.2,483.1 1474.7,483.1 1483.1,469.9 1491.6,444.2 1500.0,431.6 1500.0,690" fill="url(#fill)"/>
+<polyline points="690.0,119.1 698.4,142.7 706.9,159.0 715.3,165.8 723.8,167.9 732.2,182.1 740.6,206.8 749.1,214.1 757.5,217.8 765.9,240.9 774.4,244.6 782.8,261.9 791.2,265.6 799.7,278.2 808.1,295.0 816.6,301.8 825.0,305.5 833.4,318.1 841.9,329.7 850.3,345.4 858.8,345.4 867.2,354.4 875.6,360.7 884.1,370.1 892.5,383.3 900.9,391.7 909.4,400.1 917.8,409.5 926.2,417.4 934.7,425.8 943.1,436.3 951.6,446.3 960.0,454.2 968.4,458.9 976.9,474.6 985.3,483.6 993.8,484.6 1002.2,492.5 1010.6,500.4 1019.1,513.5 1027.5,514.6 1035.9,532.4 1044.4,536.1 1052.8,539.8 1061.2,551.3 1069.7,554.0 1078.1,560.3 1086.6,561.3 1095.0,577.1 1103.4,578.6 1111.9,579.7 1120.3,584.4 1128.8,603.9 1137.2,603.9 1145.6,608.1 1154.1,609.1 1162.5,613.8 1170.9,621.2 1179.4,624.9 1187.8,633.3 1196.2,633.8 1204.7,642.2 1213.1,645.9 1221.6,645.9 1230.0,649.0 1238.4,649.0 1246.9,652.2 1255.3,655.9 1263.8,664.8 1272.2,664.8 1280.6,652.2 1289.1,650.1 1297.5,650.1 1305.9,649.0 1314.4,649.0 1322.8,649.0 1331.2,639.6 1339.7,639.6 1348.1,630.1 1356.6,616.5 1365.0,630.1 1373.4,596.0 1381.9,577.1 1390.3,577.1 1398.8,587.1 1407.2,587.1 1415.6,546.1 1424.1,546.1 1432.5,532.9 1440.9,580.7 1449.4,514.6 1457.8,514.6 1466.2,483.1 1474.7,483.1 1483.1,469.9 1491.6,444.2 1500.0,431.6" fill="none" stroke="#FFD426" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<line x1="1089.1" y1="150" x2="1089.1" y2="690" stroke="#5A5A5F" stroke-width="1.5" stroke-dasharray="2 6"/>
+<text x="1089.1" y="142" fill="#8C8C8C" font-family="DejaVu Sans" font-size="15" text-anchor="middle">SPY 769.30</text>
+<line x1="690" y1="690" x2="1500" y2="690" stroke="#2A2A2E" stroke-width="1.5"/>
+
+  <line x1="917.8" y1="409.5" x2="917.8" y2="690" stroke="#FF8A5C" stroke-width="1.5" stroke-dasharray="3 5" opacity=".55"/>
+  <circle cx="917.8" cy="409.5" r="7" fill="#FF8A5C"/>
+  <circle cx="917.8" cy="409.5" r="13" fill="none" stroke="#FF8A5C" stroke-width="1.5" opacity=".45"/>
+  <text x="891.8" y="403.5" fill="#FF8A5C" font-family="DejaVu Sans" font-size="22" font-weight="bold" text-anchor="end">749 P</text>
+  <text x="891.8" y="425.5" fill="#8C8C8C" font-family="DejaVu Sans" font-size="15" text-anchor="end">short  Δ 0.13</text>
+
+  <line x1="1221.6" y1="645.9" x2="1221.6" y2="690" stroke="#5CC8FF" stroke-width="1.5" stroke-dasharray="3 5" opacity=".55"/>
+  <circle cx="1221.6" cy="645.9" r="7" fill="#5CC8FF"/>
+  <circle cx="1221.6" cy="645.9" r="13" fill="none" stroke="#5CC8FF" stroke-width="1.5" opacity=".45"/>
+  <text x="1221.6" y="589.9" fill="#5CC8FF" font-family="DejaVu Sans" font-size="22" font-weight="bold" text-anchor="middle">785 C</text>
+  <text x="1221.6" y="611.9" fill="#8C8C8C" font-family="DejaVu Sans" font-size="15" text-anchor="middle">short  Δ 0.13</text>
+<text x="690" y="724" fill="#6E6E73" font-family="DejaVu Sans" font-size="15">implied volatility by strike  ·  SPY  ·  11 Sep 2026 expiry  ·  measured live</text>
+
+<!-- text -->
+<text x="96" y="150" fill="#FFD426" font-family="DejaVu Sans" font-size="17" font-weight="bold" letter-spacing="4">FLUFFYMARGINS</text>
+<text x="96" y="272" fill="#FFFFFF" font-family="DejaVu Sans" font-size="104" font-weight="bold" letter-spacing="-3">Contour</text>
+<text x="96" y="340" fill="#FFD426" font-family="DejaVu Sans" font-size="26" font-weight="bold">The surface picks the structure.</text>
+
+<text x="96" y="418" fill="#A8A8AD" font-family="DejaVu Sans" font-size="21">Everyone sells iron condors — and a condor</text>
+<text x="96" y="450" fill="#A8A8AD" font-family="DejaVu Sans" font-size="21">sells both wings unconditionally, so half the</text>
+<text x="96" y="482" fill="#A8A8AD" font-family="DejaVu Sans" font-size="21">time you sell the underpriced side.</text>
+<text x="96" y="530" fill="#FFFFFF" font-family="DejaVu Sans" font-size="21">Contour measures 25-delta skew first,</text>
+<text x="96" y="562" fill="#FFFFFF" font-family="DejaVu Sans" font-size="21">and sells only the rich one.</text>
+
+<rect x="96" y="616" width="212" height="40" rx="8" fill="#FFD426" opacity="0.10"/>
+<text x="112" y="643" fill="#FFD426" font-family="DejaVu Sans" font-size="17" font-weight="bold">PUT SPREAD</text>
+<rect x="322" y="616" width="150" height="40" rx="8" fill="#FFFFFF" opacity="0.06"/>
+<text x="338" y="643" fill="#C8C8CD" font-family="DejaVu Sans" font-size="17" font-weight="bold">CONDOR</text>
+<rect x="486" y="616" width="212" height="40" rx="8" fill="#FFFFFF" opacity="0.06"/>
+<text x="502" y="643" fill="#C8C8CD" font-family="DejaVu Sans" font-size="17" font-weight="bold">CALL SPREAD</text>
+
+<line x1="96" y1="740" x2="1500" y2="740" stroke="#2A2A2E" stroke-width="1.5"/>
+<text x="96" y="790" fill="#6E6E73" font-family="DejaVu Sans" font-size="18">Alpaca Trading API  ·  MCP  ·  CLI  ·  Claude  ·  12 deterministic risk gates</text>
+<text x="1500" y="790" fill="#6E6E73" font-family="DejaVu Sans" font-size="18" text-anchor="end">Alpaca AI Trading Agents Hackathon 2026</text>
+</svg>
