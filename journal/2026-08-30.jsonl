@@ -1,0 +1,2 @@
+{"hash":"602caf8022155b1f0f91feb1250945e85cacc2d2b81b45cbfeb5ef90ac5bc09c","payload":{"cycle":0,"dry":true,"event":"cycle_start","mode":"CLOSED","now_et":"2026-08-30T15:10:03.217187-04:00","reason":"2026-08-30 is outside the contest"},"prev_hash":"0000000000000000000000000000000000000000000000000000000000000000","seq":0}
+{"hash":"7cf0a35f5a97182c36b05ed63a3cb2711fb5d6f0de757f7582521fceed55f5db","payload":{"cycle":0,"entries":0,"event":"cycle_end","mode":"CLOSED"},"prev_hash":"602caf8022155b1f0f91feb1250945e85cacc2d2b81b45cbfeb5ef90ac5bc09c","seq":1}
