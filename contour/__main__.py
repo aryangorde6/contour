@@ -14,6 +14,7 @@ from .data import AlpacaData
 from .execute import CLIBroker
 from .journal import Journal
 from .loop import run_cycle
+from .mind import Mind
 
 
 def main(argv=None) -> int:
@@ -68,8 +69,13 @@ def main(argv=None) -> int:
     market_open = bool(args.as_of) or _market_open(key, sec)
 
     journal = Journal(Path("journal") / f"{now_et:%Y-%m-%d}.jsonl")
+    mind = Mind()
+    if not mind.configured:
+        print("[mind] ANTHROPIC_API_KEY unset -- degraded: half size, "
+              "hard-coded blackout table, no LLM veto")
     res = run_cycle(ds=AlpacaData(key, sec), broker=broker, now_et=now_et,
-                    market_open=market_open, journal=journal, dry=args.dry)
+                    market_open=market_open, journal=journal, dry=args.dry,
+                    mind=mind)
 
     print(f"\nmode={res.mode}  ({res.reason})")
     for m in res.measurements:

@@ -38,14 +38,14 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 43 passing
+- [x] `tests/` — 47 passing
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)
 - [x] `contour/clock.py` — session phase; cron never trusts its firing time
 - [x] `contour/loop.py` — one idempotent cycle
 - [x] `contour/__main__.py` — `--once --dry --as-of --dev --verify`
-- [ ] `mind.py` (LLM blackout parser + regime multiplier)
+- [x] `contour/mind.py` — Claude: blackout windows, regime multiplier, structure veto
 - [ ] dashboard, GitHub Actions cron, `--replay`
 - [ ] dashboard, GitHub Actions cron, `--replay`
 

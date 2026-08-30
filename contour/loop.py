@@ -19,6 +19,7 @@ from .data import DataSource
 from .execute import CLIBroker, submit_with_ladder
 from .journal import Journal
 from .manage import ManagedPosition, close_position, should_exit
+from .mind import Mind
 from .models import Blackout, Book, Context, Leg, Measurement, OpenPosition
 
 HALT_FILE = Path("HALT")
@@ -79,6 +80,7 @@ def run_cycle(
     llm_cutoff: datetime | None = None,
     cycle: int = 0,
     dry: bool = False,
+    mind: Mind | None = None,
 ) -> CycleResult:
     phase: Phase = resolve(now_et, market_open)
     halted = HALT_FILE.exists()
@@ -119,6 +121,23 @@ def run_cycle(
         state.heartbeat(cycle, phase.mode, phase.reason)
         return CycleResult(phase.mode, phase.reason, [], [], exits)
 
+    # --- the advisory layer. It can only shrink what follows: blackouts add
+    # --- veto windows, the multiplier scales sizing DOWN, the cutoff moves
+    # --- the entry deadline EARLIER. Nothing here can widen a limit.
+    multiplier = 1.0
+    if mind is not None:
+        adv_b = mind.blackouts(now_et.date())
+        adv_r = mind.regime(now_et.date(), {})
+        blackouts = tuple(blackouts) + adv_b.blackouts
+        multiplier = min(adv_b.multiplier, adv_r.multiplier, 1.0)
+        if adv_r.no_new_entries_after is not None:
+            llm_cutoff = (min(llm_cutoff, adv_r.no_new_entries_after)
+                          if llm_cutoff else adv_r.no_new_entries_after)
+        journal.append({"event": "mind", "blackouts": adv_b.source,
+                        "regime": adv_r.source, "multiplier": multiplier,
+                        "cutoff": llm_cutoff.isoformat() if llm_cutoff else None,
+                        "notes": f"{adv_b.notes} | {adv_r.notes}"})
+
     # --- entries
     acct = broker.account()
     nav = float(acct.get("equity", 0))
@@ -146,7 +165,10 @@ def run_cycle(
             continue
 
         sided = S.assemble(structure, legs, und)
-        cand = S.build(und, structure, sided, nav) if sided else None
+        # The multiplier is applied to the NAV used for SIZING only, never to
+        # a risk threshold. multiplier 0.0 yields zero contracts and the name
+        # is skipped, which is the intended "stand down" behaviour.
+        cand = S.build(und, structure, sided, nav * multiplier) if sided else None
         if cand is None:
             decisions.append({"underlying": und, "decision": "NO_TRADE",
                               "reason": f"{structure}: could not assemble a "
@@ -170,6 +192,13 @@ def run_cycle(
         journal.append({"event": "decision", **decisions[-1]})
         if not allowed or dry:
             continue
+
+        if mind is not None:
+            v = mind.confirm(und, structure, m.vrp_ratio, m.skew_z)
+            journal.append({"event": "mind_confirm", "underlying": und,
+                            "veto": v.veto, "reason": v.reason})
+            if v.veto:
+                continue
 
         rec = submit_with_ladder(broker, cand, base, journal.append)
         if rec["filled_qty"] > 0:

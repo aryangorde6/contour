@@ -11,6 +11,7 @@ dependencies = [
     "python-dotenv",
     "httpx",
     "tenacity",
+    "anthropic>=0.75",
 ]
 
 [build-system]
