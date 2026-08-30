@@ -23,6 +23,7 @@ class Leg:
     open_interest: int
     tradable: bool
     close_price: float | None
+    quote_age_s: float | None = None   # seconds between quote ts and decision ts
 
     @property
     def mid(self) -> float:

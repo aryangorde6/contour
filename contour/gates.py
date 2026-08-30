@@ -69,6 +69,9 @@ def g5_liquidity(cand: Candidate, book: Book, ctx: Context) -> Result:
             return False, f"G5 {leg.symbol} has no close_price"
         if leg.mid <= 0:
             return False, f"G5 {leg.symbol} non-positive mid"
+        if leg.quote_age_s is not None and leg.quote_age_s > C.MAX_QUOTE_AGE_S:
+            return False, (f"G5 {leg.symbol} quote is {leg.quote_age_s / 60:.1f} min "
+                           f"stale (max {C.MAX_QUOTE_AGE_S / 60:.0f} min)")
         pct_ok = leg.spread <= C.MAX_SPREAD_PCT_OF_MID * leg.mid
         abs_ok = leg.spread <= C.MAX_SPREAD_ABS
         if not (pct_ok or abs_ok):

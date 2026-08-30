@@ -82,6 +82,19 @@ MAX_SPREAD_ABS = 0.10
 # total round-trip spread cost across all legs, as a fraction of net credit.
 MAX_ROUND_TRIP_FRICTION_PCT_OF_CREDIT = 0.30
 
+# Quote staleness. Measured 2026-08-30 against Friday's close: option QUOTES
+# stop at 15:59:59.998 ET while option TRADES run to 16:14:58 ET, so the free
+# indicative quote feed sits behind the tape. Whether that is a systematic
+# 15-minute delay during live hours or an end-of-session artifact is resolved
+# by the first live cycle -- the agent measures and journals quote age every
+# cycle rather than assuming.
+#
+# The threshold tolerates the observed ~15-minute lag and catches genuinely
+# broken or frozen data. It is deliberately NOT set to 900s: if the feed is
+# systematically 15 minutes behind, a 900s veto rejects every candidate and
+# the agent trades zero times.
+MAX_QUOTE_AGE_S = 1200.0
+
 # --- G7 delta band --------------------------------------------------------
 SHORT_DELTA_BAND = (0.10, 0.16)
 LONG_DELTA_BAND = (0.04, 0.10)

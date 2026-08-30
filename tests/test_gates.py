@@ -189,6 +189,22 @@ def test_g5_admits_a_normal_cheap_wing_but_rejects_a_bad_market():
     assert not ok and "OI 100" in why
 
 
+def test_g5_rejects_a_frozen_quote_but_tolerates_the_known_feed_lag():
+    """The free indicative feed runs behind the tape. Vetoing at 15 min would
+    reject everything; vetoing at 20 catches a genuinely frozen feed."""
+    lagging = (leg(side="sell", strike=752.0, delta=-0.13),
+               Leg(**{**vars(leg(strike=747.0, delta=-0.06, bid=0.10, ask=0.14,
+                                 close=0.12)), "quote_age_s": 890.0}))
+    ok, why = gates.g5_liquidity(put_spread(legs=lagging), book(), ctx())
+    assert ok, f"14.8 min lag must be tolerated: {why}"
+
+    frozen = (leg(side="sell", strike=752.0, delta=-0.13),
+              Leg(**{**vars(leg(strike=747.0, delta=-0.06, bid=0.10, ask=0.14,
+                                close=0.12)), "quote_age_s": 3600.0}))
+    ok, why = gates.g5_liquidity(put_spread(legs=frozen), book(), ctx())
+    assert not ok and "stale" in why
+
+
 def test_g5_friction_guard_kills_a_single_name_style_package():
     """The ETF-only decision exists because single-name weeklies cost $40-80
     round trip against a $30-42 edge. This gate enforces that, not assumes it."""
