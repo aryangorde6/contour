@@ -1,0 +1,20 @@
+[project]
+name = "contour"
+version = "0.1.0"
+description = "An autonomous options agent that measures the shape of the volatility surface and lets the measurement pick the structure."
+requires-python = ">=3.12"
+dependencies = [
+    "alpaca-py>=0.44",
+    "numpy",
+    "pandas",
+    "pydantic>=2",
+    "python-dotenv",
+    "httpx",
+    "tenacity",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
