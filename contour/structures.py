@@ -126,3 +126,55 @@ def to_cli_legs(cand: Candidate, closing: bool = False) -> list[dict]:
         out.append({"symbol": l.symbol, "ratio_qty": str(l.ratio_qty),
                     "side": side, "position_intent": intent})
     return out
+
+
+def _with_side(leg: Leg, side: Literal["buy", "sell"]) -> Leg:
+    from dataclasses import replace
+    return replace(leg, side=side)
+
+
+def _wing(legs: Sequence[Leg], short: Leg, wing_width: float,
+          above: bool) -> Leg | None:
+    """The protective leg, wing_width away from the short strike."""
+    target = short.strike + wing_width if above else short.strike - wing_width
+    same_type = [l for l in legs if l.option_type == short.option_type
+                 and ((l.strike > short.strike) if above else (l.strike < short.strike))]
+    if not same_type:
+        return None
+    return min(same_type, key=lambda l: abs(l.strike - target))
+
+
+def assemble(structure: Structure, legs: Sequence[Leg],
+             underlying: str) -> list[Leg] | None:
+    """Turn a chosen structure plus a chain into concrete, sided legs.
+
+    Long wings are picked by STRIKE DISTANCE, not by delta: a fixed wing width
+    is what makes max loss knowable in advance, which is what G3 sizes against.
+    G7 still range-checks the resulting wing delta afterwards.
+    """
+    if structure == "NO_TRADE":
+        return None
+    wing_width = C.WING_WIDTH[underlying]
+    puts = [l for l in legs if l.option_type == "put"]
+    calls = [l for l in legs if l.option_type == "call"]
+    out: list[Leg] = []
+
+    if structure in ("PUT_CS", "CONDOR"):
+        sp = pick_by_delta(puts, 0.13, C.SHORT_DELTA_BAND)
+        if sp is None:
+            return None
+        lp = _wing(puts, sp, wing_width, above=False)
+        if lp is None:
+            return None
+        out += [_with_side(sp, "sell"), _with_side(lp, "buy")]
+
+    if structure in ("CALL_CS", "CONDOR"):
+        sc = pick_by_delta(calls, 0.13, C.SHORT_DELTA_BAND)
+        if sc is None:
+            return None
+        lc = _wing(calls, sc, wing_width, above=True)
+        if lc is None:
+            return None
+        out += [_with_side(sc, "sell"), _with_side(lc, "buy")]
+
+    return out or None

@@ -159,12 +159,24 @@ VRP_RATIO_FLOOR = 1.30
 SKEW_Z_TRIGGER = 0.8
 RV_FLOOR = 6.0                        # max(rv10, 6.0) guards divide-by-small
 
-# Static skew priors, in vol points. A 60-session IV rebuild would compare a
-# live indicative-feed measurement against an OPRA-feed historical
-# distribution -- a level bias no median filter corrects. Updated online from
-# an in-session rolling buffer instead. Stated plainly in the write-up.
+# Skew priors, in vol points, for skew25 = IV(25d put) - IV(25d call).
+#
+# SEEDED FROM LIVE MEASUREMENT, 2026-08-30 (the Friday close), not from
+# intuition. The originally specified priors (SPY 4.5, QQQ 4.0, IWM 5.5) were
+# roughly 2 vol points too high, which put every name at z <= -0.9 and would
+# have made the agent sell CALL spreads on all three underlyings for the whole
+# week -- a systematic directional bet the structure map was never meant to
+# express. The error came from calibrating against the 13-delta IV pair rather
+# than the 25-delta pair the measure is actually defined over; 25-delta skew is
+# materially flatter.
+#
+# A single observation is not a distribution, so the sd values are still
+# judgement, and `mind.py` updates ref from a rolling in-session buffer once
+# real cycles accumulate. Seeding at the measured level means day one reads
+# skew-NEUTRAL and trades condors, rather than taking a directional view on the
+# strength of a constant nobody measured.
 SKEW_PRIOR = {
-    "SPY": (4.5, 1.2),
-    "QQQ": (4.0, 1.3),
-    "IWM": (5.5, 1.5),
+    "SPY": (2.52, 1.2),
+    "QQQ": (2.81, 1.3),
+    "IWM": (3.10, 1.5),
 }

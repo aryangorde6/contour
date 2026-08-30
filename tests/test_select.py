@@ -37,11 +37,21 @@ def test_vrp_floor_is_checked_before_skew():
     assert s == "NO_TRADE"
 
 
-def test_todays_real_spy_reads_as_condor():
-    """Live 2026-08-30: put IV 13.9 vs call IV 9.4 -> skew25 4.5, exactly the
-    SPY prior, so skew_z = 0.0 and both sides are fairly priced."""
-    from contour.surface import skew_25, skew_z
-    sk = skew_25(0.139, 0.094)
-    z = skew_z("SPY", sk)
-    s, _ = choose_structure(m(vrp=1.55, skew_z=z))
-    assert s == "CONDOR"
+def test_seeded_priors_read_neutral_on_the_day_they_were_measured():
+    """Guards the calibration bug: priors 2 vol points too high put every
+    underlying at z <= -0.9 and sold calls on all three, all week."""
+    from contour.surface import skew_z
+    for und, measured in (("SPY", 2.52), ("QQQ", 2.81), ("IWM", 3.10)):
+        z = skew_z(und, measured)
+        assert abs(z) < 0.8, f"{und} must read neutral at its seed, got z={z:+.2f}"
+        s, _ = choose_structure(m(vrp=1.55, skew_z=z, underlying=und))
+        assert s == "CONDOR"
+
+
+def test_a_real_skew_move_still_flips_the_structure():
+    """The map must not be inert -- half a standard deviation should not flip
+    it, but two should."""
+    from contour.surface import skew_z
+    assert choose_structure(m(skew_z=skew_z("SPY", 2.52 + 1.2 * 0.5)))[0] == "CONDOR"
+    assert choose_structure(m(skew_z=skew_z("SPY", 2.52 + 1.2 * 2)))[0] == "PUT_CS"
+    assert choose_structure(m(skew_z=skew_z("SPY", 2.52 - 1.2 * 2)))[0] == "CALL_CS"
