@@ -17,7 +17,6 @@ Failure policy, deliberately two-tiered:
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from typing import Literal, Sequence
@@ -25,9 +24,8 @@ from typing import Literal, Sequence
 from pydantic import BaseModel, Field
 
 from . import config as C
+from .llm import AnthropicProvider, Provider, build_provider
 from .models import Blackout
-
-MODEL = "claude-opus-5"
 
 # The macro regime is hard-coded into the prompt on purpose. A model left to
 # its training prior will assume weak data is bearish for equities, which is
@@ -101,32 +99,42 @@ class Mind:
     """Wraps Claude. Every method is total -- it returns a safe value rather
     than raising, because a cycle must never die on the advisory layer."""
 
-    def __init__(self, api_key: str | None = None):
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY") or ""
-        self._client = None
+    def __init__(self, api_key: str | None = None,
+                 provider: Provider | None = None):
+        if provider is not None:
+            self.provider: Provider | None = provider
+        elif api_key is not None:
+            # An explicit key names an explicit vendor. Empty means absent,
+            # which is tier one of the failure policy, not an error.
+            self.provider = AnthropicProvider(api_key) if api_key else None
+        else:
+            self.provider = build_provider()
 
     @property
     def configured(self) -> bool:
-        return bool(self.api_key)
+        return self.provider is not None
 
-    def _c(self):
-        if self._client is None:
-            import anthropic
-            self._client = anthropic.Anthropic(api_key=self.api_key)
-        return self._client
+    @property
+    def brain(self) -> str:
+        """What is actually answering, for the journal. The write-up claims
+        reproducibility; that claim needs the model named in the record."""
+        p = self.provider
+        return f"{p.name}:{p.model}" if p is not None else "degraded"
+
+    def _call(self, system: str, user: str, schema, effort: str = "low"):
+        """The one seam. Every caller treats a raise as 'the brain failed'."""
+        assert self.provider is not None
+        return self.provider.parse(system, user, schema, effort=effort)
 
     # --- 1. event windows: the genuinely LLM-shaped job -------------------
     def blackouts(self, day: date, headlines: Sequence[str] = ()) -> Advice:
         if not self.configured:
             return Advice((), 0.5, None, "degraded",
-                          "ANTHROPIC_API_KEY unset; running on the hard-coded "
+                          "no LLM provider configured; running on the hard-coded "
                           "G10 fallback table at half size")
         try:
-            r = self._c().messages.parse(
-                model=MODEL, max_tokens=8000,
-                output_config={"effort": "medium"},
-                system=AGENT_BRIEF + REGIME_BRIEF,
-                messages=[{"role": "user", "content":
+            plan = self._call(
+                AGENT_BRIEF + REGIME_BRIEF,
                     f"Today is {day:%A %Y-%m-%d}. Return the intervals during "
                     f"today's 09:30-16:00 ET session when a short-premium "
                     f"options agent should NOT open new positions, because a "
@@ -135,10 +143,8 @@ class Mind:
                     f"-- roughly 20 minutes either side. If nothing is "
                     f"scheduled today, return an empty list rather than "
                     f"inventing caution.\n\nOvernight headlines:\n"
-                    + ("\n".join(f"- {h}" for h in headlines) or "- (none)")}],
-                output_format=BlackoutPlan,
-            )
-            plan = r.parsed_output
+                    + ("\n".join(f"- {h}" for h in headlines) or "- (none)"),
+                BlackoutPlan, effort="medium")
             return Advice(
                 tuple(Blackout(_et(day, w.start_et), _et(day, w.end_et), w.reason)
                       for w in plan.windows),
@@ -152,13 +158,10 @@ class Mind:
     def regime(self, day: date, vrp: dict[str, float]) -> Advice:
         if not self.configured:
             return Advice((), 0.5, None, "degraded",
-                          "ANTHROPIC_API_KEY unset; half size")
+                          "no LLM provider configured; half size")
         try:
-            r = self._c().messages.parse(
-                model=MODEL, max_tokens=4000,
-                output_config={"effort": "low"},
-                system=AGENT_BRIEF + REGIME_BRIEF,
-                messages=[{"role": "user", "content":
+            g = self._call(
+                AGENT_BRIEF + REGIME_BRIEF,
                     f"Today is {day:%A %Y-%m-%d}. Measured implied/realized "
                     f"volatility ratios right now: "
                     + ", ".join(f"{k} {v:.2f}" for k, v in vrp.items())
@@ -166,10 +169,8 @@ class Mind:
                       "new positions may be opened. FULL only when the session "
                       "carries no scheduled macro risk and the vol premium is "
                       "genuinely being paid. NONE when you would not want a "
-                      "short-premium book open at all today."}],
-                output_format=Regime,
-            )
-            g = r.parsed_output
+                      "short-premium book open at all today.",
+                Regime, effort="low")
             return Advice((), MULTIPLIER[g.size],
                           _et(day, g.no_new_entries_after), "llm", g.rationale)
         except Exception as exc:                                # noqa: BLE001
@@ -183,11 +184,8 @@ class Mind:
             return Verdict(veto=False,
                            reason="LLM not configured; deterministic gates only")
         try:
-            r = self._c().messages.parse(
-                model=MODEL, max_tokens=4000,
-                output_config={"effort": "low"},
-                system=AGENT_BRIEF + REGIME_BRIEF,
-                messages=[{"role": "user", "content":
+            return self._call(
+                AGENT_BRIEF + REGIME_BRIEF,
                     f"The engine intends to open a {structure} on {underlying}. "
                     f"Measured: implied/realized {vrp_ratio:.2f}, 25-delta skew "
                     f"z-score {skew_z:+.2f}.\n\nHeadlines:\n"
@@ -197,10 +195,8 @@ class Mind:
                       "see -- an unpriced binary event, a pending "
                       "announcement, a halt. Richness alone is not a veto; "
                       "that is the entire strategy. You cannot modify the "
-                      "trade, only refuse it."}],
-                output_format=Verdict,
-            )
-            return r.parsed_output
+                      "trade, only refuse it.",
+                Verdict, effort="low")
         except Exception as exc:                                # noqa: BLE001
             return Verdict(veto=True,
                            reason=f"fail-closed: {type(exc).__name__}: {exc}")

@@ -78,6 +78,8 @@ jobs:
           ALPACA_DEV_API_KEY: ${{ secrets.ALPACA_DEV_API_KEY }}
           ALPACA_DEV_SECRET_KEY: ${{ secrets.ALPACA_DEV_SECRET_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FEATHERLESS_API_KEY: ${{ secrets.FEATHERLESS_API_KEY }}
+          CONTOUR_LLM: ${{ vars.CONTOUR_LLM }}
         run: |
           ARGS="--once"
           [ "${{ inputs.dry }}" = "true" ] && ARGS="$ARGS --dry"

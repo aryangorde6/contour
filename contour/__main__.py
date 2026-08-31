@@ -70,8 +70,9 @@ def main(argv=None) -> int:
 
     journal = Journal(Path("journal") / f"{now_et:%Y-%m-%d}.jsonl")
     mind = Mind()
+    print(f"[mind] brain: {mind.brain}")
     if not mind.configured:
-        print("[mind] ANTHROPIC_API_KEY unset -- degraded: half size, "
+        print("[mind] no LLM provider configured -- degraded: half size, "
               "hard-coded blackout table, no LLM veto")
     res = run_cycle(ds=AlpacaData(key, sec), broker=broker, now_et=now_et,
                     market_open=market_open, journal=journal, dry=args.dry,

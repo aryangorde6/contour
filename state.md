@@ -42,7 +42,55 @@ Repo-local `user.name`/`user.email` are set to aryangorde6; global is untouched.
 
 Secrets set on the repo: `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`,
 `ALPACA_DEV_API_KEY`, `ALPACA_DEV_SECRET_KEY`.
-**Not set:** `ANTHROPIC_API_KEY`, `FEATHERLESS_API_KEY` (both empty in `.env`).
+**Not set:** `FEATHERLESS_API_KEY` -- claim at
+`featherless.ai/join/feather_request_pricing/ALPACA26` (code auto-applied,
+$25, first-come-first-served), then key from profile -> API Keys, `fw-...`.
+
+`ANTHROPIC_API_KEY` is **dead**: there is no card available and the Console
+grants no trial credits to this org. Do not re-propose buying credits. The
+hackathon's only free inference is Featherless, whose $25 covers the ~116
+calls this week needs many times over.
+
+### The brain, and why it is Featherless
+
+`contour/llm.py` is a provider seam: `AnthropicProvider` and
+`OpenAICompatProvider` behind one `parse(system, user, schema)` contract, so
+the vendor is a config value rather than an architecture. `build_provider()`
+picks Featherless first, Anthropic second, degraded last; `CONTOUR_LLM`
+(`off`/`anthropic`/`featherless`) overrides.
+
+Featherless serves open weights over an OpenAI-compatible endpoint at
+`https://api.featherless.ai/v1`, model `zai-org/GLM-5.2`, and does **not**
+guarantee strict `json_schema`. So `OpenAICompatProvider` degrades in three
+stages -- strict schema, then JSON mode with the schema inlined in the prompt,
+then a re-ask carrying the validation error back -- and raises if all three
+fail, which the existing fail-closed policy already handles. HTTP 403 means a
+**gated model**: click "Unlock Model" on its page to accept the licence. That
+is a human action; the code raises rather than retrying.
+
+Integrating it is also worth points. The rules state partner tech must be
+*integrated* to be eligible for partner prizes, and only one of ~22 visible
+submissions lists Featherless.
+
+### Competitors are closer than assumed
+
+Read from the submissions list on 2026-08-31. "LLM proposes, deterministic
+gates dispose, hash-chained audit trail" is **table stakes**, not our
+differentiator:
+
+- **Horizon Blackline** -- "the LLM proposes, deterministic risk gates
+  authorize, every decision is hash-chained and auditable"
+- **VRP Engine** -- "harvests the variance risk premium with defined-risk
+  option spreads, risk gates, and Alpaca API + MCP + CLI"
+- **AEGIS-Q** -- "bounded AI selects a pre-validated bullish or bearish
+  spread -- or abstains -- while deterministic code controls contracts,
+  position sizing, maximum loss"
+- **EdgeStack** -- "journals every trade and every refusal"
+
+So `WRITEUP.md` must lead with **skew-driven structure selection**
+(`select.py`): the 25-delta skew z-score picks *which* of four structures to
+sell. Everyone else gates a fixed structure; we choose among four. No visible
+competitor claims this.
 
 ---
 
@@ -208,8 +256,8 @@ closed**.
 5. **Social** — 5 posts on X/LinkedIn tagging `@lablabai` and `@AlpacaHQ` **in
    the body**. Only 18 total likes across all 23 submissions; two $500 prizes
    are nearly uncontested. Reddit links likely do not qualify.
-6. Optional: `ANTHROPIC_API_KEY` (activates `mind.py`), Featherless (the $300
-   partner add-on).
+6. Claim Featherless `ALPACA26` and paste the key -- `mind.py` runs degraded
+   at half size until it lands.
 
 **Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
 verification only. File a draft submission Wednesday night.

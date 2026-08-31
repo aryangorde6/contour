@@ -19,9 +19,11 @@ DAY = date(2026, 8, 31)
 
 
 def broken(mind: Mind) -> Mind:
-    def boom():
+    """Break the provider seam, not a vendor client -- the failure policy is
+    about "the brain did not answer", whoever the brain happens to be."""
+    def boom(*_a, **_k):
         raise RuntimeError("connection reset")
-    mind._c = boom                                   # type: ignore[method-assign]
+    mind._call = boom                                # type: ignore[method-assign]
     return mind
 
 

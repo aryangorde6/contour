@@ -133,7 +133,8 @@ def run_cycle(
         if adv_r.no_new_entries_after is not None:
             llm_cutoff = (min(llm_cutoff, adv_r.no_new_entries_after)
                           if llm_cutoff else adv_r.no_new_entries_after)
-        journal.append({"event": "mind", "blackouts": adv_b.source,
+        journal.append({"event": "mind", "brain": mind.brain,
+                        "blackouts": adv_b.source,
                         "regime": adv_r.source, "multiplier": multiplier,
                         "cutoff": llm_cutoff.isoformat() if llm_cutoff else None,
                         "notes": f"{adv_b.notes} | {adv_r.notes}"})
