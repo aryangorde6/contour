@@ -7,18 +7,19 @@ our claims against the order history they pull from Alpaca independently.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from . import config as C
-from . import gates, select, state, structures as S, surface
+from . import gates, positions as P, select, state, structures as S, surface
 from .clock import Phase, resolve
 from .data import DataSource
 from .execute import CLIBroker, submit_with_ladder
 from .journal import Journal
-from .manage import ManagedPosition, close_position, should_exit
+from .manage import (ManagedPosition, close_position, flatten_due,
+                     should_exit)
 from .mind import Mind
 from .models import Blackout, Book, Context, Leg, Measurement, OpenPosition
 
@@ -60,6 +61,19 @@ def order_base_id(underlying: str, structure: str, now: datetime) -> str:
     return f"contour-{underlying.lower()}-{h}"
 
 
+def _reprice(pos: ManagedPosition, chain: Sequence[Leg]) -> tuple[Leg, ...] | None:
+    """The position's legs at today's quotes, or None if the chain is missing
+    any of them. Partial re-pricing would understate the cost to close."""
+    quotes = {l.symbol: l for l in chain}
+    out = []
+    for l in pos.candidate.legs:
+        q = quotes.get(l.symbol)
+        if q is None or not (q.bid or q.ask):
+            return None
+        out.append(replace(l, bid=q.bid, ask=q.ask))
+    return tuple(out)
+
+
 @dataclass
 class CycleResult:
     mode: str
@@ -95,12 +109,25 @@ def run_cycle(
     # --- exits first, always. A position must be manageable even when the
     # --- entry window is shut.
     exits: list[dict] = []
+    live = list(open_positions)
     for pos in open_positions:
         try:
             m = measure_underlying(ds, pos.candidate.underlying, C.EXPIRY)
-            spot = m[0].spot if m else 0.0
-            mark = abs(S.net_credit_from_mids(pos.candidate.legs))
-            do_exit, why = should_exit(pos, mark, spot, now_et)
+            # The stored legs carry their ENTRY quotes and never change, so
+            # pricing off them freezes mark at the entry credit and the profit
+            # target and stop can never fire. Re-price from today's chain.
+            fresh = _reprice(pos, m[1]) if m else None
+            if m is None or fresh is None:
+                # No usable quotes. Do NOT fall back to spot 0.0: that reads as
+                # far below every short put and fires a phantom BREACH exit.
+                # Only the clock rule is safe without market data.
+                due = flatten_due(now_et)
+                do_exit, mark = due is not None, 0.0
+                why = due or ("HOLD_UNPRICED: no live quotes for "
+                              f"{pos.candidate.underlying}; clock rule only")
+            else:
+                mark = abs(S.net_credit_from_mids(fresh))
+                do_exit, why = should_exit(pos, mark, m[0].spot, now_et)
         except Exception as exc:                             # noqa: BLE001
             do_exit, why, mark = False, f"EXIT_CHECK_FAILED: {exc}", 0.0
         rec = {"underlying": pos.candidate.underlying, "order_id": pos.order_id,
@@ -114,6 +141,9 @@ def run_cycle(
                                  f"{pos.order_id}-x", journal.append,
                                  escalate=escalate)
             journal.append({"event": "exit_done", **out})
+            if out.get("closed"):
+                live = [p for p in live if p.order_id != pos.order_id]
+                P.save(live)
 
     if phase.mode != "TRADE":
         journal.append({"event": "cycle_end", "cycle": cycle,
@@ -144,11 +174,11 @@ def run_cycle(
     acct = broker.account()
     nav = float(acct.get("equity", 0))
     state.point("equity", {"nav": round(nav, 2), "mode": phase.mode,
-                           "cycle": cycle, "open": len(open_positions)})
+                           "cycle": cycle, "open": len(live)})
     book = Book(nav=nav, session_pnl=0.0, positions=tuple(
         OpenPosition(p.candidate.underlying, p.candidate.structure,
                      p.candidate.contracts, p.candidate.max_loss_per_contract,
-                     p.credit_received) for p in open_positions))
+                     p.credit_received) for p in live))
 
     measurements, decisions, opened = [], [], []
     for und in C.UNIVERSE:
@@ -207,6 +237,21 @@ def run_cycle(
         rec = submit_with_ladder(broker, cand, base, journal.append)
         if rec["filled_qty"] > 0:
             opened.append(und)
+            # Record what actually filled, not what was requested: a partial
+            # fill leaves fewer contracts than the candidate describes, and an
+            # exit sized off the request would try to close what we never had.
+            held = replace(cand, contracts=int(rec["filled_qty"]))
+            pos = ManagedPosition(
+                candidate=held,
+                credit_received=P.credit_from_fill(rec, cand.net_credit),
+                opened_at=now_et, order_id=str(rec["order_id"]))
+            live.append(pos)
+            P.save(live)
+            journal.append({"event": "position_opened", "underlying": und,
+                            "order_id": pos.order_id,
+                            "contracts": held.contracts,
+                            "credit_received": round(pos.credit_received, 4),
+                            "open_book": len(live)})
 
     journal.append({"event": "cycle_end", "cycle": cycle, "mode": phase.mode,
                     "entries": len(opened)})

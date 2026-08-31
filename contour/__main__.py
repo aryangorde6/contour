@@ -16,6 +16,7 @@ from .execute import CLIBroker
 from .journal import Journal
 from .loop import run_cycle
 from .mind import Mind
+from . import positions as P
 from .replay import Recorder, Replay, ReplayBroker, ReplayError
 
 
@@ -116,11 +117,29 @@ def main(argv=None) -> int:
     if not mind.configured:
         print("[mind] no LLM provider configured -- degraded: half size, "
               "hard-coded blackout table, no LLM veto")
+    # The open book has to be reloaded every run: each cron cycle is a fresh
+    # container, so a position opened at 10:09 is invisible at 10:24 unless it
+    # was written down. Without this, every exit rule is dead code.
+    open_positions = P.load()
+    held = _held_symbols(broker)
+    tracked = {l.symbol for p in open_positions for l in p.candidate.legs}
+    print(f"[book] {len(open_positions)} tracked position(s), "
+          f"{len(held)} option leg(s) at the broker")
+    orphans = held - tracked
+    if orphans:
+        # Loud, not fatal: an unmanaged leg is exactly the failure this book
+        # exists to prevent, and silence is how it stayed hidden.
+        print(f"[book] WARNING: {len(orphans)} broker leg(s) not in the "
+              f"tracked book: {sorted(orphans)}", file=sys.stderr)
+        journal.append({"event": "book_discrepancy",
+                        "untracked_legs": sorted(orphans),
+                        "tracked": sorted(tracked)})
+
     ds = AlpacaData(key, sec)
     rec = Recorder(ds, args.record) if args.record else None
     res = run_cycle(ds=rec or ds, broker=broker, now_et=now_et,
                     market_open=market_open, journal=journal, dry=args.dry,
-                    mind=mind)
+                    mind=mind, open_positions=open_positions)
     if rec is not None:
         print(f"\n[record] wrote {rec.save(now_et)}")
 
@@ -185,6 +204,17 @@ def _run_replay(fx: Replay) -> int:
     ok, msg = Journal(out).verify()
     print(f"\n[replay] {out}: {msg}")
     return 0 if ok else 1
+
+
+def _held_symbols(broker) -> set[str]:
+    """Option legs the broker actually holds. Never fatal: a failed position
+    read must not stop a cycle that could otherwise manage exits."""
+    try:
+        return {str(p.get("symbol")) for p in broker.positions()
+                if str(p.get("symbol", "")).startswith(("SPY2", "QQQ2", "IWM2"))}
+    except Exception as exc:                                 # noqa: BLE001
+        print(f"[book] could not read broker positions: {exc}", file=sys.stderr)
+        return set()
 
 
 def _market_open(key: str, sec: str) -> bool:

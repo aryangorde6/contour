@@ -37,6 +37,21 @@ def short_strikes(cand: Candidate) -> list[Leg]:
     return [l for l in cand.legs if l.is_short]
 
 
+def flatten_due(now_et: datetime) -> str | None:
+    """The one exit rule that needs no market data.
+
+    Split out so a cycle that cannot price a position can still honour the
+    scheduled flatten. Everything else -- profit target, stop, breach --
+    requires live quotes, and acting on stale ones is worse than waiting.
+    """
+    if now_et.date() > C.FLATTEN_DAY or (
+        now_et.date() == C.FLATTEN_DAY and now_et.time() >= C.FLATTEN_AT
+    ):
+        return (f"FLATTEN: scheduled hard flatten at "
+                f"{C.FLATTEN_DAY} {C.FLATTEN_AT:%H:%M} ET")
+    return None
+
+
 def should_exit(pos: ManagedPosition, mark: float, spot: float,
                 now_et: datetime) -> tuple[bool, str]:
     """Pure. `mark` is the current cost to buy the package back, per contract,
@@ -45,11 +60,9 @@ def should_exit(pos: ManagedPosition, mark: float, spot: float,
     credit = pos.credit_received
 
     # 4. the clock beats every other consideration
-    if now_et.date() > C.FLATTEN_DAY or (
-        now_et.date() == C.FLATTEN_DAY and now_et.time() >= C.FLATTEN_AT
-    ):
-        return True, (f"FLATTEN: scheduled hard flatten at "
-                      f"{C.FLATTEN_DAY} {C.FLATTEN_AT:%H:%M} ET")
+    due = flatten_due(now_et)
+    if due is not None:
+        return True, due
 
     # 1. profit target
     if mark <= C.PROFIT_TARGET_PCT_OF_CREDIT * credit:
