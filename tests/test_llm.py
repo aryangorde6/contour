@@ -175,8 +175,8 @@ BR = {"AWS_ACCESS_KEY_ID": "AKIA-x", "AWS_SECRET_ACCESS_KEY": "s3cr3t"}
 def test_bedrock_wins_when_configured_because_its_credits_exist():
     got = build_provider({**BR, **FW, **GM, **AN})
     assert isinstance(got, BedrockProvider)
-    assert got.model.startswith("us.anthropic.claude-haiku-4-5"), \
-        "measured: the newer ids 403 as unentitled on this account"
+    assert got.model == "zai.glm-5", \
+        "bake-off winner: the only candidate that got all three test dates right"
 
 
 def test_bedrock_accepts_a_bearer_token_instead_of_a_key_pair():
@@ -224,19 +224,49 @@ def test_bedrock_names_the_payment_problem_rather_than_the_status_code(monkeypat
         text = '{"message":"Model access is denied due to INVALID_PAYMENT_INSTRUMENT:A valid..."}'
 
     monkeypatch.setattr(llm.httpx, "post", lambda *a, **k: R())
-    with pytest.raises(LLMError, match="needs a payment method"):
+    with pytest.raises(LLMError, match="no payment instrument"):
         BedrockProvider(api_key="bt-x").parse("sys", "user", Toy)
 
 
-def test_key_pair_without_the_bedrock_extra_says_what_to_install(monkeypatch):
-    import builtins
-    real = builtins.__import__
-
-    def no_bedrock(name, *a, **k):
-        if name == "anthropic":
-            raise ImportError("no boto3")
-        return real(name, *a, **k)
-
-    monkeypatch.setattr(builtins, "__import__", no_bedrock)
-    with pytest.raises(LLMError, match=r"anthropic\[bedrock\]"):
+def test_key_pair_auth_says_it_needs_a_bearer_token_instead():
+    """Converse is reached over plain HTTPS with a bearer token. Supporting a
+    key pair would mean implementing SigV4, which buys nothing here."""
+    with pytest.raises(LLMError, match="bearer token"):
         BedrockProvider(access_key="AKIA", secret_key="s").parse("s", "u", Toy)
+
+
+def test_converse_body_is_the_shape_bedrock_expects(monkeypatch):
+    """One body shape for all 93 models is the entire point of Converse."""
+    seen = {}
+
+    class R:
+        status_code = 200
+        def json(self):
+            return {"output": {"message": {"content": [
+                {"text": '{"veto": false, "reason": "ok"}'}]}}}
+
+    def post(url, headers=None, json=None, timeout=None):
+        seen["url"], seen["body"] = url, json
+        return R()
+
+    monkeypatch.setattr(llm.httpx, "post", post)
+    got = BedrockProvider(api_key="bt-x").parse("SYS", "USER", Toy)
+
+    assert got.veto is False
+    assert seen["url"].endswith("/converse")
+    assert seen["body"]["system"][0]["text"].startswith("SYS")
+    assert seen["body"]["messages"][0]["content"][0]["text"] == "USER"
+
+
+def test_reasoning_blocks_are_ignored_and_only_text_is_read(monkeypatch):
+    """Several Bedrock models return an empty text block plus a separate
+    reasoning block. Measured: deepseek-r1, minimax and gpt-oss all do."""
+    class R:
+        status_code = 200
+        def json(self):
+            return {"output": {"message": {"content": [
+                {"reasoningContent": {"text": "let me think..."}},
+                {"text": '{"veto": true, "reason": "read the right block"}'}]}}}
+
+    monkeypatch.setattr(llm.httpx, "post", lambda *a, **k: R())
+    assert BedrockProvider(api_key="bt-x").parse("s", "u", Toy).veto is True

@@ -51,7 +51,7 @@ grants no trial credits to this org. Do not re-propose buying credits. The
 hackathon's only free inference is Featherless, whose $25 covers the ~116
 calls this week needs many times over.
 
-### The brain: three dead ends, measured not guessed
+### The brain: Bedrock GLM-5, on AWS credits
 
 **There is no card, and every paid path needs one. Do not re-litigate this:**
 
@@ -59,12 +59,27 @@ calls this week needs many times over.
 |---|---|---|
 | Anthropic first-party | dead | Console grants this org no trial credit; only "Buy credits" |
 | Featherless `ALPACA26` | dead | $25 promo applies, amount due $0, but Stripe still demands a card for future renewals. Cash App Pay is US-only |
-| **AWS Bedrock** | **dead** | Token authenticates fine; first call 200s, then all models 403 `INVALID_PAYMENT_INSTRUMENT`. The first call triggers an AWS Marketplace subscription that needs a payment instrument. **$50 of AWS credits do not substitute for one** |
-| **Google AI Studio** | **works** | Free tier, no card, no payment instrument. 1500 req/day vs our ~29 |
+| Bedrock, **Anthropic models** | dead | 403 `INVALID_PAYMENT_INSTRUMENT`. Anthropic on Bedrock is an AWS **Marketplace subscription**, which needs a card. Credits are not a payment instrument |
+| **Bedrock, everything else** | **WORKS** | 93 models callable. Non-Anthropic models bill as ordinary AWS usage, so credits cover them |
+| Google AI Studio | works, unused | Free tier, no card. Kept as fallback |
 
-Bedrock probing was not wasted: `ListFoundationModels` works with the bearer
-token and is the way to enumerate entitlements. The catalogue lists models the
-account cannot call -- visibility is not entitlement.
+**The lesson: the payment wall was Anthropic-specific, not Bedrock-wide.** I
+concluded "Bedrock is dead" from a sample that was entirely Anthropic models.
+`ops/probe_bedrock.py` enumerates entitlements properly -- catalogue visibility
+is not entitlement, so it sends a real Converse request to one id per family.
+
+**Model chosen by bake-off, not reputation.** Six candidates held all three
+schemas. The tiebreak was the blackout job on three known dates:
+
+| Day (truth) | GLM-5 | Nova Pro / Llama-4 |
+|---|---|---|
+| Mon 8/31, nothing scheduled | 0 windows | **invented an ISM blackout** |
+| Tue 9/1, ISM+JOLTS 10:00 | 09:30-10:20 | ok |
+| Wed 9/2, ADP + Beige Book | both, right times | Beige Book ok, ADP time wrong |
+
+Nova and Llama lifted Tuesday's ISM out of the regime brief and applied it to
+Monday, which would stand the agent down on the one clear day of the week.
+`zai.glm-5` on `us-east-1`, ~30s per call against a 15-minute cycle.
 
 `contour/llm.py` is a provider seam: `AnthropicProvider`, `BedrockProvider` and
 `OpenAICompatProvider` (Featherless + Gemini) behind one
@@ -72,10 +87,14 @@ account cannot call -- visibility is not entitlement.
 than an architecture. `CONTOUR_LLM` (`off`/`anthropic`/`bedrock`/`featherless`/
 `gemini`) forces one; `CONTOUR_LLM_MODEL` overrides the model id.
 
-**Repo variable `CONTOUR_LLM=gemini` is set, deliberately.** A configured brain
-that 403s fails CLOSED -- correct policy, but with the dead Bedrock token in
-place the cron would have vetoed every trade all week. The variable routes
-around it without deleting the secret.
+Bedrock speaks the **Converse API**, not per-provider `invoke` schemas: one
+body shape across all 93 models, so switching model is a string change.
+
+Repo variables: `CONTOUR_LLM=bedrock`, `AWS_REGION=us-east-1`. Secret:
+`AWS_BEARER_TOKEN_BEDROCK`. **Watch the token's expiry** -- Bedrock bearer
+tokens can be short-lived, and a configured brain that 401s fails CLOSED, which
+would veto every entry for the rest of the week while looking healthy. If that
+happens, clear the secret or set `CONTOUR_LLM=gemini`; degraded still trades.
 
 Verify any provider without trading: `python -m contour --brain-check`.
 

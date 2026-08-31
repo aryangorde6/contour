@@ -46,7 +46,16 @@ GEMINI_MODEL = "gemini-3.7-flash"
 # INVALID_PAYMENT_INSTRUMENT, and the 3.x models are marked Legacy in us-east-1.
 # This inference profile answers, and Haiku 4.5 at $1/$5 per MTok puts the whole
 # contest around fifty cents.
-BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+# Chosen by probing the real account (ops/probe_bedrock.py), not the catalogue.
+# Anthropic models on Bedrock are AWS Marketplace subscriptions and 403 with
+# INVALID_PAYMENT_INSTRUMENT; 93 non-Anthropic models bill as ordinary AWS
+# usage and answer fine, so credits cover them.
+# Picked by bake-off against the real blackout prompt on three known dates,
+# not by benchmark reputation. GLM-5 returned zero windows on the Monday with
+# no scheduled print, and the correct windows on Tuesday and Wednesday. Nova
+# Pro and Llama-4 both invented a Monday blackout by lifting Tuesday's ISM out
+# of the brief -- which would stand the agent down on the one clear day.
+BEDROCK_MODEL = "zai.glm-5"
 BEDROCK_REGION = "us-east-1"
 
 ANTHROPIC_MODEL = "claude-opus-5"
@@ -228,28 +237,23 @@ class BedrockProvider:
         self.session_token = session_token
 
     def _invoke(self, system: str, msgs: list[dict], max_tokens: int) -> str:
-        body = {"anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": max_tokens, "system": system, "messages": msgs}
+        """Bedrock's Converse API: one request shape for every provider on the
+        platform. Nova, Qwen, Mistral, Llama and GLM each take a different
+        `invoke` body; Converse takes the same one, so the model becomes a
+        string we can change rather than a code path we have to add."""
         if not self.api_key:
-            # SigV4 is the SDK's job; we do not reimplement request signing.
-            try:
-                from anthropic import AnthropicBedrock
-            except ImportError as exc:                          # pragma: no cover
-                raise LLMError(
-                    "key-pair auth needs `pip install 'anthropic[bedrock]'`; "
-                    "a bearer token in AWS_BEARER_TOKEN_BEDROCK needs nothing"
-                ) from exc
-            c = AnthropicBedrock(aws_access_key=self.access_key,
-                                 aws_secret_key=self.secret_key,
-                                 aws_session_token=self.session_token or None,
-                                 aws_region=self.region)
-            r = c.messages.create(model=self.model, max_tokens=max_tokens,
-                                  system=system, messages=msgs)
-            return "".join(b.text for b in r.content
-                           if getattr(b, "type", None) == "text")
+            raise LLMError(
+                "Converse needs a bearer token in AWS_BEARER_TOKEN_BEDROCK; "
+                "key-pair auth would require SigV4 signing we do not do here")
 
         url = (f"https://bedrock-runtime.{self.region}.amazonaws.com"
-               f"/model/{self.model}/invoke")
+               f"/model/{self.model}/converse")
+        body = {
+            "messages": [{"role": m["role"],
+                          "content": [{"text": m["content"]}]} for m in msgs],
+            "system": [{"text": system}],
+            "inferenceConfig": {"maxTokens": max_tokens, "temperature": 0.2},
+        }
         r = httpx.post(url, headers={"Authorization": f"Bearer {self.api_key}",
                                      "Content-Type": "application/json"},
                        json=body, timeout=TIMEOUT)
@@ -257,13 +261,16 @@ class BedrockProvider:
             detail = r.text[:200]
             if "INVALID_PAYMENT_INSTRUMENT" in detail:
                 raise LLMError(
-                    f"{self.model} needs a payment method on the AWS account. "
-                    f"Pick a model the account is entitled to.")
+                    f"{self.model} is an AWS Marketplace subscription and this "
+                    f"account has no payment instrument. Anthropic models on "
+                    f"Bedrock are all like this; pick a non-Anthropic model.")
             raise LLMError(f"HTTP {r.status_code} on {self.model}: {detail}")
         try:
-            return "".join(b.get("text", "") for b in r.json().get("content", []))
-        except ValueError as exc:
-            raise LLMError(f"malformed Bedrock response: {exc}") from exc
+            blocks = r.json()["output"]["message"]["content"]
+        except (KeyError, ValueError) as exc:
+            raise LLMError(f"malformed Converse response: {exc}") from exc
+        # Reasoning models put their chain in a separate block; we want prose.
+        return "".join(b.get("text", "") for b in blocks if "text" in b)
 
     def parse(self, system: str, user: str, schema: type[BaseModel],
               effort: str = "low") -> BaseModel:
