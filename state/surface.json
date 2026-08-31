@@ -1,0 +1,29 @@
+[
+ {
+  "underlying": "SPY",
+  "spot": 765.53,
+  "atm_iv": 11.48,
+  "rv10": 7.8559,
+  "vrp_ratio": 1.461,
+  "skew25": 2.85,
+  "skew_z": 0.275
+ },
+ {
+  "underlying": "QQQ",
+  "spot": 713.83,
+  "atm_iv": 16.8075,
+  "rv10": 13.9005,
+  "vrp_ratio": 1.209,
+  "skew25": 3.53,
+  "skew_z": 0.554
+ },
+ {
+  "underlying": "IWM",
+  "spot": 293.4,
+  "atm_iv": 15.8475,
+  "rv10": 13.1622,
+  "vrp_ratio": 1.204,
+  "skew25": 2.99,
+  "skew_z": -0.073
+ }
+]
