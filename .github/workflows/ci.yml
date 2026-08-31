@@ -40,6 +40,11 @@ jobs:
           fi
           echo "ok: no account-wide destructive commands"
 
+      - name: Replay must run with no credentials
+        # This job is given no secrets at all, so if --replay works here it
+        # works for a judge who has cloned the repo and has no Alpaca account.
+        run: python -m contour --replay
+
       - name: Journal chain must verify from a clean checkout
         run: python -m contour --verify
 

@@ -96,19 +96,40 @@ jobs:
         run: python -m contour --verify
 
       - name: Publish journal and state to the agent-state branch
+        # Built with a scratch index rather than a branch switch. The old
+        # version stashed journal/ and state/, checked out agent-state and
+        # popped -- but `stash --include-untracked` skips *ignored* files, and
+        # both directories are gitignored, so the outputs stayed in the working
+        # tree and the checkout aborted on "local changes would be overwritten".
+        # Here the working tree is never touched: we stage the two directories
+        # into a throwaway index, write a tree, and commit it straight onto the
+        # branch tip. No switch, so nothing can collide.
         run: |
           git config user.name "contour-agent"
           git config user.email "aryangorde6@gmail.com"
-          git stash push --include-untracked journal state 2>/dev/null || true
           git fetch origin agent-state --depth=1 2>/dev/null || true
-          if git rev-parse --verify origin/agent-state >/dev/null 2>&1; then
-            git checkout -B agent-state origin/agent-state
-          else
-            git checkout --orphan agent-state
-            git rm -rf --cached . >/dev/null 2>&1 || true
-            rm -rf contour tests .github fixtures ops dashboard 2>/dev/null || true
-          fi
-          git stash pop 2>/dev/null || true
+          BASE=$(git rev-parse --verify origin/agent-state 2>/dev/null || true)
+
+          export GIT_INDEX_FILE="$RUNNER_TEMP/publish.index"
+          rm -f "$GIT_INDEX_FILE"
           git add -f journal state
-          git diff --cached --quiet || git commit -m "cycle $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push origin agent-state
+          TREE=$(git write-tree)
+
+          # A publish that wipes the audit trail is worse than one that fails.
+          if [ "$TREE" = "$(git hash-object -t tree /dev/null)" ]; then
+            echo "::error::refusing to publish an empty tree"
+            exit 1
+          fi
+          if [ -n "$BASE" ] && [ "$TREE" = "$(git rev-parse "$BASE^{tree}")" ]; then
+            echo "nothing changed this cycle"
+            exit 0
+          fi
+
+          MSG="cycle $(date -u +%Y-%m-%dT%H:%MZ)"
+          if [ -n "$BASE" ]; then
+            COMMIT=$(git commit-tree "$TREE" -p "$BASE" -m "$MSG")
+          else
+            COMMIT=$(git commit-tree "$TREE" -m "$MSG")
+          fi
+          git push origin "$COMMIT:refs/heads/agent-state"
+          echo "published $COMMIT"

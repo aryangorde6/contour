@@ -49,7 +49,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/mind.py` — the brain: blackout windows, regime multiplier, structure veto
 - [x] `.github/workflows/` — the cron that actually trades
 - [x] `dashboard/` — live state, hash chain verified in the browser
-- [ ] `--replay` against a recorded fixture
+- [x] `contour/replay.py` — record a session, replay it with no keys
 
 ## The dashboard
 
@@ -98,7 +98,14 @@ counts; a bare IP over plain HTTP does not.
 uv venv --python 3.12 .venv && . .venv/bin/activate
 uv pip install -e '.[dev]'
 python -m pytest -q
+python -m contour --replay        # no Alpaca account required
 ```
+
+`--replay` runs a committed fixture — a real recorded chain of SPY, QQQ and IWM
+quotes — through the exact measurement, selection and gate code the live agent
+uses, and prints the decisions with every gate reason. It forces dry mode and a
+degraded brain, so the same fixture gives the same answer on any machine, on
+any day. Record a new one with `--record fixtures/NAME.json --dev`.
 
 ## Risk gates
 

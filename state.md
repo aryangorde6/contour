@@ -308,8 +308,12 @@ closed**.
    CloudFront + ACM to get HTTPS at all, and putting the dashboard on the same
    account as the brain couples the two failures that must not correlate
    during judging.
-3. **`--replay`** against a recorded fixture — a judge with no Alpaca keys must
-   be able to run the repo.
+3. ~~`--replay`~~ — **done.** `contour/replay.py`: `Recorder` tees the
+   `DataSource` seam into a fixture, `Replay` serves it back. Forces dry + a
+   degraded brain so it is deterministic, and writes to `replay_out/` so a
+   rehearsal can never land in the published audit trail. CI runs it with no
+   secrets. **Re-record mid-session** for a better demo -- the committed
+   fixture is pre-open, so its quotes are weekend-stale and G5 vetoes.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —
    Limited"), plus slides needing market analysis, revenue model, roadmap and
    competitive analysis (four slides most teams skip).

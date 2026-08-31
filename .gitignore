@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 state/
 journal/*.jsonl
+replay_out/
 logs/
 *.db
 *.sqlite3

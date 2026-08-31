@@ -104,5 +104,8 @@ word for it.
 
 Full detail — the bake-off table, every calibration bug, the Bedrock
 payment-wall finding, and what we deliberately do *not* claim about P&L — is in
-**[TECHNICAL.md](TECHNICAL.md)**. The suite runs with no credentials at all:
-`pip install -e '.[dev]' && pytest`.
+**[TECHNICAL.md](TECHNICAL.md)**. Nothing here needs our credentials to check:
+`pytest` runs the whole suite, and `python -m contour --replay` puts a committed
+fixture of real SPY/QQQ/IWM quotes through the same measurement, selection and
+gate code the live agent runs, printing every gate reason. CI runs both with no
+secrets on every push.

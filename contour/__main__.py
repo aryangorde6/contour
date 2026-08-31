@@ -1,4 +1,5 @@
-"""python -m contour [--once] [--dry] [--as-of ISO] [--verify] [--dev]"""
+"""python -m contour [--once] [--dry] [--as-of ISO] [--verify] [--dev]
+                    [--record PATH] [--replay [PATH]]"""
 from __future__ import annotations
 
 import argparse
@@ -15,6 +16,7 @@ from .execute import CLIBroker
 from .journal import Journal
 from .loop import run_cycle
 from .mind import Mind
+from .replay import Recorder, Replay, ReplayBroker, ReplayError
 
 
 def main(argv=None) -> int:
@@ -30,6 +32,11 @@ def main(argv=None) -> int:
                     help="recompute the journal hash chain and exit")
     ap.add_argument("--brain-check", action="store_true",
                     help="exercise all three LLM calls and exit; no trading")
+    ap.add_argument("--record", metavar="PATH",
+                    help="tee every market read into a replay fixture")
+    ap.add_argument("--replay", metavar="PATH", nargs="?", const="",
+                    help="run a recorded fixture; needs no credentials at all "
+                         "(bare --replay picks the newest in fixtures/)")
     args = ap.parse_args(argv)
 
     load_dotenv()
@@ -58,6 +65,14 @@ def main(argv=None) -> int:
             print(f"  {r}")
         print(f"\n{'all three calls returned schema-valid output' if ok else 'BRAIN UNUSABLE -- see above'}")
         return 0 if ok else 1
+
+    if args.replay is not None:
+        try:
+            fx = Replay.load(args.replay) if args.replay else Replay.newest()
+        except ReplayError as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        return _run_replay(fx)
 
     if args.verify:
         ok_all = True
@@ -101,9 +116,13 @@ def main(argv=None) -> int:
     if not mind.configured:
         print("[mind] no LLM provider configured -- degraded: half size, "
               "hard-coded blackout table, no LLM veto")
-    res = run_cycle(ds=AlpacaData(key, sec), broker=broker, now_et=now_et,
+    ds = AlpacaData(key, sec)
+    rec = Recorder(ds, args.record) if args.record else None
+    res = run_cycle(ds=rec or ds, broker=broker, now_et=now_et,
                     market_open=market_open, journal=journal, dry=args.dry,
                     mind=mind)
+    if rec is not None:
+        print(f"\n[record] wrote {rec.save(now_et)}")
 
     print(f"\nmode={res.mode}  ({res.reason})")
     for m in res.measurements:
@@ -118,6 +137,54 @@ def main(argv=None) -> int:
                                  "G11 ok", "G12 ok")):
                 print(f"      VETO: {g}")
     return 0
+
+
+def _run_replay(fx: Replay) -> int:
+    """Deterministic by construction: dry, degraded brain, frozen clock.
+
+    Journal and state go to their own subdirectories so a replay can never be
+    mistaken for -- or appended onto -- the live record.
+    """
+    from . import state
+
+    now_et = fx.as_of_et
+    stem = fx.path.stem if fx.path else "fixture"
+    # Deliberately outside journal/ and state/: those two directories are what
+    # the agent publishes as its audit trail, and a rehearsal must never be
+    # able to land in it.
+    root = Path("replay_out")
+    out = root / "journal" / f"{stem}.jsonl"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.unlink(missing_ok=True)          # a fresh chain, not an appended one
+    state.ROOT = root / "state"
+
+    print(f"[replay] {fx.path}  captured {fx.data['captured_utc']}")
+    print(f"[replay] clock frozen at {now_et:%Y-%m-%d %H:%M} ET; "
+          f"dry, degraded brain -- same fixture, same decisions, every run")
+
+    journal = Journal(out)
+    try:
+        res = run_cycle(ds=fx, broker=ReplayBroker(), now_et=now_et,
+                        market_open=True, journal=journal, dry=True,
+                        mind=Mind(api_key=""))
+    except ReplayError as exc:
+        print(f"\n{exc}", file=sys.stderr)
+        return 2
+
+    print(f"\nmode={res.mode}  ({res.reason})")
+    for m in res.measurements:
+        print(f"  {m['underlying']}: spot {m['spot']}  atm_iv {m['atm_iv']:.1f}  "
+              f"rv10 {m['rv10']:.1f}  vrp {m['vrp_ratio']:.2f}  "
+              f"skew {m['skew25']:+.2f} (z {m['skew_z']:+.2f})")
+    for d in res.decisions:
+        print(f"  {d['underlying']}: {d['decision']} -- {d['reason']}")
+        for g in d.get("gates", []):
+            if " ok" not in g.split(":")[0]:
+                print(f"      VETO: {g}")
+
+    ok, msg = Journal(out).verify()
+    print(f"\n[replay] {out}: {msg}")
+    return 0 if ok else 1
 
 
 def _market_open(key: str, sec: str) -> bool:
