@@ -215,3 +215,46 @@ def test_a_cycle_with_no_journal_yet_counts_nothing(tmp_path):
     got = _counts(tmp_path, {"dec": None, "recs": None})
     assert got["opened"] == 0
     assert got["refused"] == {"gated": 0, "llm": 0, "unfilled": 0}
+
+
+# --- the deck is a published page too ------------------------------------
+DECK = PAGE.parent / "deck.html"
+
+
+def test_the_deck_and_the_dashboard_read_the_same_branch():
+    """Both pages fetch the agent's published state. If a rename moves one and
+    not the other, the broken one is silently a slide of stale numbers."""
+    def consts(p):
+        src = p.read_text()
+        return {k: re.search(rf'{k}="([^"]+)"', src).group(1)
+                for k in ("OWNER", "REPO", "BRANCH")}
+    assert consts(DECK) == consts(PAGE)
+
+
+def test_the_deck_has_seven_slides_and_the_script_expects_them():
+    """The narration in ops/video.md is written against seven, by number."""
+    assert DECK.read_text().count('class="slide') == 7
+
+
+def test_no_published_page_uses_a_root_relative_url():
+    """Pages serves these from /contour/, Vercel from the root. A root-relative
+    URL works on exactly one of them, and CI greps for this too -- but a red
+    test is a faster way to find out than a failed deploy."""
+    for p in PAGE.parent.glob("*.html"):
+        bad = re.findall(r'(?:src|href)="/[^/][^"]*"', p.read_text())
+        assert not bad, f"{p.name}: {bad}"
+
+
+def test_the_deck_does_not_advertise_a_stale_test_count(request):
+    """A number on a slide goes stale silently, and this project's whole claim
+    is that its claims are checkable. So the suite counts itself.
+
+    If this fails, the suite grew: put the new number in deck.html. Skipped on
+    a subset run, where the count means nothing.
+    """
+    collected = request.session.testscollected
+    if collected < 50:
+        pytest.skip(f"subset run ({collected} collected); count is meaningless")
+    claimed = {int(n) for n in re.findall(r"(\d+) tests", DECK.read_text())}
+    assert claimed == {collected}, (
+        f"deck.html says {claimed}, the suite has {collected}")

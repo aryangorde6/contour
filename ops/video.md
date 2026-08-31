@@ -12,7 +12,7 @@ have changed by the time you record — re-read it off the dashboard first.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 133 passed
+git pull && .venv/bin/python -m pytest -q          # expect 137 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -21,7 +21,13 @@ Open in tabs, in this order, so you never fumble mid-take:
 1. https://aryangorde6.github.io/contour/ — the dashboard
 2. A terminal, font size 18+, in `~/alpaca_hack`, cleared
 3. https://app.alpaca.markets — order history for `PA35XVXLIO0E`
-4. The slide deck (see below), on the market-analysis slide
+4. **https://aryangorde6.github.io/contour/deck.html** — the deck, fullscreen
+
+The deck is built. It is a 1280×720 stage scaled to the window, so it looks
+identical at 1080p and on a laptop; `←` `→` or click to move, and the slide
+number is bottom-right. Its market-analysis slide reads the agent's own
+published VRP measurement rather than a number typed in last week, so it is
+current on the day you record without you touching it.
 
 Record at 1920×1080. Screen capture with a voiceover beats a webcam talking
 head for a technical judge — but put a 3-second title card with your name and
@@ -142,7 +148,10 @@ are the strongest image in the video.*
 
 ## The deck
 
-Seven slides. Keep them near-wordless; the narration carries it.
+**Built: `dashboard/deck.html`, live at
+[aryangorde6.github.io/contour/deck.html](https://aryangorde6.github.io/contour/deck.html).**
+What follows is what each slide says, so you can check the narration lands on
+the right one. Slide numbers below match the counter in the corner.
 
 **1 — Title.** *Contour — the measurement picks the structure.* Name, team
 FluffyMargins, the four-line rule, account `PA35XVXLIO0E`.
@@ -153,15 +162,15 @@ FluffyMargins, the four-line rule, account `PA35XVXLIO0E`.
 **3 — Alpaca infrastructure.** CLI vs MCP (link issue 97), the three-rung
 ladder, `reconcile()` reading actual fills, the hash chain. One line each.
 
-**4 — Market analysis.**
-- Short-premium is the crowded retail options trade; the crowd sells one
-  structure regardless of the surface.
-- Measured today: SPY VRP 1.42, QQQ 1.17, IWM 1.20 ⚠️ — the premium exists
-  and is *not* uniform. Dispersion is the opportunity.
-- Friction is the real gate on universe size: single-name weeklies $40–80
-  round trip vs a $30–42 modeled edge; the three ETFs cost $8–20.
-- Alpaca serves no earnings-date endpoint on any plan, so any single-name
-  design hangs its most important gate on data that does not exist.
+**4 — Market analysis.** The three VRP figures on this slide are **live** —
+fetched from `state/surface.json` on the `agent-state` branch, with the last
+known values baked in as a fallback so it never renders an em-dash on stage.
+The footer says which of the two you are looking at. Alongside: the crowd
+sells one structure regardless of the surface; friction is the real gate on
+universe size ($40–80 round trip on single names against a $30–42 modelled
+edge, versus $8–20 on the ETFs); and Alpaca serves no earnings-date endpoint
+on any plan, so a single-name design hangs its most important gate on data
+that does not exist.
 
 > If you want a citable market-size number on this slide, source it yourself
 > and put the citation on the slide. I am not giving you one to read out —
@@ -181,7 +190,7 @@ structures from measured skew.* Third row: *runnable without our credentials —
 - **Not** signal subscriptions — that is investment advice and needs
   registration. Saying this out loud is a credibility win, not a weakness.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 133 tests. Next:
+**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 137 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of

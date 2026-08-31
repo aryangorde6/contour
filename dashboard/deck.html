@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contour — deck</title>
+<meta name="description" content="Seven slides behind the Contour submission: the structure rule, the model's leash, the twelve gates, and the four slides most teams skip.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>%F0%9F%93%90</text></svg>">
+<style>
+:root{
+  --bg:#0a0c0f; --panel:#11151a; --sunk:#0d1115; --line:#1e252d;
+  --txt:#e8eef4; --dim:#8b98a6; --faint:#5c6874;
+  --green:#46d18a; --amber:#f0b429; --red:#f2616b; --blue:#5aa9f0; --violet:#a78bfa;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+body{
+  color:var(--txt); font:16px/1.5 -apple-system,BlinkMacSystemFont,
+  "Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  display:grid; place-items:center;
+}
+a{color:var(--blue);text-decoration:none}
+
+/* The stage is a fixed 1280x720 and everything inside is sized against it, so
+   a slide looks identical whether it is recorded at 1080p or read on a laptop.
+   Only the scale changes. */
+#stage{width:1280px;height:720px;position:relative;transform-origin:center;
+  background:var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;padding:64px 76px;display:none;
+  flex-direction:column;justify-content:center}
+.slide.on{display:flex}
+
+h1{font-size:60px;line-height:1.05;margin:0 0 18px;letter-spacing:-.025em;font-weight:640}
+h1 .q{color:var(--faint);font-weight:400}
+h2{font-size:19px;margin:0 0 30px;color:var(--dim);font-weight:600;
+  text-transform:uppercase;letter-spacing:.14em}
+p{margin:0 0 14px;font-size:23px;color:var(--dim);max-width:62ch}
+p b,li b{color:var(--txt);font-weight:600}
+.lede{font-size:27px;color:var(--txt);max-width:56ch;line-height:1.4}
+ul{margin:0;padding:0;list-style:none}
+li{font-size:22px;color:var(--dim);margin-bottom:12px;padding-left:22px;position:relative;
+  max-width:60ch;line-height:1.45}
+li::before{content:"";position:absolute;left:0;top:11px;width:7px;height:7px;
+  border-radius:50%;background:var(--line)}
+li.hi::before{background:var(--green)}
+code,.mono{font-family:var(--mono)}
+.dim{color:var(--faint)}
+.rule{display:grid;grid-template-columns:auto auto 1fr;gap:8px 20px;
+  font-family:var(--mono);font-size:23px;align-items:baseline;margin-top:6px}
+.rule .c{color:var(--amber)}
+.rule .s{color:var(--txt);font-weight:600}
+.rule .w{color:var(--faint);font-size:18px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);
+  border-radius:10px;overflow:hidden;margin-top:4px}
+.two>div{padding:22px 26px}
+.two>div+div{border-left:1px solid var(--line)}
+.two h3{margin:0 0 16px;font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+.may h3{color:var(--green)} .never h3{color:var(--red)}
+.two li{font-size:19px;margin-bottom:11px}
+.never{background:var(--sunk)}
+.tight .lede{font-size:25px}
+.tight li{font-size:21px;margin-bottom:10px;line-height:1.42}
+.tight li::before{top:10px}
+.foot{position:absolute;left:76px;right:76px;bottom:34px;display:flex;
+  justify-content:space-between;align-items:center;font-family:var(--mono);
+  font-size:14px;color:var(--faint)}
+.pill{border:1px solid var(--line);background:var(--sunk);border-radius:999px;
+  padding:5px 13px;color:var(--dim)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start}
+.card{border:1px solid var(--line);border-radius:10px;padding:20px 24px;background:var(--panel)}
+.card h3{margin:0 0 10px;font-size:20px;color:var(--txt)}
+.card p{font-size:18px;margin:0;line-height:1.45}
+.num{font-family:var(--mono);color:var(--txt)}
+.big{font-family:var(--mono);font-size:40px;color:var(--txt);font-weight:600}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:6px 0 20px}
+.metric{border:1px solid var(--line);border-radius:10px;padding:16px 20px;background:var(--panel)}
+.metric .k{font-size:14px;color:var(--faint);font-family:var(--mono);letter-spacing:.08em}
+.metric .v{font-family:var(--mono);font-size:34px;font-weight:600;margin-top:4px}
+.metric .v.pos{color:var(--green)} .metric .v.neg{color:var(--red)}
+.metric .s{font-size:13px;color:var(--faint);margin-top:2px}
+table{border-collapse:collapse;width:100%;font-size:19px;margin-top:2px}
+td,th{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);color:var(--dim)}
+th{color:var(--faint);font-size:13px;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+td.me{color:var(--txt)}
+tr.mine td{background:rgba(70,209,138,.06)}
+tr:last-child td{border-bottom:none}
+
+#bar{position:absolute;left:0;bottom:0;height:2px;background:var(--green);
+  transition:width .18s ease;z-index:3}
+#nav{position:fixed;bottom:14px;right:18px;font-family:var(--mono);font-size:12px;
+  color:var(--faint);z-index:4;user-select:none}
+#hint{position:fixed;bottom:14px;left:18px;font-family:var(--mono);font-size:12px;
+  color:var(--line);z-index:4}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- 1 -->
+  <section class="slide on">
+    <h2>Alpaca AI Trading Agents Hackathon</h2>
+    <h1>Contour <span class="q">— the measurement picks the structure</span></h1>
+    <div class="rule">
+      <span class="c">vrp_ratio &lt; 1.30</span><span class="dim">→</span><span><span class="s">NO_TRADE</span> <span class="w">implied is not rich enough to sell</span></span>
+      <span class="c">skew_z ≥ +0.8</span><span class="dim">→</span><span><span class="s">PUT_CREDIT_SPREAD</span> <span class="w">puts rich — sell puts, not cheap calls</span></span>
+      <span class="c">skew_z ≤ −0.8</span><span class="dim">→</span><span><span class="s">CALL_CREDIT_SPREAD</span> <span class="w">calls rich — sell calls, not cheap puts</span></span>
+      <span class="c">otherwise</span><span class="dim">→</span><span><span class="s">IRON_CONDOR</span> <span class="w">both sides fair — sell both</span></span>
+    </div>
+    <div class="foot">
+      <span>Team FluffyMargins · SPY · QQQ · IWM · one locked expiry</span>
+      <span class="pill">paper account PA35XVXLIO0E</span>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide">
+    <h2>AI logic — the leash</h2>
+    <p class="lede" style="margin-bottom:26px">Every wired model output can only make the
+      agent trade <b>less</b>. Not a promise — a property of the import graph.</p>
+    <div class="two">
+      <div class="may">
+        <h3>The model may</h3>
+        <ul>
+          <li>Name event windows to stand down in</li>
+          <li>Return a size multiplier, clamped at 1.0</li>
+          <li>Veto a proposed structure</li>
+        </ul>
+      </div>
+      <div class="never">
+        <h3>The model may never</h3>
+        <ul>
+          <li>Choose a strike</li>
+          <li>Size or price a position</li>
+          <li>Reverse or widen anything</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot">
+      <span class="mono">execute.py never imports mind.py</span>
+      <span class="pill">GLM-5 on Amazon Bedrock · picked by bake-off</span>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide tight">
+    <h2>Alpaca infrastructure</h2>
+    <ul style="margin-top:4px">
+      <li class="hi"><b>Orders go through the CLI, and that is a finding.</b> The MCP server
+        cannot place multi-leg orders — the <code>legs</code> array arrives as a JSON string
+        and fails validation. <span class="mono dim">alpaca-mcp-server#97</span>, open since
+        July. The CLI places the identical 4-leg order correctly.</li>
+      <li>Reads are <code>alpaca-py</code>: chain snapshots carry Greeks but no
+        <code>open_interest</code>, so they are merged with Trading API contract objects.</li>
+      <li>Entries are a <b>three-rung limit ladder</b> from mid toward the bid, never a
+        market order. <code>reconcile()</code> reads actual per-leg fills: paper issues
+        random partials, and trusting the request puts condor legs out of ratio.</li>
+      <li class="hi">The journal is an <b>append-only SHA-256 hash chain</b>. The dashboard
+        recomputes it in your browser and prints the same verdict the CLI does.</li>
+      <li>Autonomy is GitHub Actions: pre-open planning, a cycle every 15 minutes, a
+        scheduled Thursday flatten. <b>No <code>pull_request</code> trigger</b> on the
+        credentialed workflow.</li>
+    </ul>
+    <div class="foot">
+      <span>Twelve risk gates · every reason journaled, pass or fail</span>
+      <span class="pill">137 tests</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide tight">
+    <h2>Market analysis</h2>
+    <p class="lede" style="margin-bottom:14px">The volatility premium is real, and it is
+      <b>not uniform</b>. That dispersion is the entire opportunity.</p>
+    <div class="metrics" id="vrp"></div>
+    <ul>
+      <li>Short premium is the crowded retail options trade — and the crowd sells
+        <b>one structure regardless of the surface</b>.</li>
+      <li><b>Friction decides the universe, not opinion.</b> Single-name weeklies cost
+        <span class="num">$40–80</span> round trip against a <span class="num">$30–42</span>
+        modelled edge — it loses to costs before it starts. Three ETFs cost
+        <span class="num">$8–20</span>.</li>
+      <li>Alpaca serves <b>no earnings-date endpoint on any plan</b>, so a single-name
+        design hangs its most important gate on data that does not exist.</li>
+    </ul>
+    <div class="foot">
+      <span id="vrpage">measured by the live agent</span>
+      <span class="pill">floor: vrp_ratio 1.30</span>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <h2>Competitive analysis</h2>
+    <table>
+      <thead><tr><th style="width:31%">Submission</th><th>Its own description</th></tr></thead>
+      <tbody>
+        <tr><td class="me">Horizon Blackline</td><td>LLM proposes, deterministic risk gates authorize, hash-chained and auditable</td></tr>
+        <tr><td class="me">VRP Engine</td><td>Harvests the variance risk premium with defined-risk spreads and risk gates</td></tr>
+        <tr><td class="me">AEGIS-Q</td><td>Bounded AI selects a pre-validated bullish or bearish spread — or abstains</td></tr>
+        <tr><td class="me">EdgeStack</td><td>Journals every trade and every refusal</td></tr>
+        <tr class="mine"><td class="me"><b>Contour</b></td><td><b>Chooses which of four structures to sell, from measured 25-delta skew.</b> And is runnable without our credentials.</td></tr>
+      </tbody>
+    </table>
+    <div class="foot">
+      <span>“LLM proposes, gates dispose, everything journaled” is table stakes now</span>
+      <span class="pill">python -m contour --replay</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide">
+    <h2>Revenue model</h2>
+    <div class="cols" style="margin-top:6px">
+      <div class="card">
+        <h3>The audit layer is the product</h3>
+        <p>The gate engine and the hash-chained decision record, licensed to brokers and
+          RIAs who have to <b>defend</b> an automated decision after the fact. That is the
+          durable asset here — not the alpha, which decays.</p>
+      </div>
+      <div class="card">
+        <h3>Own capital</h3>
+        <p>P&amp;L is the revenue and no registration question arises. The honest ceiling
+          on defined-risk premium selling is the credit, so this scales with capital,
+          not with claims.</p>
+      </div>
+    </div>
+    <p style="margin-top:26px"><b>Not</b> signal subscriptions. Selling trade
+      recommendations is investment advice and needs registration — saying so out loud
+      is a credibility position, not a limitation.</p>
+    <div class="foot">
+      <span>What we do not claim matters as much as what we do</span>
+      <span class="pill">median week: under +1%</span>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide">
+    <h2>Roadmap</h2>
+    <div class="cols">
+      <div>
+        <h3 style="font-size:17px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px">Shipped</h3>
+        <ul>
+          <li>3 ETFs, one locked expiry, 15-minute cycle</li>
+          <li>Twelve gates, 137 tests, chain verified in CI</li>
+          <li>Record / replay: a fixture reruns the pipeline with no credentials</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:17px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px">Next</h3>
+        <ul>
+          <li>Expiry laddering and rolls</li>
+          <li>Skew priors <b>learned</b> per underlying instead of hard-coded</li>
+          <li>Backtest harness — a data problem now, not a rewrite, because the
+            recorder already exists</li>
+          <li>Portfolio vega and gamma caps, not per-position max loss alone</li>
+          <li>Paid feed to close the indicative-vs-NBBO gap</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot">
+      <span>github.com/aryangorde6/contour · aryangorde6.github.io/contour</span>
+      <span class="pill">PA35XVXLIO0E</span>
+    </div>
+  </section>
+
+  <div id="bar"></div>
+</div>
+
+<div id="nav"></div>
+<div id="hint">← → or click</div>
+
+<script>
+const OWNER="aryangorde6", REPO="contour", BRANCH="agent-state";
+const RAW=`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/`;
+const slides=[...document.querySelectorAll(".slide")];
+let i=0;
+
+/* The stage is a fixed 1280x720 box scaled to fit. Recording at 1080p and
+   reading on a laptop then differ by a scale factor and nothing else, so a
+   line that fits here fits on tape. */
+function fit(){
+  const s=Math.min(innerWidth/1280,innerHeight/720);
+  document.getElementById("stage").style.transform=`scale(${s})`;
+}
+function show(n){
+  i=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,k)=>s.classList.toggle("on",k===i));
+  document.getElementById("bar").style.width=`${(i+1)/slides.length*100}%`;
+  document.getElementById("nav").textContent=`${i+1} / ${slides.length}`;
+  location.hash=i+1;
+}
+addEventListener("resize",fit);
+addEventListener("keydown",e=>{
+  if(["ArrowRight"," ","PageDown","n"].includes(e.key)){show(i+1);e.preventDefault();}
+  else if(["ArrowLeft","PageUp","p"].includes(e.key)){show(i-1);e.preventDefault();}
+  else if(e.key==="Home")show(0);
+  else if(e.key==="End")show(slides.length-1);
+});
+addEventListener("click",e=>show(i+(e.clientX<innerWidth*0.25?-1:1)));
+
+/* The market slide reads the agent's own published measurement rather than
+   quoting a number typed in last week. Static values stay in the markup as
+   the fallback: a slide that renders an em-dash on stage is worse than one
+   that is a few hours old, and the footer says which it is. */
+const FALLBACK=[{underlying:"SPY",vrp_ratio:1.42},{underlying:"QQQ",vrp_ratio:1.17},
+                {underlying:"IWM",vrp_ratio:1.20}];
+function drawVrp(rows,live){
+  document.getElementById("vrp").innerHTML=rows.map(m=>{
+    const rich=m.vrp_ratio>=1.30;
+    return `<div class="metric"><div class="k">${m.underlying}</div>
+      <div class="v ${rich?"pos":"neg"}">${Number(m.vrp_ratio).toFixed(2)}</div>
+      <div class="s">${rich?"paid to sell":"not paid enough"}</div></div>`;}).join("");
+  document.getElementById("vrpage").textContent = live
+    ? "implied / 10-day realized, measured by the live agent"
+    : "implied / 10-day realized — last published measurement";
+}
+drawVrp(FALLBACK,false);
+fetch(RAW+"state/surface.json?t="+Date.now(),{cache:"no-store"})
+  .then(r=>r.ok?r.json():null)
+  .then(d=>{ if(Array.isArray(d)&&d.length) drawVrp(d,true); })
+  .catch(()=>{});
+
+fit();
+show(Number(location.hash.slice(1))-1||0);
+</script>
+</body>
+</html>

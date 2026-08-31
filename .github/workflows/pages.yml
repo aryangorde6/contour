@@ -35,13 +35,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: The page must be self-contained
-        # It is served from a project path (/contour/) on Pages and from the
+      - name: Every published page must be self-contained
+        # They are served from a project path (/contour/) on Pages and from the
         # root on Vercel. Any root-relative URL would work on exactly one of
         # them, and the one that broke would be the one a judge opened.
+        # Globbed, not named: this guard was written when index.html was the
+        # only page, and a guard that only covers the first page is not one.
         run: |
-          if grep -nE '(src|href)="/[^/]' dashboard/index.html; then
-            echo "::error::root-relative URL in dashboard/index.html -- breaks on a Pages project path"
+          if grep -rnE '(src|href)="/[^/]' dashboard/; then
+            echo "::error::root-relative URL under dashboard/ -- breaks on a Pages project path"
             exit 1
           fi
           echo "ok: no root-relative URLs"

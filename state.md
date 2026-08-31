@@ -237,7 +237,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**133 tests passing.** All core modules complete.
+**137 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -353,7 +353,13 @@ which read as a market-data problem rather than a brain outage.
    4:05–4:15, the tab order to set up first, and what to cut if it runs long
    (never §5 — the twelve green gates are the strongest evidence we have).
    Live numbers in it are marked ⚠️ and must be re-read off the dashboard at
-   record time. **What remains is recording it, which needs the operator.**
+   record time. **The deck is built too: `dashboard/deck.html`**, seven slides
+   published alongside the dashboard at `/contour/deck.html`, a 1280x720 stage
+   scaled to the window so it reads the same at 1080p and on a laptop. Its
+   market-analysis slide fetches the agent's own published VRP rather than
+   quoting a stale number, falling back to the last known values so it never
+   renders an em-dash on stage. **What remains is recording it, which needs
+   the operator.**
 5. **Social** — 5 posts on X/LinkedIn tagging `@lablabai` and `@AlpacaHQ` **in
    the body**. Only 18 total likes across all 23 submissions; two $500 prizes
    are nearly uncontested. Reddit links likely do not qualify. **All five are
@@ -536,7 +542,7 @@ it is wired in.
 ## 8. Resume commands
 
 ```bash
-.venv/bin/python -m pytest -q                                  # 133 tests
+.venv/bin/python -m pytest -q                                  # 137 tests
 .venv/bin/python -m contour --replay                           # no credentials needed
 .venv/bin/python -m contour --brain-check                      # is the LLM alive?
 .venv/bin/python -m contour --dry --dev --as-of 2026-08-31T11:00
