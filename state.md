@@ -269,9 +269,68 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 | `contour/__main__.py` | `--once --dry --as-of --dev --verify --brain-check --record --replay` |
 
 **`mind.py` design rule:** the LLM's outputs can only make the agent trade
-**less**. Multiplier is `min(value, 1.0)` and scales the NAV used for *sizing*,
-so `NONE` yields zero contracts. It cannot pick a strike, size, price, or
-reverse a structure. Enforced structurally — `execute.py` does not import it.
+**less**. It cannot pick a strike, size, price, or reverse a structure.
+Enforced structurally — `execute.py` does not import it.
+
+### 2026-08-31: the model was anchoring, so sizing moved out of it
+
+`multiplier` came back **exactly 0.5 on sixteen consecutive cycles** with
+mutually contradictory prose attached — *"implied is roughly double realized,
+which normally favors short premium"*, then *"vol premium is NOT being paid"*,
+then *"the vol premium is extremely rich"* — same market, same session. The
+prose was generated; the number was not. And 0.5 is also the documented
+degraded default, so nothing in the journal would ever have flagged it as
+wrong. It was visible only because the multiplier is journaled every cycle.
+
+`contour/regime.py` sizes now, from work researched, backtested and frozen
+before this hackathon existed (`~/TRADINGVIEW_INDICATOR`, `~/fable_project`):
+
+| System | Rule used | Evidence |
+|---|---|---|
+| Stage-2 | above a **rising** 30-week SMA — the persistent state, not the breakout entry | Weinstein; replicated 30.5y / 397 round-trips / 39 names, pooled **PF 3.53** (CI 2.11–5.82), 3.78 OOS |
+| Ribbon | EMA 20>50>200, price above the 200 | 15 names / 10 sectors, 11 of 15 PF>1 |
+| LRS-VT2 | `min(1, σ_LR/σ_20)` × two-speed ladder × overextension trim | Gayed & Bilello 2016 (Dow Award); Moreira & Muir 2017 (JF) |
+
+**LRS supplies the magnitude** (the only one carrying a sizing formula); the
+other two **confirm** — both standing takes the weight whole, one halves it,
+neither is zero. Bounded at 1.0, so "can only trade less" still holds. Every
+gate runs against the result; G3 caps book and per-position risk regardless.
+
+**Blast radius is bounded by gates that already existed.** At weight 1.0 a
+condor sizes to ~$840 max loss against G3's $1,000 per-position cap, and G4
+still caps 6 concurrent / 2 per underlying — so the ceiling is ~5% of NAV,
+inside the Wed/Thu 8% ramp.
+
+**Live first reading: SPY 1.0, QQQ 1.0, IWM 0.5.** The ladder drops IWM to its
+warning rung (below its 50d SMA), independently agreeing with the surface,
+which reads IWM weakest. Two unrelated measurements flagging the same name is
+worth more than either alone.
+
+**Two transfers, stated in `regime.py`, `WRITEUP.md` and `TECHNICAL.md` rather
+than buried:** (1) Stage-2 and the ribbon were validated on Indian equities and
+are used here on US ETFs — Stage-2 is Weinstein, US literature returning home,
+and the ribbon is generic trend-following, but it is still a transfer; (2) all
+three are *long-equity* systems sizing a *short-premium* book, justified
+because both are short volatility and die in the same regime, which is exactly
+what the vol-scaling term measures.
+
+**Rejected, and why — do not revisit:**
+
+| Candidate | Why not |
+|---|---|
+| TQQQ VP+TPO (`src/tqqq_vp_tpo_*.pine`) | The only US intraday work and the only 4-day-compatible holding period, but **unvalidated by its own header**. Running an unbacktested system on the judged account three days out contradicts the whole submission |
+| NIFTY 5m/15m family (10 files) | `docs/FINDINGS.md` is a terminal negative result: PF 0.63–0.80 across 5 entries × 3 exits × 2 timeframes. Knowingly trading a system the research killed |
+| Stage-2 as an **entry** system | Median winner held 9–10 months, <1 trade per name per year. Over four days it produces nothing. Only its regime *state* is usable |
+| Trend-aware structure selection | **Right, and deferred on purpose.** The map breaks ties toward the condor, which sells calls into a confirmed uptrend — the exact error the thesis was written against. But it changes `select.py`, the differentiator every judged document describes, and a put spread collects $0.33 against the condor's $0.81, so it would *cost* P&L this week. It is the roadmap slide and one line in the video instead |
+
+### `Replay.newest` served the wrong fixture for two days
+
+It sorted by **filename**. `2026-08-31-1305et.json` sorts before
+`2026-08-31-preopen.json`, so `--replay` — the demo whose whole job is showing
+twelve passing gates — served a fixture recorded four hours earlier and showed
+a **G5 staleness veto** instead. Now sorted on the fixture's own
+`captured_utc`, with an unreadable file never winning. The claim in README and
+WRITEUP was true when written and had silently stopped being true.
 
 **Two-tier failure policy:** not configured → degraded but **still trading**
 (half size, hard-coded blackouts, no veto). Configured but failing → **fail
