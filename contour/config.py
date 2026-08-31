@@ -13,7 +13,7 @@ UTC = ZoneInfo("UTC")
 
 # --- universe -------------------------------------------------------------
 # Three ETFs, deliberately. Single-name weeklies cost $40-80 round-trip
-# against a ~$30-42 modeled edge; SPY/QQQ/IWM cost $8-20. See WRITEUP.md.
+# against a ~$30-42 modeled edge; SPY/QQQ/IWM cost $8-20. See TECHNICAL.md.
 UNIVERSE = ("SPY", "QQQ", "IWM")
 
 WING_WIDTH = {"SPY": 5.0, "QQQ": 5.0, "IWM": 2.0}

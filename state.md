@@ -287,9 +287,12 @@ closed**.
 
 ## 7. What is left
 
-1. ~~`WRITEUP.md`~~ — **done**, but it still describes the AI layer as
-   Featherless/Gemini/Anthropic. Rewrite that section for Bedrock + GLM-5 and
-   the Converse decision before submitting; it is a graded deliverable.
+1. ~~`WRITEUP.md`~~ — **done.** Split in two on 2026-08-31: `WRITEUP.md` is the
+   brief's one-pager (idea, AI logic, twelve gates, Alpaca infra) and
+   `TECHNICAL.md` holds everything else (bake-off table, calibration bugs,
+   Bedrock payment wall, the honest P&L claim). Both name Bedrock + GLM-5.
+   **Edit both when a fact changes** -- the gate list and the structure map
+   appear in each.
 2. ~~Dashboard~~ — **built and LIVE at
    https://aryangorde6.github.io/contour/** (HTTPS, chain verifies in-browser).
    Pages was enabled out of band with

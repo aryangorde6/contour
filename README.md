@@ -55,6 +55,9 @@ Risk layer first, strategy second — deliberately.
 
 **Live: [aryangorde6.github.io/contour](https://aryangorde6.github.io/contour/)**
 
+_Submission write-up: [WRITEUP.md](WRITEUP.md) · engineering detail:
+[TECHNICAL.md](TECHNICAL.md)_
+
 `dashboard/index.html` is one static file with no build step and no backend. It
 reads the agent's own published state from the orphan **`agent-state`** branch
 over `raw.githubusercontent.com` and renders four things:
@@ -99,7 +102,8 @@ python -m pytest -q
 
 ## Risk gates
 
-The twelve gates are documented in [WRITEUP.md](WRITEUP.md). Two of them deviate
+The twelve gates are documented in [WRITEUP.md](WRITEUP.md), with the full
+calibration history in [TECHNICAL.md](TECHNICAL.md). Two of them deviate
 from the original design, both because writing the tests first proved the
 original values would have stopped the agent from ever placing an order. Those
 deviations are documented inline in `config.py` rather than quietly applied.
