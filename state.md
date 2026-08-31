@@ -237,7 +237,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**47 tests passing.** All core modules complete.
+**84 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -283,10 +283,14 @@ closed**.
 
 ## 7. What is left
 
-1. **`WRITEUP.md`** — required one-pager. §5 above is the risk content verbatim.
-2. **Dashboard + hosted demo URL** — scored on whether the link *works*. Use
-   Vercel, **not** Streamlit Community Cloud (sleeps after 12h idle; judges look
-   days later). Reads `agent-state` via raw.githubusercontent.
+1. ~~`WRITEUP.md`~~ — **done**, but it still describes the AI layer as
+   Featherless/Gemini/Anthropic. Rewrite that section for Bedrock + GLM-5 and
+   the Converse decision before submitting; it is a graded deliverable.
+2. ~~Dashboard~~ — **built** (`dashboard/index.html`, one static file, no build
+   step). **Still needs the hosted URL**: import the repo at vercel.com/new,
+   accept the settings `vercel.json` supplies, deploy. Scored on whether the
+   link *works*, so avoid Streamlit Community Cloud (sleeps after 12h idle;
+   judges look days later).
 3. **`--replay`** against a recorded fixture — a judge with no Alpaca keys must
    be able to run the repo.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —
@@ -301,12 +305,48 @@ closed**.
 **Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
 verification only. File a draft submission Wednesday night.
 
+### The dashboard
+
+One static file. No build, no backend, no framework. It fetches the agent's own
+published state from `agent-state` over raw.githubusercontent (CORS is open,
+`max-age=300`, so every request carries a cache-buster) and draws:
+
+- **the structure map** — the three names on skew-z against VRP over the four
+  decision zones. This is the differentiator made visible in one chart.
+- surface, every gate result, the equity curve, the journal feed
+- **the hash chain, recomputed client-side with WebCrypto.**
+
+The chain check does **not** re-serialise the payload. `to_line` and
+`_canonical` use the same `sort_keys`/`separators`, so the payload's canonical
+bytes are already sitting inside the line — the JS slices them out by
+brace-matching and hashes those. That verifies the file *as written* rather
+than our idea of it, and sidesteps the fact that Python writes `0.0` where
+`JSON.stringify` writes `0`. `tests/test_dashboard.py` runs the shipped
+JavaScript under Node against a Python-written chain (including a tampered
+record) and asserts identical verdicts.
+
+Two bugs the tests caught, both mine, both in code that looked right:
+`\\"` closed the string early in the brace matcher (the escape flag was read
+one character late), and stripping `<`/`>` for XSS turned
+`vrp 1.24 < 1.30` into `vrp 1.24 1.30` — escape, never censor.
+
+`state.point()` appends the NAV series the curve is drawn from; it is
+deliberately tolerant of a corrupt file, because a cosmetic curve is never
+worth failing a trading cycle over.
+
+**Journals are gitignored on `main` now.** A dev dry-run `journal/2026-08-31.jsonl`
+had been committed by an incidental `git add -A`, and the runner restores
+`journal/` from `agent-state` with a path-scoped checkout that does not delete
+untracked-elsewhere files — so the live cron would have appended judged records
+onto twelve dev dry-run records and published them as one chain. Journals are
+agent output; they belong on `agent-state` only, exactly like `state/`.
+
 ---
 
 ## 8. Resume commands
 
 ```bash
-.venv/bin/python -m pytest -q                                  # 47 tests
+.venv/bin/python -m pytest -q                                  # 84 tests
 .venv/bin/python -m contour --dry --dev --as-of 2026-08-31T11:00
 .venv/bin/python -m contour --verify                           # hash chain
 .venv/bin/python verify_setup.py                               # judged account

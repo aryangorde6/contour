@@ -118,7 +118,8 @@ def run_cycle(
     if phase.mode != "TRADE":
         journal.append({"event": "cycle_end", "cycle": cycle,
                         "mode": phase.mode, "entries": 0})
-        state.heartbeat(cycle, phase.mode, phase.reason)
+        state.heartbeat(cycle, phase.mode, phase.reason,
+                        {"brain": mind.brain if mind else "none"})
         return CycleResult(phase.mode, phase.reason, [], [], exits)
 
     # --- the advisory layer. It can only shrink what follows: blackouts add
@@ -142,6 +143,8 @@ def run_cycle(
     # --- entries
     acct = broker.account()
     nav = float(acct.get("equity", 0))
+    state.point("equity", {"nav": round(nav, 2), "mode": phase.mode,
+                           "cycle": cycle, "open": len(open_positions)})
     book = Book(nav=nav, session_pnl=0.0, positions=tuple(
         OpenPosition(p.candidate.underlying, p.candidate.structure,
                      p.candidate.contracts, p.candidate.max_loss_per_contract,
@@ -208,7 +211,8 @@ def run_cycle(
     journal.append({"event": "cycle_end", "cycle": cycle, "mode": phase.mode,
                     "entries": len(opened)})
     state.heartbeat(cycle, phase.mode, phase.reason,
-                    {"nav": nav, "entries": len(opened)})
+                    {"nav": nav, "entries": len(opened),
+                     "brain": mind.brain if mind else "none"})
     state.write("surface", measurements)
     state.write("decisions", decisions)
     return CycleResult(phase.mode, phase.reason, measurements, decisions, exits)

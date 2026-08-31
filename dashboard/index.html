@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contour — live</title>
+<meta name="description" content="An autonomous options agent that lets the shape of the volatility surface pick the structure. Live state, read straight from the agent's own hash-chained journal.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>%F0%9F%93%90</text></svg>">
+<style>
+:root{
+  --bg:#0a0c0f; --panel:#11151a; --sunk:#0d1115; --line:#1e252d;
+  --txt:#e8eef4; --dim:#8b98a6; --faint:#5c6874;
+  --green:#46d18a; --amber:#f0b429; --red:#f2616b; --blue:#5aa9f0; --violet:#a78bfa;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--txt); font:15px/1.55 -apple-system,BlinkMacSystemFont,
+  "Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px 72px}
+
+/* ---------- header ---------- */
+header{position:relative;overflow:hidden;border-bottom:1px solid var(--line);margin-bottom:26px}
+header .contours{position:absolute;inset:0;width:100%;height:100%;opacity:.5}
+header .inner{position:relative;max-width:1120px;margin:0 auto;padding:26px 20px 22px;
+  display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+.brand h1{margin:0;font-size:26px;letter-spacing:-.02em;font-weight:650}
+.brand h1 span{color:var(--faint);font-weight:400}
+.brand p{margin:5px 0 0;color:var(--dim);font-size:13.5px;max-width:52ch}
+.headmeta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--mono);font-size:12px}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--sunk);color:var(--dim);white-space:nowrap}
+.pill b{color:var(--txt);font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.dot.live{background:var(--green);box-shadow:0 0 0 3px rgba(70,209,138,.16)}
+.dot.warn{background:var(--amber);box-shadow:0 0 0 3px rgba(240,180,41,.14)}
+.dot.off{background:var(--faint)}
+
+/* ---------- layout ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:20px}
+.panel > h2{margin:0;padding:14px 18px;font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);font-weight:600;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px}
+.panel > h2 .note{text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;color:var(--faint)}
+.body{padding:18px}
+.grid2{display:grid;grid-template-columns:1fr;gap:20px}
+/* grid items default to min-width:auto, which lets wide content push the
+   track open instead of scrolling inside it. */
+.grid2 > *,.panel,.body{min-width:0}
+@media(min-width:900px){.grid2{grid-template-columns:1.15fr .85fr}}
+
+/* ---------- stat strip ---------- */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px}
+@media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
+.stat{background:var(--panel);padding:14px 16px}
+.stat .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.stat .v{font-family:var(--mono);font-size:21px;margin-top:5px;letter-spacing:-.01em}
+.stat .s{font-size:12px;color:var(--dim);margin-top:2px;font-family:var(--mono)}
+.pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--txt)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+th{text-align:right;font-weight:500;color:var(--faint);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;padding:0 0 9px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 0;border-bottom:1px solid rgba(30,37,45,.6);text-align:right}
+tr:last-child td{border-bottom:0}
+.tick{font-weight:600;letter-spacing:.02em}
+
+/* ---------- decisions ---------- */
+.dec{border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:11px;background:var(--sunk)}
+.dec:last-child{margin-bottom:0}
+.dec .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:11px;padding:2.5px 8px;border-radius:5px;
+  border:1px solid;letter-spacing:.03em;font-weight:600}
+.b-open{color:var(--green);border-color:rgba(70,209,138,.4);background:rgba(70,209,138,.09)}
+.b-veto{color:var(--amber);border-color:rgba(240,180,41,.4);background:rgba(240,180,41,.09)}
+.b-none{color:var(--faint);border-color:var(--line);background:transparent}
+.dec .why{color:var(--dim);font-size:13px;margin-top:8px}
+.gates{margin-top:10px;display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:11.5px}
+.g{color:var(--faint);display:flex;gap:7px}
+.g .m{flex:none;width:11px}
+.g.fail{color:var(--amber)}
+.g.fail .m{color:var(--amber)}
+
+/* ---------- journal ---------- */
+.feed{max-height:440px;overflow:auto;font-family:var(--mono);font-size:12px}
+.ev{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,37,45,.55);align-items:baseline}
+.ev:last-child{border-bottom:0}
+.ev .sq{color:var(--faint);flex:none;width:34px;text-align:right}
+.ev .nm{flex:none;width:132px;color:var(--blue)}
+.ev .dt{color:var(--dim);word-break:break-word;flex:1}
+.chain{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;
+  padding:11px 14px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);margin-bottom:14px}
+.chain.ok{border-color:rgba(70,209,138,.32)} .chain.bad{border-color:rgba(242,97,107,.4)}
+
+.foot{color:var(--faint);font-size:12.5px;text-align:center;margin-top:30px;line-height:1.9}
+.foot a{color:var(--dim)}
+.err{color:var(--amber);font-family:var(--mono);font-size:12.5px}
+button.rf{font:inherit;font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--sunk);
+  border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer}
+button.rf:hover{color:var(--txt);border-color:var(--faint)}
+.skeleton{color:var(--faint);font-family:var(--mono);font-size:12.5px}
+svg{display:block;width:100%;height:auto}
+/* the map is the hero; let it scroll rather than shrink its labels
+   into illegibility on a phone. */
+.scroller{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.scroller > svg{min-width:520px}
+.scroller > table{min-width:340px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--dim)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="contours" viewBox="0 0 1200 190" preserveAspectRatio="none" aria-hidden="true">
+    <g fill="none" stroke="#5aa9f0" stroke-width="1">
+      <path d="M0 176 C 180 176 300 120 460 96 C 620 72 760 66 900 84 C 1020 100 1120 128 1200 150" opacity=".16"/>
+      <path d="M0 168 C 180 166 300 104 460 78 C 620 52 760 46 900 66 C 1020 84 1120 116 1200 142" opacity=".13"/>
+      <path d="M0 160 C 180 156 300 88 460 60 C 620 32 760 26 900 48 C 1020 68 1120 104 1200 134" opacity=".10"/>
+      <path d="M0 152 C 180 146 300 72 460 42 C 620 12 760 6 900 30 C 1020 52 1120 92 1200 126" opacity=".07"/>
+      <path d="M0 184 C 180 186 300 136 460 114 C 620 92 760 86 900 102 C 1020 116 1120 140 1200 158" opacity=".19"/>
+    </g>
+  </svg>
+  <div class="inner">
+    <div class="brand">
+      <h1>Contour <span>/ live</span></h1>
+      <p>An autonomous options agent that measures the volatility surface every 15 minutes
+         and lets its <em>shape</em> pick the structure.</p>
+    </div>
+    <div class="headmeta" id="headmeta">
+      <span class="pill"><span class="dot off"></span><b>connecting…</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="stats" id="stats"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The structure map <span class="note">measurement picks the trade</span></h2>
+      <div class="body">
+        <div class="scroller">
+          <svg id="map" viewBox="0 0 760 430" role="img"
+               aria-label="Scatter of the three underlyings on skew z-score against the volatility risk premium ratio, over the four decision zones."></svg>
+        </div>
+        <div class="legend">
+          <span><i style="background:#5aa9f0"></i>CALL_CS — calls rich</span>
+          <span><i style="background:#46d18a"></i>CONDOR — both sides fair</span>
+          <span><i style="background:#a78bfa"></i>PUT_CS — puts rich</span>
+          <span><i style="background:#3a2a2e"></i>NO_TRADE — premium too thin</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Surface <span class="note" id="surf-age"></span></h2>
+      <div class="body" id="surface"><div class="skeleton">loading…</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Decisions this cycle <span class="note">every gate, pass or fail</span></h2>
+    <div class="body" id="decisions"><div class="skeleton">loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Equity <span class="note">paper account PA35XVXLIO0E, from $100,000</span></h2>
+    <div class="body" id="equity"><div class="skeleton">loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Journal <span class="note">hash chain recomputed in your browser</span></h2>
+    <div class="body">
+      <div id="chain" class="chain"><span class="dot off"></span><span>verifying…</span></div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+
+  <p class="foot">
+    Nothing here is typed by hand. Every value is read live from the agent's own
+    append-only journal on the
+    <a href="https://github.com/aryangorde6/contour/tree/agent-state" target="_blank" rel="noopener">agent-state</a>
+    branch, and the SHA-256 chain above is recomputed from those raw bytes by this page.<br>
+    <a href="https://github.com/aryangorde6/contour" target="_blank" rel="noopener">source</a> ·
+    <a href="https://github.com/aryangorde6/contour/blob/main/WRITEUP.md" target="_blank" rel="noopener">write-up</a> ·
+    paper trading only — not investment advice
+  </p>
+</div>
+
+<script>
+const OWNER="aryangorde6", REPO="contour", BRANCH="agent-state";
+const RAW=`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/`;
+const FIRST_DAY="2026-08-28", LAST_DAY="2026-09-04";
+const START_NAV=100000, VRP_FLOOR=1.30, SKEW_TRIG=0.8, GENESIS="0".repeat(64);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+async function grab(path,asText){
+  const r=await fetch(RAW+path+"?t="+Date.now(),{cache:"no-store"});
+  if(!r.ok) return null;
+  return asText? r.text() : r.json();
+}
+const num=(v,d=2)=>v==null||Number.isNaN(v)?"—":Number(v).toFixed(d);
+const money=v=>v==null?"—":"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
+function ago(iso){
+  if(!iso) return "never";
+  const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<90) return Math.max(0,Math.round(s))+"s ago";
+  if(s<5400) return Math.round(s/60)+"m ago";
+  if(s<172800) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+
+function contestDays(){
+  const out=[], d=new Date(FIRST_DAY+"T00:00:00Z"),
+        end=new Date(LAST_DAY+"T00:00:00Z"), today=new Date();
+  for(; d<=end; d.setUTCDate(d.getUTCDate()+1)){
+    if(d>today) break;
+    out.push(d.toISOString().slice(0,10));
+  }
+  return out.length?out:[FIRST_DAY];
+}
+
+/* ---------- the structure map ---------- */
+function drawMap(surface){
+  const W=760,H=430,L=52,R=18,T=16,B=44;
+  const x0=-2.5,x1=2.5,y0=0.95,y1=2.05;
+  const X=v=>L+(Math.min(x1,Math.max(x0,v))-x0)/(x1-x0)*(W-L-R);
+  const Y=v=>H-B-(Math.min(y1,Math.max(y0,v))-y0)/(y1-y0)*(H-T-B);
+  const p=[];
+  const zone=(xa,xb,ya,yb,fill,stroke)=>p.push(
+    `<rect x="${X(xa)}" y="${Y(yb)}" width="${X(xb)-X(xa)}" height="${Y(ya)-Y(yb)}"
+      fill="${fill}" stroke="${stroke}" stroke-width="1"/>`);
+
+  zone(x0,x1,y0,VRP_FLOOR,"rgba(242,97,107,.055)","rgba(242,97,107,.16)");
+  zone(x0,-SKEW_TRIG,VRP_FLOOR,y1,"rgba(90,169,240,.085)","rgba(90,169,240,.22)");
+  zone(-SKEW_TRIG,SKEW_TRIG,VRP_FLOOR,y1,"rgba(70,209,138,.085)","rgba(70,209,138,.22)");
+  zone(SKEW_TRIG,x1,VRP_FLOOR,y1,"rgba(167,139,250,.085)","rgba(167,139,250,.22)");
+
+  const lab=(cx,cy,t,c,sz=12.5,w=600)=>p.push(
+    `<text x="${cx}" y="${cy}" fill="${c}" font-size="${sz}" font-weight="${w}"
+      text-anchor="middle" font-family="ui-monospace,Menlo,monospace"
+      letter-spacing=".05em">${t}</text>`);
+  lab((X(x0)+X(-SKEW_TRIG))/2,Y(y1)+26,"CALL_CS","#5aa9f0");
+  lab(X(0),Y(y1)+26,"CONDOR","#46d18a");
+  lab((X(SKEW_TRIG)+X(x1))/2,Y(y1)+26,"PUT_CS","#a78bfa");
+  lab(X(0),(Y(y0)+Y(VRP_FLOOR))/2+4,"NO_TRADE — implied not rich enough","#8b7076",11.5,500);
+
+  // axes + ticks
+  p.push(`<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#1e252d"/>`);
+  p.push(`<line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="#1e252d"/>`);
+  for(const t of [-2,-1,0,1,2]){
+    p.push(`<line x1="${X(t)}" y1="${H-B}" x2="${X(t)}" y2="${H-B+5}" stroke="#2b333c"/>`);
+    p.push(`<text x="${X(t)}" y="${H-B+19}" fill="#5c6874" font-size="11" text-anchor="middle"
+      font-family="ui-monospace,Menlo,monospace">${t>0?"+"+t:t}</text>`);
+  }
+  for(const t of [1.0,1.3,1.6,2.0]){
+    p.push(`<text x="${L-9}" y="${Y(t)+4}" fill="#5c6874" font-size="11" text-anchor="end"
+      font-family="ui-monospace,Menlo,monospace">${t.toFixed(1)}</text>`);
+  }
+  p.push(`<text x="${(L+W-R)/2}" y="${H-6}" fill="#8b98a6" font-size="11.5" text-anchor="middle">25-delta skew, z-score vs the name's own prior</text>`);
+  p.push(`<text transform="translate(14,${(T+H-B)/2}) rotate(-90)" fill="#8b98a6" font-size="11.5"
+    text-anchor="middle">implied / realised vol</text>`);
+  p.push(`<line x1="${L}" y1="${Y(VRP_FLOOR)}" x2="${W-R}" y2="${Y(VRP_FLOOR)}"
+    stroke="rgba(242,97,107,.5)" stroke-dasharray="4 4"/>`);
+
+  // the three names
+  for(const m of surface||[]){
+    const cx=X(m.skew_z), cy=Y(m.vrp_ratio);
+    const c = m.vrp_ratio<VRP_FLOOR ? "#f2616b"
+            : m.skew_z<=-SKEW_TRIG ? "#5aa9f0"
+            : m.skew_z>=SKEW_TRIG  ? "#a78bfa" : "#46d18a";
+    p.push(`<circle cx="${cx}" cy="${cy}" r="12" fill="${c}" opacity=".18"/>`);
+    p.push(`<circle cx="${cx}" cy="${cy}" r="5.5" fill="${c}" stroke="#0a0c0f" stroke-width="1.5"/>`);
+    p.push(`<text x="${cx}" y="${cy-17}" fill="#e8eef4" font-size="12.5" font-weight="600"
+      text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${esc(m.underlying)}</text>`);
+  }
+  $("map").innerHTML=p.join("");
+}
+
+/* ---------- equity ---------- */
+function drawEquity(series){
+  const el=$("equity");
+  if(!series||series.length<2){
+    el.innerHTML=`<div class="skeleton">${series&&series.length?
+      "one sample so far — the curve draws once a second cycle books NAV.":
+      "no NAV samples published yet; the curve fills in on the first live trading cycle."}</div>`;
+    return;
+  }
+  const W=1040,H=170,L=58,R=14,T=14,B=22;
+  const navs=series.map(d=>d.nav);
+  const lo=Math.min(START_NAV,...navs), hi=Math.max(START_NAV,...navs);
+  const pad=Math.max(200,(hi-lo)*0.18), y0=lo-pad, y1=hi+pad;
+  const X=i=>L+(series.length<2?0:i/(series.length-1))*(W-L-R);
+  const Y=v=>H-B-(v-y0)/(y1-y0)*(H-T-B);
+  const line=series.map((d,i)=>`${i?"L":"M"}${X(i).toFixed(1)} ${Y(d.nav).toFixed(1)}`).join(" ");
+  const last=navs[navs.length-1], pnl=last-START_NAV;
+  const c=pnl>=0?"#46d18a":"#f2616b";
+  const area=`${line} L${X(series.length-1).toFixed(1)} ${H-B} L${L} ${H-B} Z`;
+  el.innerHTML=`
+   <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:170px">
+     <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
+       <stop offset="0" stop-color="${c}" stop-opacity=".22"/>
+       <stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient></defs>
+     <line x1="${L}" y1="${Y(START_NAV)}" x2="${W-R}" y2="${Y(START_NAV)}"
+       stroke="#3a444f" stroke-dasharray="4 4"/>
+     <text x="${L-8}" y="${Y(START_NAV)+4}" fill="#5c6874" font-size="11" text-anchor="end"
+       font-family="ui-monospace,Menlo,monospace">100k</text>
+     <path d="${area}" fill="url(#eg)"/>
+     <path d="${line}" fill="none" stroke="${c}" stroke-width="1.8"
+       stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+     <circle cx="${X(series.length-1)}" cy="${Y(last)}" r="3.5" fill="${c}"/>
+   </svg>
+   <div style="font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:8px">
+     ${series.length} samples · latest ${money(last)}
+     <span class="${pnl>=0?'pos':'neg'}">(${pnl>=0?'+':''}${money(pnl)})</span>
+   </div>`;
+}
+
+/* ---------- the hash chain, recomputed here ---------- */
+async function sha256(s){
+  const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+/* The payload's canonical bytes are already in the line: journal.py dumps the
+   record and the payload with the same sort_keys/separators, so the nested
+   text is byte-identical to what was hashed. Slice it out rather than
+   re-serialising -- that verifies the file as written, not our idea of it. */
+function payloadText(line){
+  const k='"payload":', i=line.indexOf(k);
+  if(i<0) return null;
+  let depth=0,inStr=false,esc=false;
+  for(let j=i+k.length;j<line.length;j++){
+    const c=line[j];
+    if(inStr){
+      if(esc) esc=false;
+      else if(c==="\\") esc=true;
+      else if(c==='"') inStr=false;
+      continue;
+    }
+    if(c==='"') inStr=true;
+    else if(c==="{") depth++;
+    else if(c==="}"&&--depth===0) return line.slice(i+k.length,j+1);
+  }
+  return null;
+}
+async function verifyChain(lines){
+  let prev=GENESIS, seq=0;
+  for(const line of lines){
+    let rec; try{ rec=JSON.parse(line); }catch{ return[false,`unparseable line at seq ${seq}`,seq]; }
+    const pt=payloadText(line);
+    if(pt===null) return [false,`no payload at seq ${seq}`,seq];
+    if(rec.seq!==seq) return [false,`seq gap at ${rec.seq}, expected ${seq}`,seq];
+    if(rec.prev_hash!==prev) return [false,`broken link at seq ${rec.seq}`,seq];
+    if(await sha256(prev+pt)!==rec.hash) return [false,`payload tampered at seq ${rec.seq}`,seq];
+    prev=rec.hash; seq++;
+  }
+  return [true,`chain intact, ${seq} records`,seq];
+}
+
+/* ---------- journal feed ---------- */
+const SKIP=new Set(["event"]);
+function summarise(p){
+  const bits=[];
+  for(const [k,v] of Object.entries(p)){
+    if(SKIP.has(k)) continue;
+    if(k==="gates"&&Array.isArray(v)){
+      const bad=v.filter(g=>!/^G\d+ ok/.test(g));
+      bits.push(bad.length?`gates: ${bad.join("; ")}`:`gates: all ${v.length} passed`);
+      continue;
+    }
+    if(Array.isArray(v)) { bits.push(`${k}=[${v.length}]`); continue; }
+    if(v===null||v==="") continue;
+    bits.push(`${k}=${typeof v==="number"?(Number.isInteger(v)?v:v.toFixed(3)):v}`);
+  }
+  return bits.join("  ");
+}
+function drawFeed(recs){
+  $("feed").innerHTML = recs.length ? recs.slice().reverse().map(r=>`
+    <div class="ev"><span class="sq">${r.seq}</span>
+      <span class="nm">${r.payload.event||"—"}</span>
+      <span class="dt">${esc(summarise(r.payload))}</span></div>`).join("")
+    : `<div class="skeleton">no journal for today yet — the pre-open cycle writes the first record at 09:20 ET.</div>`;
+}
+
+/* ---------- render ---------- */
+function drawStats(hb,dec,eq){
+  const nav = eq&&eq.length ? eq[eq.length-1].nav : (hb&&hb.nav);
+  const pnl = nav!=null ? nav-START_NAV : null;
+  const opened = (dec||[]).filter(d=>d.decision&&!["NO_TRADE","VETOED"].includes(d.decision)).length;
+  const vetoed = (dec||[]).filter(d=>d.decision==="VETOED").length;
+  const cell=(k,v,cls,s)=>`<div class="stat"><div class="k">${k}</div>
+     <div class="v ${cls||"neu"}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+  $("stats").innerHTML=[
+    cell("Net liquidation",nav!=null?money(nav):"—",null,"paper account"),
+    cell("P&L",pnl==null?"—":(pnl>=0?"+":"")+money(pnl),
+         pnl==null?null:(pnl>=0?"pos":"neg"),
+         pnl==null?"":`${pnl>=0?"+":""}${(pnl/START_NAV*100).toFixed(2)}%`),
+    cell("Mode",hb?esc(hb.mode):"—",null,hb?esc(hb.reason):""),
+    cell("Structures opened",opened,opened?"pos":null,`${vetoed} vetoed this cycle`),
+    cell("Cycle",hb?hb.cycle_count:"—",null,hb?ago(hb.last_cycle_utc):""),
+  ].join("");
+}
+function drawSurface(s){
+  if(!s||!s.length){ $("surface").innerHTML='<div class="skeleton">no measurement published yet.</div>'; return; }
+  $("surface").innerHTML=`<div class="scroller"><table>
+   <thead><tr><th>·</th><th>spot</th><th>IV</th><th>RV10</th><th>VRP</th><th>skew z</th></tr></thead>
+   <tbody>${s.map(m=>{
+     const rich=m.vrp_ratio>=VRP_FLOOR;
+     return `<tr><td class="tick">${esc(m.underlying)}</td><td>${num(m.spot,2)}</td>
+       <td>${num(m.atm_iv,1)}</td><td>${num(m.rv10,1)}</td>
+       <td class="${rich?"pos":"neg"}">${num(m.vrp_ratio,2)}</td>
+       <td>${m.skew_z>=0?"+":""}${num(m.skew_z,2)}</td></tr>`;}).join("")}
+   </tbody></table></div>
+   <div style="margin-top:12px;font-size:12.5px;color:var(--faint);line-height:1.6">
+     VRP is a <em>ratio</em>, not a difference. Below ${VRP_FLOOR.toFixed(2)} the agent
+     is not being paid enough to sell, whatever the skew says.</div>`;
+}
+function drawDecisions(d){
+  if(!d||!d.length){ $("decisions").innerHTML='<div class="skeleton">no decisions published yet.</div>'; return; }
+  $("decisions").innerHTML=d.map(x=>{
+    const cls=x.decision==="VETOED"?"b-veto":x.decision==="NO_TRADE"?"b-none":"b-open";
+    const gates=(x.gates||[]).map(g=>{
+      const ok=/^G\d+ ok/.test(g);
+      return `<div class="g ${ok?"":"fail"}"><span class="m">${ok?"✓":"✕"}</span><span>${esc(g)}</span></div>`;}).join("");
+    const extra=x.credit!=null?`<span class="pill">credit <b>$${num(x.credit,2)}</b></span>
+       <span class="pill">contracts <b>${x.contracts}</b></span>
+       <span class="pill">max loss/ct <b>$${num(x.max_loss_per_contract,0)}</b></span>`:"";
+    return `<div class="dec"><div class="top">
+        <span class="tick" style="font-family:var(--mono);font-size:14px">${esc(x.underlying)}</span>
+        <span class="badge ${cls}">${esc(x.decision)}</span>${extra}</div>
+      <div class="why">${esc(x.reason)}</div>
+      ${gates?`<div class="gates">${gates}</div>`:""}</div>`;
+  }).join("");
+}
+
+async function load(){
+  const [hb,surf,dec,eq]=await Promise.all([
+    grab("state/heartbeat.json"), grab("state/surface.json"),
+    grab("state/decisions.json"), grab("state/equity.json"),
+  ]).catch(()=>[null,null,null,null]);
+
+  drawStats(hb,dec,eq);
+  drawSurface(surf);
+  drawMap(surf);
+  drawDecisions(dec);
+  drawEquity(eq);
+  $("surf-age").textContent = hb ? "measured "+ago(hb.last_cycle_utc) : "";
+
+  const live = hb && (Date.now()-new Date(hb.last_cycle_utc).getTime())<40*60*1000;
+  const brain = (hb && hb.brain) || null;
+  $("headmeta").innerHTML=`
+    <span class="pill"><span class="dot ${hb?(live?"live":"warn"):"off"}"></span>
+      <b>${hb?esc(hb.mode):"offline"}</b></span>
+    <span class="pill">last cycle <b>${hb?ago(hb.last_cycle_utc):"—"}</b></span>
+    ${brain?`<span class="pill">brain <b>${esc(brain)}</b></span>`:""}
+    <button class="rf" id="rf">refresh</button>`;
+  $("rf").onclick=load;
+
+  // journal: the newest contest day that exists. Walking back from today
+  // rather than from the end of the calendar means the common case is one
+  // request, not a run of 404s for days that have not happened yet.
+  let recs=[], text=null, day=null;
+  for(const d of contestDays().reverse()){
+    text=await grab(`journal/${d}.jsonl`,true);
+    if(text&&text.trim()){ day=d; break; }
+  }
+  const lines=(text||"").split("\n").filter(l=>l.trim());
+  recs=lines.map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean);
+  drawFeed(recs);
+
+  const box=$("chain");
+  if(!lines.length){
+    box.className="chain";
+    box.innerHTML='<span class="dot off"></span><span>nothing to verify yet.</span>';
+    return;
+  }
+  try{
+    const [ok,msg]=await verifyChain(lines);
+    box.className="chain "+(ok?"ok":"bad");
+    box.innerHTML=`<span class="dot ${ok?"live":"warn"}"></span>
+      <span><b style="color:var(--txt)">${ok?"verified":"FAILED"}</b> — ${msg}
+      &nbsp;<span style="color:var(--faint)">journal/${day}.jsonl, SHA-256 recomputed in this browser</span></span>`;
+  }catch(e){
+    box.className="chain";
+    box.innerHTML=`<span class="dot warn"></span><span class="err">cannot verify: ${e.message}
+      (WebCrypto needs https)</span>`;
+  }
+}
+
+load();
+setInterval(load,60000);
+</script>
+</body>
+</html>

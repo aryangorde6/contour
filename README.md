@@ -38,16 +38,45 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 47 passing
+- [x] `tests/` — 84 passing
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)
 - [x] `contour/clock.py` — session phase; cron never trusts its firing time
 - [x] `contour/loop.py` — one idempotent cycle
 - [x] `contour/__main__.py` — `--once --dry --as-of --dev --verify`
-- [x] `contour/mind.py` — Claude: blackout windows, regime multiplier, structure veto
-- [ ] dashboard, GitHub Actions cron, `--replay`
-- [ ] dashboard, GitHub Actions cron, `--replay`
+- [x] `contour/llm.py` — provider seam; the vendor is a config value
+- [x] `contour/mind.py` — the brain: blackout windows, regime multiplier, structure veto
+- [x] `.github/workflows/` — the cron that actually trades
+- [x] `dashboard/` — live state, hash chain verified in the browser
+- [ ] `--replay` against a recorded fixture
+
+## The dashboard
+
+`dashboard/index.html` is one static file with no build step and no backend. It
+reads the agent's own published state from the orphan **`agent-state`** branch
+over `raw.githubusercontent.com` and renders four things:
+
+- **the structure map** — SPY, QQQ and IWM plotted on 25-delta skew z-score
+  against the VRP ratio, over the four decision zones. The chart *is* the
+  strategy: where a name lands decides what gets sold, or whether anything does.
+- the surface measurement and every gate result, pass or fail
+- the equity curve against the $100,000 starting NAV
+- **the hash chain, recomputed in your browser.** The page does not take the
+  agent's word for it. It fetches the raw journal, walks the chain with
+  WebCrypto SHA-256 and prints the same verdict `python -m contour --verify`
+  prints. Tamper with one byte on the branch and the badge goes red.
+
+`tests/test_dashboard.py` runs that JavaScript under Node against a chain
+Python wrote — including a deliberately tampered record — and asserts both
+implementations return the *same* verdict, so the badge cannot quietly become
+decoration.
+
+Serve it anywhere static:
+
+```bash
+python -m http.server -d dashboard 8899
+```
 
 ## Quickstart
 

@@ -22,3 +22,21 @@ def heartbeat(cycle: int, mode: str, reason: str, extra: dict | None = None) -> 
         "cycle_count": cycle, "mode": mode, "reason": reason,
         **(extra or {}),
     })
+
+
+def point(series: str, sample: dict[str, Any], cap: int = 600) -> Path:
+    """Append one timestamped sample to a series the dashboard plots.
+
+    Deliberately tolerant: a corrupt or missing history file restarts the
+    series rather than raising. A cosmetic curve is never worth failing a
+    trading cycle over.
+    """
+    p = ROOT / f"{series}.json"
+    try:
+        prev = json.loads(p.read_text())
+        if not isinstance(prev, list):
+            prev = []
+    except Exception:                                            # noqa: BLE001
+        prev = []
+    prev.append({"t": datetime.now(timezone.utc).isoformat(), **sample})
+    return write(series, prev[-cap:])
