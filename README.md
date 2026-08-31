@@ -53,6 +53,8 @@ Risk layer first, strategy second — deliberately.
 
 ## The dashboard
 
+**Live: [aryangorde6.github.io/contour](https://aryangorde6.github.io/contour/)**
+
 `dashboard/index.html` is one static file with no build step and no backend. It
 reads the agent's own published state from the orphan **`agent-state`** branch
 over `raw.githubusercontent.com` and renders four things:
@@ -73,8 +75,9 @@ implementations return the *same* verdict, so the badge cannot quietly become
 decoration.
 
 It is published to two independent hosts, both redeployed on every push to
-`main`: Vercel on the custom domain, and GitHub Pages, which depends on no DNS
-at all — so a registrar or certificate problem cannot take both down at once.
+`main`: GitHub Pages, which depends on no DNS at all, and Vercel on
+`contour.aryangorde.com` — so a registrar or certificate problem cannot take
+both down at once.
 
 Serve it locally the same way, no build step required:
 

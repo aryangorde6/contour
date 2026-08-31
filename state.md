@@ -290,11 +290,14 @@ closed**.
 1. ~~`WRITEUP.md`~~ — **done**, but it still describes the AI layer as
    Featherless/Gemini/Anthropic. Rewrite that section for Bedrock + GLM-5 and
    the Converse decision before submitting; it is a graded deliverable.
-2. ~~Dashboard~~ — **built**, and `pages.yml` publishes it. **Still needs the
-   Vercel side**: import at vercel.com/new (accept what `vercel.json` supplies),
-   then add `contour.aryangorde.com` under Settings -> Domains. Also flip
-   Settings -> Pages -> Source to "GitHub Actions" once, or the workflow has
-   nowhere to deploy.
+2. ~~Dashboard~~ — **built and LIVE at
+   https://aryangorde6.github.io/contour/** (HTTPS, chain verifies in-browser).
+   Pages was enabled out of band with
+   `gh api -X POST repos/aryangorde6/contour/pages -f build_type=workflow`,
+   because GITHUB_TOKEN cannot create the site itself.
+   **Still open: the Vercel side** — import at vercel.com/new (accept what
+   `vercel.json` supplies), then add `contour.aryangorde.com` under
+   Settings -> Domains.
    **Verify HTTPS specifically**, not just that the page loads: `crypto.subtle`
    exists only in a secure context, so before the certificate lands the chain
    badge silently degrades to an error while the rest of the page looks fine.
