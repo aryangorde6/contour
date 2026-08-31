@@ -125,15 +125,15 @@ tr:last-child td{border-bottom:none}
         <h3>The model may</h3>
         <ul>
           <li>Name event windows to stand down in</li>
-          <li>Return a size multiplier, clamped at 1.0</li>
           <li>Veto a proposed structure</li>
+          <li>Stand the whole book down</li>
         </ul>
       </div>
       <div class="never">
         <h3>The model may never</h3>
         <ul>
           <li>Choose a strike</li>
-          <li>Size or price a position</li>
+          <li><b>Size</b> or price a position</li>
           <li>Reverse or widen anything</li>
         </ul>
       </div>
@@ -165,7 +165,7 @@ tr:last-child td{border-bottom:none}
     </ul>
     <div class="foot">
       <span>Twelve risk gates · every reason journaled, pass or fail</span>
-      <span class="pill">137 tests</span>
+      <span class="pill">165 tests</span>
     </div>
   </section>
 
@@ -244,13 +244,18 @@ tr:last-child td{border-bottom:none}
         <h3 style="font-size:17px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px">Shipped</h3>
         <ul>
           <li>3 ETFs, one locked expiry, 15-minute cycle</li>
-          <li>Twelve gates, 137 tests, chain verified in CI</li>
+          <li>Twelve gates, 165 tests, chain verified in CI</li>
           <li>Record / replay: a fixture reruns the pipeline with no credentials</li>
+          <li>Sizing from three published trend systems, after an audit caught
+            the model anchoring at 0.5 for sixteen straight cycles</li>
         </ul>
       </div>
       <div>
         <h3 style="font-size:17px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px">Next</h3>
         <ul>
+          <li><b>Trend-aware structure selection.</b> The map breaks ties toward
+            the condor — which sells calls into a confirmed uptrend. Three trend
+            systems say that is the wrong default; skew alone should not decide</li>
           <li>Expiry laddering and rolls</li>
           <li>Skew priors <b>learned</b> per underlying instead of hard-coded</li>
           <li>Backtest harness — a data problem now, not a rewrite, because the

@@ -48,7 +48,8 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/loop.py` — one idempotent cycle
 - [x] `contour/__main__.py` — `--once --dry --as-of --dev --verify`
 - [x] `contour/llm.py` — provider seam; the vendor is a config value
-- [x] `contour/mind.py` — the brain: blackout windows, regime multiplier, structure veto
+- [x] `contour/regime.py` — position sizing from three published trend systems
+- [x] `contour/mind.py` — the brain: blackout windows, structure veto, stand-down
 - [x] `.github/workflows/` — the cron that actually trades
 - [x] `dashboard/` — live state, hash chain verified in the browser
 - [x] `contour/replay.py` — record a session, replay it with no keys

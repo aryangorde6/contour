@@ -47,14 +47,55 @@ agent trade less.** This is enforced structurally, not by convention:
 | The model may | The model may never |
 |---|---|
 | Name event windows to stand down in | Choose a strike |
-| Return a size multiplier, clamped at 1.0 | Size a position |
-| Veto a proposed structure | Price an order |
+| Veto a proposed structure | **Size a position** |
+| Stand the whole book down | Price an order |
 | | Reverse or widen anything |
 
 Strikes, sizing and pricing are arithmetic, and language models should not do
 arithmetic that money depends on. What is genuinely language-shaped — *"which
 of today's scheduled releases should a short-premium book stand down for?"* —
 is what it is asked.
+
+### Sizing was on the left of that table until we measured it
+
+On 2026-08-31 the regime call returned a size multiplier of **exactly 0.5 on
+sixteen consecutive cycles**, with reasoning that contradicted itself across
+calls — *"implied is roughly double realized, which normally favors short
+premium"*, then *"vol premium is NOT being paid"*, then *"VIX at 2026 lows
+with realized vol at 7.6% means the vol premium is extremely rich"* — same
+market, same session. The prose was generated; the number was not. It was
+anchoring, and because the multiplier scales the NAV used for sizing, half
+the book was determined by an artifact that no journal entry would have
+flagged, because 0.5 is also the documented degraded default.
+
+It was only visible because the multiplier is journaled every cycle. The fix
+is `contour/regime.py` — sizing from three trend systems that were researched,
+backtested and frozen before this hackathon existed:
+
+| System | Rule used | Evidence behind it |
+|---|---|---|
+| Stage-2 | price above a **rising** 30-week SMA (the persistent state, not the breakout entry) | Weinstein Stage Analysis; replicated in-house over 30.5 years / 397 round-trips / 39 names — pooled PF **3.53** (95% CI 2.11–5.82), 3.78 on a second universe |
+| Ribbon | EMA 20>50>200 and price above the 200 | validated long-only across 15 names in 10 sectors, 11 of 15 profitable |
+| LRS-VT2 | `min(1, σ_longrun/σ_20d)` × two-speed ladder × overextension trim | Gayed & Bilello 2016 (Dow Award); Moreira & Muir 2017, *Journal of Finance* |
+
+**LRS-VT2 supplies the magnitude** — it is the only one of the three carrying
+an explicit position-sizing formula. **Stage-2 and the ribbon confirm**: both
+standing takes the weight whole, one halves it, neither means no trend support
+and the weight is zero. The result is bounded at 1.0, so the property that
+matters is unchanged — this layer can still only make the agent trade *less*.
+
+**Two transfers, stated rather than buried.** Stage-2 and the ribbon were
+validated on Indian equities and are applied here to US ETFs; Stage-2 is
+Weinstein, US-origin literature returning home, and the ribbon is generic
+trend-following, but it is still a transfer. And all three are *long-equity*
+systems sizing a *short-premium* book — justified because leveraged long
+equity and short option premium are the same trade in disguise, both short
+volatility, both destroyed by the same regime, which is exactly what the
+vol-scaling term measures.
+
+First live reading: **SPY 1.0, QQQ 1.0, IWM 0.5** — the two-speed ladder drops
+IWM to its warning rung, independently agreeing with the volatility surface,
+which reads IWM as the weakest of the three.
 
 **Failure policy is two-tiered, deliberately asymmetric:**
 

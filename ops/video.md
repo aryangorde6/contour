@@ -12,7 +12,7 @@ have changed by the time you record — re-read it off the dashboard first.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 137 passed
+git pull && .venv/bin/python -m pytest -q          # expect 165 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -78,10 +78,22 @@ four zones.*
 > **less**, and that's structural, not a promise: `execute.py` never imports
 > the model layer, so no model output can physically reach an order.
 >
-> It may name event windows to stand down in. It may return a size multiplier,
-> clamped at one. It may veto a structure. It may never choose a strike, size
-> a position, or price one — that's arithmetic, and language models shouldn't
-> do arithmetic that money depends on.
+> It may name event windows to stand down in. It may veto a structure. It may
+> stand the whole book down. It may never choose a strike, size a position, or
+> price one — that's arithmetic, and language models shouldn't do arithmetic
+> that money depends on.
+>
+> Sizing was on the left of that table until I measured it. The model returned
+> a size multiplier of exactly zero point five on sixteen consecutive cycles,
+> with reasoning that contradicted itself between calls — "implied is roughly
+> double realized" in one, "the vol premium is not being paid" in the next,
+> same market, same session. It was anchoring on a number and writing the
+> justification afterwards. Half my book was sized by an artifact.
+>
+> So I took sizing away from it and gave it to three published trend systems —
+> Weinstein Stage-2, an EMA ribbon, and Leverage for the Long Run with
+> Moreira-Muir volatility scaling. Deterministic, testable, and I can show you
+> the profit factor behind each one.
 >
 > I picked the model by bake-off, not reputation. All six candidates returned
 > valid output, so the tiebreak was blackout accuracy — and Nova Pro and
@@ -190,7 +202,7 @@ structures from measured skew.* Third row: *runnable without our credentials —
 - **Not** signal subscriptions — that is investment advice and needs
   registration. Saying this out loud is a credibility win, not a weakness.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 137 tests. Next:
+**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 165 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of

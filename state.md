@@ -245,7 +245,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**137 tests passing.** All core modules complete.
+**165 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -560,7 +560,7 @@ it is wired in.
 ## 8. Resume commands
 
 ```bash
-.venv/bin/python -m pytest -q                                  # 137 tests
+.venv/bin/python -m pytest -q                                  # 165 tests
 .venv/bin/python -m contour --replay                           # no credentials needed
 .venv/bin/python -m contour --brain-check                      # is the LLM alive?
 .venv/bin/python -m contour --dry --dev --as-of 2026-08-31T11:00
