@@ -12,9 +12,21 @@ So sizing moves here, to three published trend systems that were researched,
 backtested and frozen before this hackathon existed:
 
   Stage-2      Weinstein Stage Analysis, mechanised: price above a RISING
-               30-week SMA. Replicated in-house over 30.5 years and 397
-               round-trips on 39 names -- pooled profit factor 3.53 (95% CI
-               2.11-5.82), and 3.78 on a second out-of-sample universe.
+               30-week SMA. Replicated in-house over 30.5 years and 738
+               round-trips across two universes of 39 names. Profit factor
+               6.43 and 5.12, surviving removal of the top three winners at
+               4.67 and 4.01, bootstrap 95% CI 4.28-9.66 and 3.51-7.55.
+               Those are the PERCENT-space figures. The source project's own
+               correction pass WITHDREW its rupee-denominated numbers (3.53
+               and 3.77): its simulator resets equity inside the per-name
+               loop, so each name compounds an independent account and the
+               pooled currency column is size-weighted rather than a
+               per-trade edge measure. Cite percent or cite nothing.
+               Honest caveats that survive the correction: the median trade
+               returns +0.3% and -1.0%, so the edge lives entirely in the
+               tail, and the second universe decays 44% first half to
+               second. Both are characteristic of trend-following, and
+               neither is hidden here.
   Ribbon       EMA ribbon stacked bullish above the 200 EMA. Validated long-
                only across 15 names in 10 sectors, 11 of 15 profitable.
   LRS-VT2      "Leverage for the Long Run" (Gayed & Bilello 2016, Dow Award)

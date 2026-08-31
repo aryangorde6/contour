@@ -74,9 +74,23 @@ backtested and frozen before this hackathon existed:
 
 | System | Rule used | Evidence behind it |
 |---|---|---|
-| Stage-2 | price above a **rising** 30-week SMA (the persistent state, not the breakout entry) | Weinstein Stage Analysis; replicated in-house over 30.5 years / 397 round-trips / 39 names — pooled PF **3.53** (95% CI 2.11–5.82), 3.78 on a second universe |
+| Stage-2 | price above a **rising** 30-week SMA (the persistent state, not the breakout entry) | Weinstein Stage Analysis; replicated in-house over 30.5 years / 738 round-trips / two universes — PF **6.43** and **5.12**, surviving top-3 removal at 4.67 / 4.01, bootstrap 95% CI 4.28–9.66 / 3.51–7.55 |
 | Ribbon | EMA 20>50>200 and price above the 200 | validated long-only across 15 names in 10 sectors, 11 of 15 profitable |
 | LRS-VT2 | `min(1, σ_longrun/σ_20d)` × two-speed ladder × overextension trim | Gayed & Bilello 2016 (Dow Award); Moreira & Muir 2017, *Journal of Finance* |
+
+**The Stage-2 figures above are percent-space, and that matters.** The source
+project's correction pass **withdrew** its rupee-denominated numbers (PF 3.53
+and 3.77): its simulator resets equity inside the per-name loop, so each of 39
+names compounds an independent account and pooling the currency column
+size-weights trades by *when* they happened rather than measuring per-trade
+edge. In rupee space the second universe fails a fragility check — PF collapses
+3.77 → 1.57 when three of 355 trades are removed. In percent space, which is
+size-invariant, it does not: 5.12 → 4.01, with the top three worth 21.8% of
+gross gain rather than 58.3%. I cited the withdrawn figures in the first draft
+of this section; they are corrected here, and the correction makes the evidence
+*stronger*, not weaker. Two caveats that survive it: the median trade returns
++0.3% and −1.0%, so the edge is entirely in the tail, and the second universe's
+profit factor decays 44% from first half to second.
 
 **LRS-VT2 supplies the magnitude** — it is the only one of the three carrying
 an explicit position-sizing formula. **Stage-2 and the ribbon confirm**: both

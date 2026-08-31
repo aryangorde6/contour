@@ -287,7 +287,7 @@ before this hackathon existed (`~/TRADINGVIEW_INDICATOR`, `~/fable_project`):
 
 | System | Rule used | Evidence |
 |---|---|---|
-| Stage-2 | above a **rising** 30-week SMA — the persistent state, not the breakout entry | Weinstein; replicated 30.5y / 397 round-trips / 39 names, pooled **PF 3.53** (CI 2.11–5.82), 3.78 OOS |
+| Stage-2 | above a **rising** 30-week SMA — the persistent state, not the breakout entry | Weinstein; 30.5y / 738 round-trips / two universes. **PF 6.43 and 5.12 in PERCENT space**, excl top-3 4.67 / 4.01, CI 4.28–9.66 / 3.51–7.55. **Do not cite 3.53 / 3.77** — the source withdrew its rupee figures (per-name equity reset makes the pooled currency column size-weighted) |
 | Ribbon | EMA 20>50>200, price above the 200 | 15 names / 10 sectors, 11 of 15 PF>1 |
 | LRS-VT2 | `min(1, σ_LR/σ_20)` × two-speed ladder × overextension trim | Gayed & Bilello 2016 (Dow Award); Moreira & Muir 2017 (JF) |
 
@@ -322,6 +322,51 @@ what the vol-scaling term measures.
 | NIFTY 5m/15m family (10 files) | `docs/FINDINGS.md` is a terminal negative result: PF 0.63–0.80 across 5 entries × 3 exits × 2 timeframes. Knowingly trading a system the research killed |
 | Stage-2 as an **entry** system | Median winner held 9–10 months, <1 trade per name per year. Over four days it produces nothing. Only its regime *state* is usable |
 | Trend-aware structure selection | **Right, and deferred on purpose.** The map breaks ties toward the condor, which sells calls into a confirmed uptrend — the exact error the thesis was written against. But it changes `select.py`, the differentiator every judged document describes, and a put spread collects $0.33 against the condor's $0.81, so it would *cost* P&L this week. It is the roadmap slide and one line in the video instead |
+
+### `~/TRADINGVIEW_INDICATOR/fallacy-auditor` — and the citation it caught
+
+A grounded reasoning auditor with three surfaces, two of which need no model
+and were run against this project's sources on 2026-08-31:
+
+```bash
+PYTHONPATH=~/TRADINGVIEW_INDICATOR/fallacy-auditor/src \
+  .venv/bin/python -m fallacy_auditor <file.pine|trades.csv|reasoning.txt>
+```
+
+- **Pine linter** (deterministic): all three strategies the sizer is built on
+  — `LRS_VT.pine`, `stock_stage2_trend_weekly.pine`,
+  `stock_swing_ribbon_pullback.pine` — return **clean: no mechanical red
+  flags**. No `lookahead_on`, no `calc_on_every_tick`, no wall-clock in logic.
+  The signals were validated for mechanical bias before being adopted.
+- **Profit-factor auditor** (deterministic): this is what caught the citation
+  error. It fires two fragility warnings on the Stage-2 OOS universe *in rupee
+  space* — PF 3.77 → 1.57 when 3 of 355 trades are removed, second half worth
+  13% of the first — which is exactly what I had cited as clean supporting
+  evidence.
+- **Reasoning audit** (LLM): needs Ollama, **which is not installed on this
+  machine**. `ollama pull qwen2.5:7b` (~4.7 GB) would enable running it over
+  `WRITEUP.md` and `TECHNICAL.md`. Not done; noted as available.
+
+**The correction, and why it makes the evidence stronger.** The source
+project's own correction pass (`docs/STAGE2_BACKTEST_RECON.md` §0) **withdrew
+every rupee-denominated statistic**: `replicate_stage2.py:73` resets equity
+inside the per-name loop, so 39 names each compound an independent account and
+pooling the currency column size-weights trades by *when* they happened. The
+replacement is percent space, and it is better: **PF 6.43 / 5.12** (vs the
+withdrawn 3.53 / 3.77), surviving top-3 removal at **4.67 / 4.01**, top-3
+worth 27.4% / 21.8% of gross gain rather than 58.3%. Caveats that survive:
+the median trade returns +0.3% / −1.0% — the edge is entirely in the tail —
+and U2 decays 44% first half to second.
+
+**Note for anyone reading the source:** the Pine header of
+`stock_stage2_trend_weekly.pine` still quotes the withdrawn rupee figures.
+That is their repo's stale claim, not ours; we cite percent.
+
+**The lesson worth keeping, and it is the same one as the anchored
+multiplier:** a number that looks like supporting evidence deserves the same
+scrutiny as a number that looks wrong. Both errors this week were figures
+nobody re-derived — 0.5 because it matched the degraded default, 3.53 because
+it was in a header. Cite the artifact, not the summary.
 
 ### `Replay.newest` served the wrong fixture for two days
 
