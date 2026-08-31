@@ -1,0 +1,160 @@
+[
+ {
+  "candidate": {
+   "underlying": "SPY",
+   "structure": "CONDOR",
+   "legs": [
+    {
+     "symbol": "SPY260911P00745000",
+     "side": "sell",
+     "ratio_qty": 1,
+     "option_type": "put",
+     "strike": 745.0,
+     "expiration_date": "2026-09-11",
+     "bid": 1.25,
+     "ask": 1.25,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 1.25,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911P00740000",
+     "side": "buy",
+     "ratio_qty": 1,
+     "option_type": "put",
+     "strike": 740.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.92,
+     "ask": 0.92,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.92,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911C00781000",
+     "side": "sell",
+     "ratio_qty": 1,
+     "option_type": "call",
+     "strike": 781.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.78,
+     "ask": 0.78,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.78,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911C00786000",
+     "side": "buy",
+     "ratio_qty": 1,
+     "option_type": "call",
+     "strike": 786.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.31,
+     "ask": 0.31,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.31,
+     "quote_age_s": null
+    }
+   ],
+   "net_credit": 0.8,
+   "wing_width": 5.0,
+   "contracts": 1,
+   "max_loss_per_contract": 420.0
+  },
+  "credit_received": 0.8,
+  "opened_at": "2026-08-31T10:39:21.495452-04:00",
+  "order_id": "1b003d45-9655-4dd8-bb69-adcee798ff44"
+ },
+ {
+  "candidate": {
+   "underlying": "SPY",
+   "structure": "CONDOR",
+   "legs": [
+    {
+     "symbol": "SPY260911P00745000",
+     "side": "sell",
+     "ratio_qty": 1,
+     "option_type": "put",
+     "strike": 745.0,
+     "expiration_date": "2026-09-11",
+     "bid": 1.3,
+     "ask": 1.3,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 1.3,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911P00740000",
+     "side": "buy",
+     "ratio_qty": 1,
+     "option_type": "put",
+     "strike": 740.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.96,
+     "ask": 0.96,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.96,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911C00781000",
+     "side": "sell",
+     "ratio_qty": 1,
+     "option_type": "call",
+     "strike": 781.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.8,
+     "ask": 0.8,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.8,
+     "quote_age_s": null
+    },
+    {
+     "symbol": "SPY260911C00786000",
+     "side": "buy",
+     "ratio_qty": 1,
+     "option_type": "call",
+     "strike": 786.0,
+     "expiration_date": "2026-09-11",
+     "bid": 0.32,
+     "ask": 0.32,
+     "delta": null,
+     "implied_volatility": null,
+     "open_interest": 0,
+     "tradable": true,
+     "close_price": 0.32,
+     "quote_age_s": null
+    }
+   ],
+   "net_credit": 0.8200000000000001,
+   "wing_width": 5.0,
+   "contracts": 1,
+   "max_loss_per_contract": 418.0
+  },
+  "credit_received": 0.8200000000000001,
+  "opened_at": "2026-08-31T10:09:46.667685-04:00",
+  "order_id": "b4507a9a-114c-431e-9c39-a3ba904b89ba"
+ }
+]
