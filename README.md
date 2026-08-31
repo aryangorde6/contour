@@ -72,11 +72,19 @@ Python wrote — including a deliberately tampered record — and asserts both
 implementations return the *same* verdict, so the badge cannot quietly become
 decoration.
 
-Serve it anywhere static:
+It is published to two independent hosts, both redeployed on every push to
+`main`: Vercel on the custom domain, and GitHub Pages, which depends on no DNS
+at all — so a registrar or certificate problem cannot take both down at once.
+
+Serve it locally the same way, no build step required:
 
 ```bash
 python -m http.server -d dashboard 8899
 ```
+
+The page needs **HTTPS**, not just a web server: the chain check calls
+`crypto.subtle`, which browsers expose only in a secure context. `localhost`
+counts; a bare IP over plain HTTP does not.
 
 ## Quickstart
 

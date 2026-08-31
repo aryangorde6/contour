@@ -269,6 +269,10 @@ closed**.
 
 - `agent.yml` — schedule + `workflow_dispatch` **only**. Never `pull_request`:
   this is a public repo holding live trading credentials.
+- `pages.yml` — publishes `dashboard/` to GitHub Pages on push to `main`.
+  **No secrets**, no `pull_request` trigger, and it guards against
+  root-relative URLs, which would work on Vercel's root but 404 under Pages'
+  `/contour/` project path.
 - `ci.yml` — runs on PRs, **no secrets**. Tests + grep-block on
   `close-all`/`cancel-all` + chain verify + import-without-credentials.
 - Cron (UTC): `20 13 * * 1-5` pre-open · `*/15 14-19 * * 1-5` cycle ·
@@ -286,11 +290,18 @@ closed**.
 1. ~~`WRITEUP.md`~~ — **done**, but it still describes the AI layer as
    Featherless/Gemini/Anthropic. Rewrite that section for Bedrock + GLM-5 and
    the Converse decision before submitting; it is a graded deliverable.
-2. ~~Dashboard~~ — **built** (`dashboard/index.html`, one static file, no build
-   step). **Still needs the hosted URL**: import the repo at vercel.com/new,
-   accept the settings `vercel.json` supplies, deploy. Scored on whether the
-   link *works*, so avoid Streamlit Community Cloud (sleeps after 12h idle;
-   judges look days later).
+2. ~~Dashboard~~ — **built**, and `pages.yml` publishes it. **Still needs the
+   Vercel side**: import at vercel.com/new (accept what `vercel.json` supplies),
+   then add `contour.aryangorde.com` under Settings -> Domains. Also flip
+   Settings -> Pages -> Source to "GitHub Actions" once, or the workflow has
+   nowhere to deploy.
+   **Verify HTTPS specifically**, not just that the page loads: `crypto.subtle`
+   exists only in a secure context, so before the certificate lands the chain
+   badge silently degrades to an error while the rest of the page looks fine.
+   Hosting is deliberately *not* on AWS despite the credits: S3 needs
+   CloudFront + ACM to get HTTPS at all, and putting the dashboard on the same
+   account as the brain couples the two failures that must not correlate
+   during judging.
 3. **`--replay`** against a recorded fixture — a judge with no Alpaca keys must
    be able to run the repo.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —

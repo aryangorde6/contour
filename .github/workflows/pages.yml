@@ -1,0 +1,56 @@
+name: pages
+
+# Publishes the dashboard to GitHub Pages as a second, independently hosted
+# copy of the same file. Vercel serves it on the custom domain; this one needs
+# no DNS at all, so a registrar or certificate problem cannot take both down.
+#
+# Like ci.yml, this is given NO secrets. It only ever copies a static file.
+# push-to-main and manual only -- never pull_request, so a fork cannot publish
+# to the project's own Pages origin.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Newest deploy wins. Unlike the agent, there is no state to fork here, so an
+# in-flight publish of a stale commit is worth cancelling.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The page must be self-contained
+        # It is served from a project path (/contour/) on Pages and from the
+        # root on Vercel. Any root-relative URL would work on exactly one of
+        # them, and the one that broke would be the one a judge opened.
+        run: |
+          if grep -nE '(src|href)="/[^/]' dashboard/index.html; then
+            echo "::error::root-relative URL in dashboard/index.html -- breaks on a Pages project path"
+            exit 1
+          fi
+          echo "ok: no root-relative URLs"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
