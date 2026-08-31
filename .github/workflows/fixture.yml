@@ -1,0 +1,145 @@
+name: record fixture
+
+# Records a replay fixture from a LIVE session and commits it to main.
+#
+# `--replay` is the one thing a judge can run without an Alpaca account, and it
+# picks the NEWEST fixture, so the newest one had better be worth running. The
+# first committed fixture was captured before the open: its quotes were hours
+# stale and G5 refused SPY for staleness on every replay -- an honest refusal,
+# but a demonstration of the staleness gate rather than of the pipeline.
+#
+# Schedule + manual only, exactly like agent.yml: this repo is public, and a
+# workflow that can be triggered from a fork is a workflow that can exfiltrate
+# its secrets. This one only ever holds the THROWAWAY account's credentials,
+# and runs --dry, and --dev refuses outright if they resolve to the judged
+# account -- but the discipline is the point.
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:20 and 10:50 ET on Tuesday. The entry window opens at 10:05 ET, so
+    # the first is the earliest capture that resolves to a TRADE phase; the
+    # second is a retry that does nothing if the first already succeeded.
+    # Once a day, one day: code freeze is Wednesday, and a judged repo does
+    # not want a drawer full of near-identical fixtures.
+    - cron: "20,50 14 * * 2"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: contour-fixture
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Cache the Alpaca CLI
+        id: cli-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/alpaca
+          key: alpaca-cli-v0.0.14
+
+      - name: Install the Alpaca CLI
+        if: steps.cli-cache.outputs.cache-hit != 'true'
+        run: go install github.com/alpacahq/cli/cmd/alpaca@latest
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -e .
+
+      - name: Decide whether to record
+        id: gate
+        # The contest window comes from config.py rather than from a date
+        # written into this file, so the workflow stops recording on its own
+        # once the contest is over instead of committing a fixture every
+        # Tuesday for ever.
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from pathlib import Path
+          from contour import config as C
+
+          now = datetime.now(C.ET)
+          have = sorted(Path("fixtures").glob(f"{now:%Y-%m-%d}*.json"))
+          if now.date() not in C.BOOK_RISK_RAMP:
+              print("go=false")
+              print(f"why={now:%Y-%m-%d} is outside the contest window")
+          elif have:
+              print("go=false")
+              print(f"why=already recorded today: {have[-1]}")
+          else:
+              print("go=true")
+              print(f"why=recording at {now:%H:%M} ET")
+              print(f"path=fixtures/{now:%Y-%m-%d-%H%M}et.json")
+          PY
+
+      - name: Why
+        run: echo "${{ steps.gate.outputs.why }}"
+
+      - name: Record one cycle
+        if: steps.gate.outputs.go == 'true'
+        env:
+          # The throwaway account only, and no LLM keys at all. The fixture
+          # captures market reads, not decisions, and `--replay` forces a
+          # degraded brain anyway -- so a brain here would cost a call and
+          # change nothing that gets committed.
+          ALPACA_DEV_API_KEY: ${{ secrets.ALPACA_DEV_API_KEY }}
+          ALPACA_DEV_SECRET_KEY: ${{ secrets.ALPACA_DEV_SECRET_KEY }}
+        run: python -m contour --once --dry --dev --record "${{ steps.gate.outputs.path }}"
+
+      - name: The fixture has to replay, with quotes that are actually fresh
+        id: check
+        if: steps.gate.outputs.go == 'true'
+        # A fixture is only worth committing if it is better than the one it
+        # replaces. "Better" here means one thing: no gate refuses it for
+        # stale quotes. Whether the market happened to offer a tradeable
+        # structure is not something this workflow controls, and a fresh
+        # NO_TRADE is still an honest demonstration of the pipeline.
+        run: |
+          set -o pipefail
+          if ! python -m contour --replay "${{ steps.gate.outputs.path }}" | tee out.txt; then
+            echo "::warning::the recorded fixture does not replay -- not committing it"
+            rm -f "${{ steps.gate.outputs.path }}"
+            echo "usable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q "stale" out.txt; then
+            echo "::warning::recorded quotes are already stale -- not committing"
+            rm -f "${{ steps.gate.outputs.path }}"
+            echo "usable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q "\[ok  \] G1 ok" out.txt; then
+            echo "reached the gate evaluation"
+          else
+            echo "::notice::no structure passed selection, so no gates ran; committing anyway -- the measurement is real and current"
+          fi
+          echo "usable=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit it to main
+        if: steps.check.outputs.usable == 'true'
+        # A push made with GITHUB_TOKEN does not trigger other workflows, so
+        # ci.yml will not re-run on this commit. That is why the replay is
+        # verified above rather than left to CI.
+        run: |
+          git config user.name "contour-agent"
+          git config user.email "aryangorde6@gmail.com"
+          git add -f "${{ steps.gate.outputs.path }}"
+          git commit -m "Fixture recorded live at $(TZ=America/New_York date '+%H:%M ET on %Y-%m-%d')"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "committed ${{ steps.gate.outputs.path }}"

@@ -105,9 +105,11 @@ python -m contour --replay        # no Alpaca account required
 
 `--replay` runs a committed fixture — a real recorded chain of SPY, QQQ and IWM
 quotes — through the exact measurement, selection and gate code the live agent
-uses, and prints the decisions with every gate reason. It forces dry mode and a
-degraded brain, so the same fixture gives the same answer on any machine, on
-any day. Record a new one with `--record fixtures/NAME.json --dev`.
+uses, and prints the decisions with every gate reason. The newest fixture was
+captured at 13:05 ET on 2026-08-31: it puts a SPY iron condor through all
+twelve gates and refuses QQQ and IWM on the volatility premium. It forces dry
+mode and a degraded brain, so the same fixture gives the same answer on any
+machine, on any day. Record a new one with `--record fixtures/NAME.json --dev`.
 
 ## Risk gates
 

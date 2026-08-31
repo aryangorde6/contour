@@ -279,10 +279,14 @@ which read as a market-data problem rather than a brain outage.
   **No secrets**, no `pull_request` trigger, and it guards against
   root-relative URLs, which would work on Vercel's root but 404 under Pages'
   `/contour/` project path.
+- `fixture.yml` — records a live replay fixture and commits it to `main`.
+  Schedule + dispatch only, **dev account only**, `--dry`, and it verifies the
+  recording replays with non-stale quotes before committing. A `GITHUB_TOKEN`
+  push does not trigger other workflows, which is why it verifies in-job.
 - `ci.yml` — runs on PRs, **no secrets**. Tests + grep-block on
   `close-all`/`cancel-all` + chain verify + import-without-credentials.
 - Cron (UTC): `20 13 * * 1-5` pre-open · `*/15 14-19 * * 1-5` cycle ·
-  `50 19 * * 4` Thursday flatten escalation.
+  `50 19 * * 4` Thursday flatten escalation · `20,50 14 * * 2` fixture.
 - Concurrency group, `cancel-in-progress: false` — two writers would fork the
   hash chain. A long cycle therefore queues the next rather than racing it.
 - **`timeout-minutes: 25`**, not 12. Three entry ladders at 3 rungs x 90s is
@@ -332,8 +336,16 @@ which read as a market-data problem rather than a brain outage.
    `DataSource` seam into a fixture, `Replay` serves it back. Forces dry + a
    degraded brain so it is deterministic, and writes to `replay_out/` so a
    rehearsal can never land in the published audit trail. CI runs it with no
-   secrets. **Re-record mid-session** for a better demo -- the committed
-   fixture is pre-open, so its quotes are weekend-stale and G5 vetoes.
+   secrets. **Re-recorded mid-session** on 2026-08-31 at 13:05 ET:
+   `fixtures/2026-08-31-1305et.json` puts a real SPY condor through **all
+   twelve gates, every one passing** (credit $0.79, rung-3 $0.70 vs a $0.65
+   floor), with QQQ and IWM refused on VRP. The pre-open fixture is kept --
+   it is the record of day one, and it is where G5's staleness veto is
+   visible -- but `--replay` picks the newest, which is the good one.
+   `.github/workflows/fixture.yml` re-records on Tuesday at 10:20 ET so this
+   does not go stale again; it uses the throwaway account, runs dry, refuses
+   to commit a fixture whose quotes are already stale, and stops recording on
+   its own once `BOOK_RISK_RAMP` runs out.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —
    Limited"), plus slides needing market analysis, revenue model, roadmap and
    competitive analysis (four slides most teams skip). **Biggest remaining
