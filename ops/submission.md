@@ -1,0 +1,146 @@
+# The lablab submission — every field, ready to paste
+
+**Nothing is submitted yet.** That is the single largest open risk on this
+project: the code, the dashboard, the deck and the write-up are all finished
+and none of it counts until a submission exists on lablab.ai.
+
+**File a draft as soon as you read this.** lablab lets you edit a submission
+until the deadline, so a draft filed Monday with a placeholder video link is
+strictly better than a perfect submission filed Friday morning — the only
+unrecoverable failure mode this week is the form not being open when
+2026-09-04 11:00 ET arrives.
+
+Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
+
+---
+
+## Fixed facts to paste
+
+| Field | Value |
+|---|---|
+| Project name | **Contour** |
+| Team | FluffyMargins (solo — aryangorde6) |
+| **Alpaca paper account** | **`PA35XVXLIO0E`** |
+| Repository | https://github.com/aryangorde6/contour |
+| Live dashboard | https://aryangorde6.github.io/contour/ |
+| Slides | https://aryangorde6.github.io/contour/deck.html |
+| Write-up | https://github.com/aryangorde6/contour/blob/main/WRITEUP.md |
+| Video | *(paste the YouTube/Loom link once recorded — unlisted is fine)* |
+
+---
+
+## Tagline (one line)
+
+> An autonomous options agent that measures the volatility surface every 15
+> minutes and lets the measurement pick the structure — put spread, call
+> spread, condor, or nothing.
+
+## Short description (~50 words)
+
+> Everyone sells iron condors. A condor sells both wings unconditionally, so
+> half the time you are selling the side that isn't rich. Contour measures
+> 25-delta skew first and sells only the rich side, on SPY, QQQ and IWM —
+> behind twelve deterministic risk gates and an append-only hash-chained
+> journal.
+
+## Full description
+
+Paste this, then trim to whatever the field allows. Order matters: the
+differentiator first, the safety argument second, the proof third.
+
+> **The idea.** Contour measures the shape of the volatility surface before it
+> decides what to sell. Two numbers do the work. `vrp_ratio` is ATM implied
+> over 10-day realized — am I being paid at all? `skew_z` is the 25-delta
+> put/call IV gap scored against a per-underlying prior — which side holds the
+> premium? The map is four lines:
+>
+> ```
+> vrp_ratio < 1.30   ->  NO_TRADE     implied isn't rich enough
+> skew_z >= +0.8     ->  PUT_CS       puts rich, sell puts only
+> skew_z <= -0.8     ->  CALL_CS      calls rich, sell calls only
+> otherwise          ->  CONDOR       both sides fairly priced
+> ```
+>
+> Every other agent in this hackathon gates a *fixed* structure. Contour
+> chooses among four from a measurement, and the choice is visible in the
+> order history rather than only in the README. On the first session SPY
+> measured 1.42 and QQQ 1.14 — same week, same market, opposite decisions.
+>
+> **The AI, and its leash.** GLM-5 on Amazon Bedrock. Every wired model output
+> can only make the agent trade *less*, and that is structural rather than a
+> promise: `execute.py` never imports the model layer, so no model output can
+> physically reach an order. The model may name event windows to stand down
+> in, return a size multiplier clamped at 1.0, and veto a structure. It may
+> never choose a strike, size a position, or price one — that is arithmetic,
+> and language models should not do arithmetic that money depends on. The
+> model was chosen by bake-off, not reputation: all six candidates returned
+> schema-valid output, so the tiebreak was blackout accuracy on dates I could
+> check by hand, and two candidates invented a macro release that would have
+> stood the agent down on the week's one clear session.
+>
+> Failure has two tiers. No brain configured → degraded but still trading at
+> half size on hard-coded blackouts. A brain configured but failing → fail
+> closed, an explicit `STAND_DOWN` journaled per underlying.
+>
+> **Twelve risk gates.** Pure functions, zero I/O, fixed order, evaluated
+> before every order — NAV floors, session loss limit, a book-risk ramp,
+> concentration caps, liquidity and quote-staleness, non-null Greeks on every
+> leg, delta bands, an expiry lock, a structure-aware credit floor, event
+> blackouts, the session clock, and a committed `HALT` kill switch. The reason
+> is journaled whether the gate passes **or** fails, so a no-trade cycle is
+> exactly as auditable as a trade.
+>
+> **Alpaca infrastructure, and a finding.** Orders route through the Alpaca
+> CLI because the MCP server cannot currently place multi-leg option orders —
+> the `legs` array arrives as a JSON string and fails pydantic validation
+> (alpacahq/alpaca-mcp-server#97, open since July). The CLI places the
+> identical 4-leg order correctly. Reads go through `alpaca-py`: option
+> snapshots carry Greeks and quotes but no open interest, which lives on the
+> Trading API contract object, so both are merged. Entries go out as a
+> three-rung price ladder and fills are reconciled from actual per-leg fill
+> prices, because paper issues partial fills that would otherwise leave condor
+> legs out of ratio.
+>
+> **You do not have to trust any of this.** The journal is an append-only
+> SHA-256 hash chain, and the dashboard recomputes it in your browser with
+> WebCrypto — same verdict as the CLI, nothing of mine in between. And
+> `python -m contour --replay` runs a fixture of real SPY/QQQ/IWM quotes,
+> recorded mid-session, through the same measurement, selection and gate code
+> the live agent runs, printing all twelve gate reasons. **No Alpaca account
+> required.** Clone the repo and get the same decisions back.
+>
+> **The honest number.** Defined-risk premium selling is capped at the credit.
+> The median outcome for a week is under one percent. Whoever posts the
+> winning P&L will have won a coin flip; I optimised the four criteria that
+> are not luck.
+
+## Technologies / tags
+
+Alpaca Trading API · Alpaca CLI · alpaca-py · Amazon Bedrock · GLM-5 ·
+Python 3.12 · GitHub Actions · GitHub Pages
+
+*(Do not tag the MCP server as used — it is documented as a blocker, and
+claiming it would be the one dishonest line in an otherwise checkable
+submission. Do not tag Featherless: it is wired as a fallback but the live
+brain runs on Bedrock.)*
+
+## "How it uses Alpaca" (if the form asks separately)
+
+> Reads: `alpaca-py` option chain snapshots merged with Trading API contract
+> objects. Writes: the Alpaca CLI, `--order-class mleg`, three-rung limit
+> ladder, per-leg fill reconciliation. Account assertion runs before every
+> single order, because an `ALPACA_API_KEY` in the environment silently
+> overrides an explicit profile flag — verified live.
+
+---
+
+## Pre-flight, the morning of
+
+```bash
+git pull && .venv/bin/python -m pytest -q      # expect 137 passed
+.venv/bin/python -m contour --verify           # hash chain intact
+curl -s -o /dev/null -w '%{http_code}\n' https://aryangorde6.github.io/contour/
+```
+
+Then confirm on the form itself: **account ID present**, video link resolves
+in a private window, and the repo is still public.
