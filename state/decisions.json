@@ -1,31 +1,24 @@
 [
  {
   "underlying": "SPY",
-  "decision": "CONDOR",
-  "reason": "SKEW_NEUTRAL: SPY skew_z +0.27 inside +/-0.80 -- both sides fairly priced, selling both",
+  "decision": "VETOED",
+  "reason": "SKEW_NEUTRAL: SPY skew_z +0.28 inside +/-0.80 -- both sides fairly priced, selling both",
   "gates": [
-   "G1 ok: NAV $100,000",
+   "G1 ok: NAV $99,997",
    "G2 ok: session P&L $0",
-   "G3 ok: book $412 / $2,000 (2% ramp)",
+   "G3 ok: book $414 / $2,000 (2% ramp)",
    "G4 ok: 0 open, 0 in SPY",
-   "G5 ok: 4 legs liquid, round-trip friction $0.18 / $0.26",
-   "G6 ok: Greeks present on all 4 legs",
-   "G7 ok: all legs inside delta bands",
-   "G8 ok: all legs expire 2026-09-11",
-   "G9 ok: credit $0.88, rung-3 $0.78 vs floor $0.65",
-   "G10 ok: outside all blackout windows",
-   "G11 ok: 10:07 ET on 2026-08-31",
-   "G12 ok: contour-spy-dd42f76f-r1"
+   "G5 round-trip friction $0.34 > 30% of $0.85 credit ($0.26)"
   ],
-  "spot": 765.53,
-  "atm_iv": 11.48,
-  "rv10": 7.8559,
-  "vrp_ratio": 1.461,
+  "spot": 765.5,
+  "atm_iv": 11.235,
+  "rv10": 7.8633,
+  "vrp_ratio": 1.429,
   "skew25": 2.85,
   "skew_z": 0.275,
-  "credit": 0.875,
+  "credit": 0.855,
   "contracts": 1,
-  "max_loss_per_contract": 412.5,
+  "max_loss_per_contract": 414.5,
   "legs": [
    "SPY260911P00745000",
    "SPY260911P00740000",
@@ -36,23 +29,23 @@
  {
   "underlying": "QQQ",
   "decision": "NO_TRADE",
-  "reason": "VRP_TOO_LOW: QQQ implied/realized 1.21 < 1.30 -- not paid enough to sell",
-  "spot": 713.83,
-  "atm_iv": 16.8075,
-  "rv10": 13.9005,
-  "vrp_ratio": 1.209,
-  "skew25": 3.53,
-  "skew_z": 0.554
+  "reason": "VRP_TOO_LOW: QQQ implied/realized 1.20 < 1.30 -- not paid enough to sell",
+  "spot": 714.02,
+  "atm_iv": 16.6575,
+  "rv10": 13.9015,
+  "vrp_ratio": 1.198,
+  "skew25": 3.61,
+  "skew_z": 0.615
  },
  {
   "underlying": "IWM",
   "decision": "NO_TRADE",
-  "reason": "VRP_TOO_LOW: IWM implied/realized 1.20 < 1.30 -- not paid enough to sell",
-  "spot": 293.4,
-  "atm_iv": 15.8475,
-  "rv10": 13.1622,
-  "vrp_ratio": 1.204,
-  "skew25": 2.99,
-  "skew_z": -0.073
+  "reason": "VRP_TOO_LOW: IWM implied/realized 1.19 < 1.30 -- not paid enough to sell",
+  "spot": 293.38,
+  "atm_iv": 15.67,
+  "rv10": 13.1873,
+  "vrp_ratio": 1.188,
+  "skew25": 2.9,
+  "skew_z": -0.133
  }
 ]
