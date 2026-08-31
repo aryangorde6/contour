@@ -237,7 +237,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**84 tests passing.** All core modules complete.
+**109 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -251,10 +251,14 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 | `contour/execute.py` | CLI broker, account assertion, 3-rung ladder, fill reconciliation |
 | `contour/manage.py` | Exits: TP 50% / stop 2.0× / breach 0.30×wing / Thu flatten; shorts-first legout |
 | `contour/data.py` | DataSource seam (snapshots + contracts merged); replay swaps in here |
+| `contour/positions.py` | **The open book, persisted across cron runs.** Without it every exit rule is dead code |
+| `contour/replay.py` | `Recorder` tees the DataSource seam into a fixture; `Replay` serves it back with no credentials |
+| `contour/llm.py` | Provider seam: Bedrock / Featherless / Gemini / Anthropic behind one `parse()` |
+| `contour/state.py` | The dashboard snapshot + the equity series + `written_at.json` per-file timestamps |
 | `contour/clock.py` | Session phase; cron never trusts its firing time |
-| `contour/mind.py` | Claude: blackout windows, regime multiplier, structure veto |
+| `contour/mind.py` | The brain: blackout windows, regime multiplier, structure veto |
 | `contour/loop.py` | One idempotent cycle; exits before entries, always |
-| `contour/__main__.py` | `--once --dry --as-of --dev --verify` |
+| `contour/__main__.py` | `--once --dry --as-of --dev --verify --brain-check --record --replay` |
 
 **`mind.py` design rule:** the LLM's outputs can only make the agent trade
 **less**. Multiplier is `min(value, 1.0)` and scales the NAV used for *sizing*,
@@ -263,7 +267,9 @@ reverse a structure. Enforced structurally — `execute.py` does not import it.
 
 **Two-tier failure policy:** not configured → degraded but **still trading**
 (half size, hard-coded blackouts, no veto). Configured but failing → **fail
-closed**.
+closed**. A fail-closed cycle journals an explicit `STAND_DOWN` per name; it
+used to surface as "could not assemble a valid structure from the chain",
+which read as a market-data problem rather than a brain outage.
 
 ### CI / cron
 
@@ -278,7 +284,21 @@ closed**.
 - Cron (UTC): `20 13 * * 1-5` pre-open · `*/15 14-19 * * 1-5` cycle ·
   `50 19 * * 4` Thursday flatten escalation.
 - Concurrency group, `cancel-in-progress: false` — two writers would fork the
-  hash chain.
+  hash chain. A long cycle therefore queues the next rather than racing it.
+- **`timeout-minutes: 25`**, not 12. Three entry ladders at 3 rungs x 90s is
+  810s before any LLM call. A killed job skips the publish step, and since the
+  open book lives in `state/`, losing that publish loses a freshly-recorded
+  position — it recreates the unmanaged-book bug.
+- Verify and publish both run **`if: always()`**, with publish gated on
+  `steps.verify.outcome == 'success'`. A cycle that crashes after a fill still
+  has a position and a journal worth keeping; a corrupt chain is still never
+  pushed.
+- The publish step builds its commit with a **scratch `GIT_INDEX_FILE` +
+  `write-tree` + `commit-tree`**, never a branch checkout. It used to stash
+  `journal`/`state` and check out `agent-state`, but `stash --include-untracked`
+  skips *ignored* files and both directories are gitignored, so the outputs
+  stayed in the tree and the checkout aborted. It also refuses to push an empty
+  tree: a publish that wipes the audit trail is worse than one that fails.
 - Journal and state publish to the orphan **`agent-state`** branch.
 - **Scheduled runs are LIVE on the judged account** — `workflow_dispatch` inputs
   are empty on a schedule trigger, so `ARGS` is just `--once`.
@@ -316,15 +336,46 @@ closed**.
    fixture is pre-open, so its quotes are weekend-stale and G5 vetoes.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —
    Limited"), plus slides needing market analysis, revenue model, roadmap and
-   competitive analysis (four slides most teams skip).
+   competitive analysis (four slides most teams skip). **Biggest remaining
+   scoring lever, and it needs the operator — not something the agent can do.**
 5. **Social** — 5 posts on X/LinkedIn tagging `@lablabai` and `@AlpacaHQ` **in
    the body**. Only 18 total likes across all 23 submissions; two $500 prizes
    are nearly uncontested. Reddit links likely do not qualify.
-6. Claim Featherless `ALPACA26` and paste the key -- `mind.py` runs degraded
-   at half size until it lands.
+6. ~~Featherless `ALPACA26`~~ — **moot.** The brain runs on Bedrock GLM-5 with
+   AWS credits; Featherless stays wired as a fallback but needs a card.
+7. **Audit findings not yet fixed** (none on the money path; take before the
+   freeze if there is time):
+   - a partially-filled entry rung does not cancel its residual, and
+     `legs_balanced` is computed but never consumed (`execute.py`)
+   - the dashboard's "Structures opened" counts gate-passing candidates, not
+     fills, so an LLM-vetoed cycle renders as a successful one
+   - `cycle_count` is always 0 in the heartbeat and every journal record
+   - the regime call is handed an empty measurement dict (`loop.py` passes
+     `{}`), so it sizes the book without seeing the surface
+   - the 13:20 UTC "pre-open" cron cannot reach the blackout code (the cycle
+     resolves to a non-TRADE phase and returns first); the docs describe it as
+     if it does
+   - `--replay` prints only failing gate reasons, though the docs say every one
 
 **Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
 verification only. File a draft submission Wednesday night.
+
+### Live state as of 2026-08-31 close
+
+**Two SPY iron condors are open on the judged account**, both expiring
+2026-09-11, tracked in `state/positions.json` on `agent-state`:
+
+| order | filled ET | credit | max loss/ct | strikes |
+|---|---|---|---|---|
+| `1b003d45` | 10:39 | $0.80 | $420 | 745/740 P · 781/786 C |
+| `b4507a9a` | 10:09 | $0.82 | $418 | 745/740 P · 781/786 C |
+
+NAV ~$99,990. They exit-check every cycle now; the profit target fires at
+~$0.40 and the stop at ~$1.60. **They will be flattened by the scheduled
+Thursday 15:45 ET flatten** -- which is only true because of the fix below.
+
+Nothing more opened today after 11:00 ET: the regime call set a `no_new_entries
+_after` cutoff of 11:00 ET, and G11 enforced it for the rest of the session.
 
 ### The dashboard
 
@@ -367,6 +418,37 @@ had been committed by an incidental `git add -A`, and the runner restores
 untracked-elsewhere files — so the live cron would have appended judged records
 onto twelve dev dry-run records and published them as one chain. Journals are
 agent output; they belong on `agent-state` only, exactly like `state/`.
+
+### Every CI failure so far, and why — do not re-investigate
+
+| Run | Cause | Fixed by |
+|---|---|---|
+| `ci` 33329914945 | `Multiple top-level packages discovered: ['contour', 'journal']` | `c3677e7` — declare the package explicitly |
+| `pages` 33375780059 | Pages not enabled on the repo | enabled out of band via the API |
+| `pages` 33375832427 | `GITHUB_TOKEN` cannot *create* a Pages site, even with `pages: write` — "Resource not accessible by integration". `actions/configure-pages`' own `enablement: true` cannot get around it either | flag removed; site created once with `gh api -X POST .../pages -f build_type=workflow` |
+| `contour agent` 33376951937 | `stash --include-untracked` skips ignored files → `checkout -B agent-state` aborted on `state/heartbeat.json` | scratch-index publish, above |
+
+The standing annotation is a **Node 20 deprecation warning** on
+`actions/checkout@v4` and `actions/setup-python@v5`. GitHub already force-runs
+them on Node 24, so it is cosmetic. **Do not bump action pins on the
+credentialed trading workflow during the contest** — wrong risk for a warning.
+
+### The audit that found all of this
+
+Five parallel reviewers (live path · CI/CD · code landed that day · LLM layer ·
+truthfulness of the judged docs), each finding capped at 4, then per-finding
+adversarial verifiers prompted to **refute by default**. 9 confirmed, 1
+refuted, 10 reported unverified under a per-dimension cap.
+
+Two process notes worth keeping:
+
+1. **An empty result is not a clean bill of health.** The first run returned
+   "no defects survived verification" because all five agents had died on a
+   usage limit before running. The journal held five `started` records and zero
+   results. Always check the journal before believing a negative.
+2. **Verification earned its keep.** The one refuted finding ("CI verifies zero
+   journal files") was factually right about the files but wrong about the
+   consequence — the step above it already covers the case.
 
 ### 2026-08-31: the open book was never passed to the cycle
 
@@ -417,12 +499,21 @@ it is wired in.
 ## 8. Resume commands
 
 ```bash
-.venv/bin/python -m pytest -q                                  # 84 tests
+.venv/bin/python -m pytest -q                                  # 109 tests
+.venv/bin/python -m contour --replay                           # no credentials needed
+.venv/bin/python -m contour --brain-check                      # is the LLM alive?
 .venv/bin/python -m contour --dry --dev --as-of 2026-08-31T11:00
 .venv/bin/python -m contour --verify                           # hash chain
 .venv/bin/python verify_setup.py                               # judged account
+.venv/bin/python ops/repair_book.py                            # rebuild the book, dry
 gh run list --workflow="contour agent" --limit 5
 gh workflow run "contour agent" -f dry=true -f dev=true        # safe rehearsal
+```
+
+Read the live book without cloning anything:
+
+```bash
+curl -s https://raw.githubusercontent.com/aryangorde6/contour/agent-state/state/positions.json
 ```
 
 The Alpaca CLI is at `~/go/bin/alpaca` (v0.0.14). Python venv is pinned to
