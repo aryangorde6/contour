@@ -131,3 +131,37 @@ def test_anthropic_is_used_when_it_is_the_only_key():
 def test_explicit_choice_overrides_and_missing_key_means_degraded(env, want):
     got = build_provider(env)
     assert got is None if want is None else isinstance(got, want)
+
+
+# --- the no-card fallback ------------------------------------------------
+GM = {"GEMINI_API_KEY": "AIza-x"}
+
+
+def test_gemini_is_used_when_featherless_is_unavailable():
+    """The card wall on Featherless is the reason this seam exists."""
+    got = build_provider({**GM, **AN})
+    assert isinstance(got, OpenAICompatProvider)
+    assert "generativelanguage" in got.base_url and got.model.startswith("gemini")
+
+
+def test_google_api_key_is_accepted_as_an_alias():
+    assert isinstance(build_provider({"GOOGLE_API_KEY": "AIza-x"}),
+                      OpenAICompatProvider)
+
+
+def test_preference_order_is_featherless_then_gemini_then_anthropic():
+    assert build_provider({**FW, **GM, **AN}).base_url.startswith(
+        "https://api.featherless.ai")
+    assert "generativelanguage" in build_provider({**GM, **AN}).base_url
+    assert isinstance(build_provider(dict(AN)), AnthropicProvider)
+
+
+def test_model_override_survives_provider_selection():
+    """If a model id turns out wrong we fix it with an env var, not a deploy."""
+    got = build_provider({**GM, "CONTOUR_LLM_MODEL": "gemini-2.5-flash"})
+    assert got.model == "gemini-2.5-flash"
+
+
+def test_explicit_gemini_choice_ignores_a_present_featherless_key():
+    got = build_provider({**FW, **GM, "CONTOUR_LLM": "gemini"})
+    assert "generativelanguage" in got.base_url

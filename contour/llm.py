@@ -34,6 +34,13 @@ TIMEOUT = 90.0
 # whole call has to finish inside a 15-minute cron cycle.
 FEATHERLESS_BASE = "https://api.featherless.ai/v1"
 FEATHERLESS_MODEL = "zai-org/GLM-5.2"
+
+# Google AI Studio speaks the same OpenAI shape, and its free tier needs no
+# card -- which is the whole reason this seam exists. 15 RPM / 1500 RPD against
+# our ~29 calls a day is not a constraint worth designing around.
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
+GEMINI_MODEL = "gemini-3.7-flash"
+
 ANTHROPIC_MODEL = "claude-opus-5"
 
 
@@ -185,16 +192,28 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     """
     e = os.environ if env is None else env
     choice = (e.get("CONTOUR_LLM") or "").strip().lower()
-    fw, an = e.get("FEATHERLESS_API_KEY", ""), e.get("ANTHROPIC_API_KEY", "")
+    override = (e.get("CONTOUR_LLM_MODEL") or "").strip()
+    fw = e.get("FEATHERLESS_API_KEY", "")
+    gm = e.get("GEMINI_API_KEY", "") or e.get("GOOGLE_API_KEY", "")
+    an = e.get("ANTHROPIC_API_KEY", "")
+
+    def feather():
+        return OpenAICompatProvider(
+            fw, FEATHERLESS_BASE, override or FEATHERLESS_MODEL) if fw else None
+
+    def gemini():
+        return OpenAICompatProvider(
+            gm, GEMINI_BASE, override or GEMINI_MODEL) if gm else None
+
+    def claude():
+        return AnthropicProvider(an, override or ANTHROPIC_MODEL) if an else None
 
     if choice == "off":
         return None
-    if choice == "anthropic":
-        return AnthropicProvider(an) if an else None
-    if choice == "featherless":
-        return OpenAICompatProvider(fw) if fw else None
-    if fw:
-        return OpenAICompatProvider(fw)
-    if an:
-        return AnthropicProvider(an)
-    return None
+    if choice in ("featherless", "gemini", "anthropic"):
+        return {"featherless": feather, "gemini": gemini,
+                "anthropic": claude}[choice]()
+    # Preference order is availability, not quality: Featherless is the funded
+    # partner path, Gemini the no-card fallback, Anthropic needs credits we
+    # do not have.
+    return feather() or gemini() or claude()
