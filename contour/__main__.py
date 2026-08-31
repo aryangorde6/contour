@@ -28,9 +28,36 @@ def main(argv=None) -> int:
                     help="use the throwaway account, never the judged one")
     ap.add_argument("--verify", action="store_true",
                     help="recompute the journal hash chain and exit")
+    ap.add_argument("--brain-check", action="store_true",
+                    help="exercise all three LLM calls and exit; no trading")
     args = ap.parse_args(argv)
 
     load_dotenv()
+
+    if args.brain_check:
+        mind = Mind()
+        print(f"brain: {mind.brain}")
+        if not mind.configured:
+            print("no provider configured -- set one of AWS_BEARER_TOKEN_BEDROCK,"
+                  "\n  AWS_ACCESS_KEY_ID+AWS_SECRET_ACCESS_KEY, FEATHERLESS_API_KEY,"
+                  "\n  GEMINI_API_KEY, ANTHROPIC_API_KEY")
+            return 1
+        day = datetime.now(C.ET).date()
+        ok = True
+        for label, call in (
+            ("blackouts", lambda: mind.blackouts(day)),
+            ("regime", lambda: mind.regime(day, {"SPY": 1.42, "QQQ": 1.38, "IWM": 1.51})),
+            ("confirm", lambda: mind.confirm("SPY", "CONDOR", 1.42, 0.1)),
+        ):
+            r = call()
+            src = getattr(r, "source", None)
+            bad = src == "failed_closed" or (src is None and r.veto
+                                             and "fail-closed" in r.reason)
+            ok &= not bad
+            print(f"\n[{label}] {'FAIL' if bad else 'ok'}")
+            print(f"  {r}")
+        print(f"\n{'all three calls returned schema-valid output' if ok else 'BRAIN UNUSABLE -- see above'}")
+        return 0 if ok else 1
 
     if args.verify:
         ok_all = True

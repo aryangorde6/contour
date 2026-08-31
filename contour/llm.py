@@ -41,6 +41,10 @@ FEATHERLESS_MODEL = "zai-org/GLM-5.2"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
 GEMINI_MODEL = "gemini-3.7-flash"
 
+# Sonnet 5 is Open access on Bedrock; Opus 5 is gated behind an access
+# request. $2/$10 per MTok makes a week of this agent cost about a dollar.
+BEDROCK_MODEL = "anthropic.claude-sonnet-5"
+
 ANTHROPIC_MODEL = "claude-opus-5"
 
 
@@ -82,6 +86,15 @@ def _first_json_object(text: str) -> str:
                 if depth == 0:
                     return text[start:i + 1]
     raise LLMError(f"unbalanced JSON in reply: {text[:200]!r}")
+
+
+def _schema_instruction(schema: type[BaseModel]) -> str:
+    """For endpoints with no native structured output. Amazon Bedrock is one:
+    it serves the Messages API but explicitly does not support structured
+    outputs, so the schema has to travel in the prompt."""
+    return ("Reply with a single JSON object and nothing else -- no prose, no "
+            "code fence. It must validate against this JSON Schema:\n"
+            + json.dumps(schema.model_json_schema()))
 
 
 class AnthropicProvider:
@@ -183,6 +196,71 @@ class OpenAICompatProvider:
         return schema.model_validate_json(_first_json_object(raw))
 
 
+class BedrockProvider:
+    """Claude through Amazon Bedrock.
+
+    Same Messages API shape as first-party, with two differences that matter
+    here: structured outputs are NOT supported, so the schema goes in the
+    prompt and we validate ourselves; and auth is either a bearer token (short
+    lived, 12h) or an AWS key pair (long lived, which is what a four-day cron
+    actually needs).
+
+    Default model is Sonnet 5 rather than Opus 5 deliberately: Sonnet is Open
+    access on Bedrock while Opus 5 is gated, and for a job that returns three
+    small fixed-shape objects the difference is not worth an access request.
+    """
+
+    name = "bedrock"
+
+    def __init__(self, model: str = BEDROCK_MODEL, region: str = "us-east-1",
+                 api_key: str = "", access_key: str = "", secret_key: str = "",
+                 session_token: str = ""):
+        self.model, self.region = model, region
+        self.api_key = api_key
+        self.access_key, self.secret_key = access_key, secret_key
+        self.session_token = session_token
+        self._client: Any = None
+
+    def _c(self) -> Any:
+        if self._client is None:
+            from anthropic import AnthropicBedrockMantle
+            if self.api_key:
+                self._client = AnthropicBedrockMantle(
+                    api_key=self.api_key, aws_region=self.region)
+            else:
+                self._client = AnthropicBedrockMantle(
+                    aws_access_key=self.access_key,
+                    aws_secret_key=self.secret_key,
+                    aws_session_token=self.session_token or None,
+                    aws_region=self.region)
+        return self._client
+
+    def parse(self, system: str, user: str, schema: type[BaseModel],
+              effort: str = "low") -> BaseModel:
+        sys_p = f"{system}\n\n{_schema_instruction(schema)}"
+        msgs: list[dict] = [{"role": "user", "content": user}]
+        last = ""
+        for _ in range(2):
+            try:
+                r = self._c().messages.create(
+                    model=self.model, max_tokens=4000,
+                    system=sys_p, messages=msgs)
+                raw = "".join(b.text for b in r.content
+                              if getattr(b, "type", None) == "text")
+            except Exception as exc:                            # noqa: BLE001
+                raise LLMError(f"{type(exc).__name__}: {exc}") from exc
+            try:
+                return schema.model_validate_json(_first_json_object(raw))
+            except (LLMError, ValidationError) as exc:
+                last = f"{type(exc).__name__}: {exc}"
+                msgs = msgs + [
+                    {"role": "assistant", "content": raw or "(empty)"},
+                    {"role": "user", "content":
+                        f"That did not validate: {last}. Return only the JSON "
+                        f"object, matching the schema exactly."}]
+        raise LLMError(f"bedrock returned nothing schema-valid: {last}")
+
+
 def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     """Pick a brain from the environment. None means run degraded.
 
@@ -193,9 +271,21 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     e = os.environ if env is None else env
     choice = (e.get("CONTOUR_LLM") or "").strip().lower()
     override = (e.get("CONTOUR_LLM_MODEL") or "").strip()
+    bedrock_key = (e.get("AWS_BEARER_TOKEN_BEDROCK", "")
+                   or e.get("BEDROCK_API_KEY", ""))
+    ak, sk = e.get("AWS_ACCESS_KEY_ID", ""), e.get("AWS_SECRET_ACCESS_KEY", "")
+    region = e.get("AWS_REGION", "") or e.get("AWS_DEFAULT_REGION", "") or "us-east-1"
     fw = e.get("FEATHERLESS_API_KEY", "")
     gm = e.get("GEMINI_API_KEY", "") or e.get("GOOGLE_API_KEY", "")
     an = e.get("ANTHROPIC_API_KEY", "")
+
+    def bedrock():
+        if not (bedrock_key or (ak and sk)):
+            return None
+        return BedrockProvider(
+            model=override or e.get("BEDROCK_MODEL", "") or BEDROCK_MODEL,
+            region=region, api_key=bedrock_key, access_key=ak, secret_key=sk,
+            session_token=e.get("AWS_SESSION_TOKEN", ""))
 
     def feather():
         return OpenAICompatProvider(
@@ -210,10 +300,11 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
 
     if choice == "off":
         return None
-    if choice in ("featherless", "gemini", "anthropic"):
-        return {"featherless": feather, "gemini": gemini,
+    if choice in ("bedrock", "featherless", "gemini", "anthropic"):
+        return {"bedrock": bedrock, "featherless": feather, "gemini": gemini,
                 "anthropic": claude}[choice]()
-    # Preference order is availability, not quality: Featherless is the funded
-    # partner path, Gemini the no-card fallback, Anthropic needs credits we
-    # do not have.
-    return feather() or gemini() or claude()
+    # Preference order is availability, not taste. Bedrock first: it is the
+    # only path where we have both a real Claude and credits that exist.
+    # Featherless needs a card we do not have, Gemini is the free fallback,
+    # first-party Anthropic has no credits at all.
+    return bedrock() or feather() or gemini() or claude()

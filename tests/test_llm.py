@@ -14,7 +14,8 @@ import pytest
 from pydantic import BaseModel
 
 from contour import llm
-from contour.llm import (AnthropicProvider, LLMError, OpenAICompatProvider,
+from contour.llm import (AnthropicProvider, BedrockProvider, LLMError,
+                         OpenAICompatProvider,
                          _first_json_object, build_provider)
 
 
@@ -165,3 +166,59 @@ def test_model_override_survives_provider_selection():
 def test_explicit_gemini_choice_ignores_a_present_featherless_key():
     got = build_provider({**FW, **GM, "CONTOUR_LLM": "gemini"})
     assert "generativelanguage" in got.base_url
+
+
+# --- Bedrock: Claude, on credits that actually exist ---------------------
+BR = {"AWS_ACCESS_KEY_ID": "AKIA-x", "AWS_SECRET_ACCESS_KEY": "s3cr3t"}
+
+
+def test_bedrock_wins_when_configured_because_its_credits_exist():
+    got = build_provider({**BR, **FW, **GM, **AN})
+    assert isinstance(got, BedrockProvider)
+    assert got.model == "anthropic.claude-sonnet-5", "Opus 5 is gated on Bedrock"
+
+
+def test_bedrock_accepts_a_bearer_token_instead_of_a_key_pair():
+    got = build_provider({"AWS_BEARER_TOKEN_BEDROCK": "bt-x"})
+    assert isinstance(got, BedrockProvider) and got.api_key == "bt-x"
+
+
+def test_a_lone_access_key_is_not_enough_to_claim_a_brain():
+    assert build_provider({"AWS_ACCESS_KEY_ID": "AKIA-x"}) is None
+
+
+def test_region_falls_back_through_the_usual_aws_names():
+    assert build_provider({**BR}).region == "us-east-1"
+    assert build_provider({**BR, "AWS_DEFAULT_REGION": "ap-south-1"}).region == "ap-south-1"
+    assert build_provider({**BR, "AWS_REGION": "eu-west-1"}).region == "eu-west-1"
+
+
+def test_bedrock_carries_the_schema_in_the_prompt_and_reasks_once(monkeypatch):
+    """Bedrock does not support structured outputs, so the schema has to
+    travel in the system prompt and we validate it ourselves."""
+    seen: list[dict] = []
+
+    class Blk:
+        type = "text"
+        def __init__(self, t): self.text = t
+
+    class Msg:
+        def __init__(self, t): self.content = [Blk(t)]
+
+    replies = iter(['{"veto": "nope"}', '{"veto": true, "reason": "second try"}'])
+
+    class FakeMessages:
+        def create(self, **kw):
+            seen.append(kw)
+            return Msg(next(replies))
+
+    class FakeClient:
+        messages = FakeMessages()
+
+    p = BedrockProvider()
+    monkeypatch.setattr(p, "_c", lambda: FakeClient())
+    got = p.parse("sys", "user", Toy)
+
+    assert got.veto is True and len(seen) == 2
+    assert "JSON Schema" in seen[0]["system"]
+    assert "did not validate" in seen[1]["messages"][-1]["content"]

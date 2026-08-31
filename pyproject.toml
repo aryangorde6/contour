@@ -11,7 +11,7 @@ dependencies = [
     "python-dotenv",
     "httpx",
     "tenacity",
-    "anthropic>=0.75",
+    "anthropic[bedrock]>=0.75",   # [bedrock] pulls boto3 for SigV4 signing
 ]
 
 [build-system]
