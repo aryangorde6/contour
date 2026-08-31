@@ -294,8 +294,8 @@ class BedrockProvider:
 def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     """Pick a brain from the environment. None means run degraded.
 
-    Featherless wins by default because it is the funded path for this
-    hackathon; CONTOUR_LLM overrides for testing and for the write-up's
+    Bedrock wins by default: it is the only path funded by credits that
+    actually exist. CONTOUR_LLM overrides for testing and for the write-up's
     reproducibility claim.
     """
     e = os.environ if env is None else env
@@ -334,8 +334,8 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     if choice in ("bedrock", "featherless", "gemini", "anthropic"):
         return {"bedrock": bedrock, "featherless": feather, "gemini": gemini,
                 "anthropic": claude}[choice]()
-    # Preference order is availability, not taste. Bedrock first: it is the
-    # only path where we have both a real Claude and credits that exist.
-    # Featherless needs a card we do not have, Gemini is the free fallback,
-    # first-party Anthropic has no credits at all.
+    # Preference order is availability, not taste. Bedrock first, because AWS
+    # credits pay for every non-Anthropic model there. Featherless needs a card
+    # we do not have, Gemini is the no-card fallback, and first-party Anthropic
+    # has no credits at all.
     return bedrock() or feather() or gemini() or claude()

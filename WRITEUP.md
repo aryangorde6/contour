@@ -2,6 +2,7 @@
 
 **Alpaca AI Trading Agents Hackathon · Options Alpha Agents**
 Paper account `PA35XVXLIO0E` · [github.com/aryangorde6/contour](https://github.com/aryangorde6/contour)
+Live dashboard: **[aryangorde6.github.io/contour](https://aryangorde6.github.io/contour/)**
 
 ---
 
@@ -59,16 +60,51 @@ is what it is asked.
 - **Brain configured but answering off-schema** → **fail closed**: veto, size
   zero. A configured brain returning garbage is a real signal, not a hiccup.
 
-`llm.py` is a **provider seam**: Featherless (open weights), Google AI Studio
+`llm.py` is a **provider seam**: Amazon Bedrock, Featherless, Google AI Studio
 and Anthropic sit behind one `parse(system, user, schema)` contract, so the
-vendor is a config value rather than an architecture. Open-weight endpoints do
-not guarantee strict `json_schema`, so the OpenAI-compatible path degrades in
-three stages — strict schema, then JSON mode with the schema inlined in the
-prompt, then a re-ask carrying the validation error back — and raises if all
-three fail, which the fail-closed policy above already handles. Extraction is
-brace-matched, because these models fence their JSON and think out loud in
-front of it. The journal records **which brain answered**, so a result can be
-reproduced against the model that produced it.
+vendor is a config value rather than an architecture — `CONTOUR_LLM` picks one
+and `CONTOUR_LLM_MODEL` overrides the model id. The judged run is **GLM-5 on
+Bedrock**, reached through the **Converse API**: Nova, Qwen, Mistral, Llama and
+GLM each take a different `invoke` body, while Converse takes the same one for
+all of them, so changing model is a string rather than a new code path.
+
+**The model was chosen by bake-off, not by reputation.** Six candidates all
+returned schema-valid output for all three jobs, so schema compliance separated
+nothing. The tiebreak was blackout accuracy on three dates whose calendars we
+already knew:
+
+| Prompted for (truth) | GLM-5 | Nova Pro / Llama-4 |
+|---|---|---|
+| Mon 8/31 — nothing scheduled | 0 windows | **invented an ISM blackout** |
+| Tue 9/1 — ISM + JOLTS, 10:00 ET | 09:30–10:20 | correct |
+| Wed 9/2 — ADP + Beige Book | both, correct times | Beige Book only; ADP time wrong |
+
+Nova and Llama lifted Tuesday's ISM out of the regime brief and applied it to
+Monday, which would have stood the agent down on the one clear session of the
+week. In a design where the model can only subtract, a hallucinated blackout is
+not a cosmetic error — it is the *only* kind of error it can still make.
+
+Bedrock's Converse API does not offer structured outputs, so the schema is
+inlined in the system prompt, the reply is brace-matched out (these models fence
+their JSON and think out loud in front of it), validated against the pydantic
+model, and on a mismatch re-asked **once** with the validation error handed
+back. Two failures raise, which the fail-closed policy above already covers.
+Reasoning models return their chain in a separate content block, so only text
+blocks are read. The OpenAI-compatible providers get a similar three-stage
+ladder, since open-weight endpoints do not guarantee strict `json_schema`
+either.
+
+One finding worth recording, because it cost a day: **the Bedrock payment wall
+is Anthropic-specific.** Anthropic models on Bedrock are AWS *Marketplace*
+subscriptions and 403 with `INVALID_PAYMENT_INSTRUMENT` on a credit-funded
+account; every other model bills as ordinary AWS usage and works. Concluding
+"Bedrock is unavailable" from an all-Anthropic sample was wrong —
+`ops/probe_bedrock.py` sends a real Converse request to one model per family,
+because catalogue visibility is not entitlement, and found **93 callable
+models**.
+
+The journal records **which brain answered**, so any result can be reproduced
+against the model that produced it.
 
 ---
 
@@ -153,6 +189,15 @@ reach a credential.
 **The journal is a SHA-256 hash chain**, append-only, verified in CI. Every
 decision, every refusal, every gate reason and every fill is in it, and the
 chain proves the record was not edited after the fact.
+
+**The dashboard re-verifies that chain in your browser.** It is one static file
+with no backend: it fetches the raw journal from `agent-state`, walks the chain
+with WebCrypto SHA-256 and prints the same verdict `python -m contour --verify`
+prints, so the audit trail does not rest on our word for it. Its test suite runs
+that same JavaScript under Node against a Python-written chain — including a
+deliberately tampered record — and asserts both implementations reach an
+identical verdict, because a badge that always reads "verified" is decoration
+rather than evidence.
 
 ---
 
