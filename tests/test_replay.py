@@ -14,8 +14,8 @@ import pytest
 
 from contour import config as C
 from contour.models import Leg
-from contour.replay import (Recorder, Replay, ReplayBroker, ReplayError,
-                            _leg_from_dict, _leg_to_dict)
+from contour.replay import (FORMAT, Recorder, Replay, ReplayBroker,
+                            ReplayError, _leg_from_dict, _leg_to_dict)
 
 from .test_gates import leg
 
@@ -111,10 +111,10 @@ def test_no_fixtures_tells_you_how_to_make_one(tmp_path):
 
 
 def test_newest_wins(tmp_path):
-    for name in ("2026-08-29.json", "2026-08-31.json", "2026-08-30.json"):
-        src = FakeSource()
-        Recorder(src, tmp_path / name).save(AS_OF)
-    assert Replay.newest(tmp_path).path.name == "2026-08-31.json"
+    """The last recording wins, whatever the operator called the file."""
+    for name in ("2026-08-29.json", "2026-08-31.json", "aaa-recorded-last.json"):
+        Recorder(FakeSource(), tmp_path / name).save(AS_OF)
+    assert Replay.newest(tmp_path).path.name == "aaa-recorded-last.json"
 
 
 # --- the broker cannot trade, structurally -------------------------------
@@ -185,3 +185,38 @@ def test_replay_prints_every_gate_reason_not_only_the_refusals(tmp_path,
                if rec["payload"].get("event") == "decision"
                for g in rec["payload"].get("gates", [])]
     assert len(printed) == len(reasons)
+
+
+# --- picking the fixture to demo -------------------------------------------
+def test_the_newest_fixture_is_the_newest_recording_not_the_last_filename(
+        tmp_path):
+    """`1305et` sorts before `preopen` but was recorded four hours later.
+
+    Filename order served the pre-open fixture, whose quotes are hours stale,
+    so the `--replay` demo showed a G5 staleness veto instead of the twelve
+    green gates the README and the write-up both promise.
+    """
+    import json as _json
+    from contour.replay import Replay
+
+    base = {"format": FORMAT, "as_of_et": "2026-08-31T11:00:00-04:00",
+            "spot": {}, "closes": {}, "legs": {}}
+    (tmp_path / "2026-08-31-preopen.json").write_text(_json.dumps(
+        {**base, "captured_utc": "2026-08-31T13:19:59+00:00"}))
+    (tmp_path / "2026-08-31-1305et.json").write_text(_json.dumps(
+        {**base, "captured_utc": "2026-08-31T17:05:00+00:00"}))
+
+    assert Replay.newest(tmp_path).path.name == "2026-08-31-1305et.json"
+
+
+def test_an_unreadable_fixture_never_wins_the_selection(tmp_path):
+    import json as _json
+    from contour.replay import Replay
+
+    (tmp_path / "good.json").write_text(_json.dumps(
+        {"format": FORMAT, "as_of_et": "2026-08-31T11:00:00-04:00",
+         "captured_utc": "2026-08-31T17:05:00+00:00",
+         "spot": {}, "closes": {}, "legs": {}}))
+    (tmp_path / "zzz-broken.json").write_text("{not json")
+
+    assert Replay.newest(tmp_path).path.name == "good.json"

@@ -108,12 +108,30 @@ class Replay:
 
     @classmethod
     def newest(cls, root: str | Path = "fixtures") -> "Replay":
-        found = sorted(Path(root).glob("*.json"))
+        """The most recently RECORDED fixture, by its own captured timestamp.
+
+        This used to take the lexically last filename, which is not the same
+        thing and quietly served the wrong one: `2026-08-31-1305et.json` sorts
+        before `2026-08-31-preopen.json`, so the mid-session recording lost to
+        a pre-open one taken four hours earlier -- and `--replay`, the demo
+        that is supposed to show twelve passing gates, showed a stale-quote
+        veto instead. A fixture carries the time it was taken; sort on that
+        and the filename can be anything.
+        """
+        found = list(Path(root).glob("*.json"))
         if not found:
             raise ReplayError(
                 f"no fixtures in {root}/ -- record one with "
                 f"`python -m contour --record {root}/NAME.json --dev`")
-        return cls.load(found[-1])
+
+        def captured(path: Path) -> tuple[str, str]:
+            try:
+                stamp = json.loads(path.read_text()).get("captured_utc") or ""
+            except Exception:                                    # noqa: BLE001
+                stamp = ""                                       # unreadable -> oldest
+            return (stamp, path.name)
+
+        return cls.load(max(found, key=captured))
 
     @property
     def as_of_et(self) -> datetime:

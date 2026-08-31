@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from . import config as C
-from . import gates, positions as P, select, state, structures as S, surface
+from . import gates, positions as P, regime, select, state, structures as S, surface
 from .clock import Phase, is_preopen, resolve
 from .data import DataSource
 from .execute import CLIBroker, submit_with_ladder
@@ -22,6 +22,7 @@ from .manage import (ManagedPosition, close_position, flatten_due,
                      should_exit)
 from .mind import Mind
 from .models import Blackout, Book, Context, Leg, Measurement, OpenPosition
+from .regime import Regime
 
 HALT_FILE = Path("HALT")
 
@@ -134,6 +135,22 @@ def run_cycle(
             chains[und] = measure_underlying(ds, und, C.EXPIRY)
         return chains[und]
 
+    # Trend regime, cached the same way and for the same reason. A fixture
+    # recorded before this module existed has no closes at this lookback, so
+    # the seam raises and the name degrades to half size rather than failing
+    # the cycle -- an unmeasurable regime is not evidence of a bad one.
+    regimes: dict[str, Regime] = {}
+
+    def trend(und: str) -> Regime:
+        if und not in regimes:
+            try:
+                closes = ds.closes(und, C.REGIME_LOOKBACK)
+            except Exception as exc:                             # noqa: BLE001
+                regimes[und] = regime.degraded(und, f"closes unavailable: {exc}")
+            else:
+                regimes[und] = regime.assess(und, closes)
+        return regimes[und]
+
     exits: list[dict] = []
     live = list(open_positions)
     for pos in open_positions:
@@ -201,7 +218,13 @@ def run_cycle(
     # --- the advisory layer. It can only shrink what follows: blackouts add
     # --- veto windows, the multiplier scales sizing DOWN, the cutoff moves
     # --- the entry deadline EARLIER. Nothing here can widen a limit.
-    multiplier = 1.0
+    # The advisory layer no longer SIZES. Sixteen consecutive regime calls on
+    # 2026-08-31 returned a multiplier of exactly 0.5 with mutually
+    # contradictory prose attached -- the model was anchoring on a number and
+    # narrating afterwards, so half the book was sized by an artifact. It
+    # keeps the jobs it demonstrably does: naming event windows, vetoing a
+    # structure, and standing the whole book down. Size comes from `regime.py`.
+    llm_mult = 1.0
     if mind is not None:
         adv_b = mind.blackouts(now_et.date())
         # The regime call sizes the entire book, so it has to see the surface
@@ -215,13 +238,14 @@ def run_cycle(
                 vrp[und] = round(got[0].vrp_ratio, 3)
         adv_r = mind.regime(now_et.date(), vrp)
         blackouts = tuple(blackouts) + adv_b.blackouts
-        multiplier = min(adv_b.multiplier, adv_r.multiplier, 1.0)
+        llm_mult = min(adv_b.multiplier, adv_r.multiplier, 1.0)
         if adv_r.no_new_entries_after is not None:
             llm_cutoff = (min(llm_cutoff, adv_r.no_new_entries_after)
                           if llm_cutoff else adv_r.no_new_entries_after)
         journal.append({"event": "mind", "brain": mind.brain,
                         "blackouts": adv_b.source,
-                        "regime": adv_r.source, "multiplier": multiplier,
+                        "regime": adv_r.source, "multiplier": llm_mult,
+                        "multiplier_role": "stand-down only -- sizing is regime.py",
                         "vrp": vrp,
                         "cutoff": llm_cutoff.isoformat() if llm_cutoff else None,
                         "notes": f"{adv_b.notes} | {adv_r.notes}"})
@@ -242,7 +266,7 @@ def run_cycle(
     # chain being unreadable. Without this the fail-closed path reports
     # "could not assemble a valid structure from the chain" for every name --
     # a brain outage reads in the journal as a market-data problem.
-    if multiplier == 0.0:
+    if llm_mult == 0.0:
         reason = ("STAND_DOWN: advisory layer returned multiplier 0 "
                   "(fail-closed brain or a hard event blackout); no entries "
                   "this cycle. Exits above still ran.")
@@ -270,6 +294,9 @@ def run_cycle(
         m, legs = got
         measurements.append(m.as_dict())
 
+        reg = trend(und)
+        journal.append({"event": "regime", **reg.as_dict()})
+
         structure, why = select.choose_structure(m)
         if structure == "NO_TRADE":
             decisions.append({"underlying": und, "decision": "NO_TRADE",
@@ -278,10 +305,14 @@ def run_cycle(
             continue
 
         sided = S.assemble(structure, legs, und)
-        # The multiplier is applied to the NAV used for SIZING only, never to
-        # a risk threshold. multiplier 0.0 yields zero contracts and the name
-        # is skipped, which is the intended "stand down" behaviour.
-        cand = S.build(und, structure, sided, nav * multiplier) if sided else None
+        # The weight is applied to the NAV used for SIZING only, never to a
+        # risk threshold, and it is bounded at 1.0 -- it can only shrink the
+        # book. A weight of 0.0 yields zero contracts and the name is skipped,
+        # which is the intended "stand down" behaviour. Every gate still runs
+        # against the result: G3 caps per-position and book risk regardless of
+        # what any regime says.
+        cand = (S.build(und, structure, sided, nav * reg.weight)
+                if sided else None)
         if cand is None:
             decisions.append({"underlying": und, "decision": "NO_TRADE",
                               "reason": f"{structure}: could not assemble a "

@@ -24,6 +24,7 @@ from contour import loop as L
 from contour import positions as P
 from contour import state
 from contour.journal import Journal
+from contour.replay import ReplayError
 from contour.mind import Advice, Verdict
 from contour.models import Blackout, Measurement
 
@@ -46,13 +47,29 @@ class Broker:
 
 
 class Src:
-    """Never asked anything: every test here patches `measure_underlying`."""
+    """The option chain is patched; the daily history the regime reads is not.
+
+    `closes` is answered for real because the cycle now sizes from it. Pass
+    `history=None` to model a source that cannot serve it -- a fixture
+    recorded before `regime.py` existed does exactly that.
+    """
+
+    def __init__(self, history="up"):
+        self.history, self.closes_asked = history, []
 
     def spot(self, u):
         raise AssertionError("the cycle went round the measurement cache")
 
     def closes(self, u, n=11):
-        raise AssertionError("the cycle went round the measurement cache")
+        self.closes_asked.append((u, n))
+        if self.history is None:
+            raise ReplayError(f"fixture has no closes for {u!r}|{n}")
+        drift = 0.0006 if self.history == "up" else -0.0006
+        px, out = 100.0, []
+        for _ in range(n):
+            px *= 1.0 + drift
+            out.append(px)
+        return out
 
     def legs(self, u, expiry, spot):
         raise AssertionError("the cycle went round the measurement cache")
@@ -293,3 +310,84 @@ def test_a_balanced_fill_lets_the_cycle_finish(isolated_state, monkeypatch):
     assert not [r for r in recs if r["event"] == "entries_halted"]
     assert next(r for r in recs
                 if r["event"] == "position_opened")["legs_balanced"] is True
+
+
+# --- sizing comes from measured trend, not from a model that anchored ------
+def test_the_cycle_sizes_from_the_measured_regime_not_the_model(isolated_state,
+                                                               monkeypatch):
+    """The bug this module exists for: the model returned 0.5 sixteen times.
+
+    A confirmed uptrend must size at the LRS weight, not at whatever the
+    advisory layer says -- and the record has to show which one was used.
+    """
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    sizes: list[float] = []
+    real_build = L.S.build
+    monkeypatch.setattr(L.S, "build",
+                        lambda u, st, sd, nav: sizes.append(nav) or
+                        real_build(u, st, sd, nav))
+    class Anchored(StubMind):
+        """What the live brain actually did: 0.5, every call, regardless."""
+        def regime(self, day, vrp):
+            return Advice((), 0.5, None, "llm", "vol premium is thin")
+
+    _, _, recs = cycle(tmp_path=isolated_state, mind=Anchored(), ds=Src("up"))
+
+    reg = [r for r in recs if r["event"] == "regime"]
+    assert reg and reg[0]["source"] == "measured"
+    assert reg[0]["weight"] == 1.0
+    # 100_000, not the 50_000 the anchored multiplier would have produced.
+    assert sizes == [100_000.0], "the anchored multiplier still sized the book"
+
+
+def test_the_regime_is_read_once_per_underlying_per_cycle(isolated_state,
+                                                          monkeypatch):
+    patch_chains(monkeypatch, {u: (measurement(u), chain()) for u in C.UNIVERSE})
+    src = Src("up")
+    cycle(tmp_path=isolated_state, mind=StubMind(), ds=src)
+    asked = [u for u, n in src.closes_asked if n == C.REGIME_LOOKBACK]
+    assert sorted(asked) == sorted(set(asked)), "regime read more than once"
+
+
+def test_a_source_without_regime_history_degrades_instead_of_failing(
+        isolated_state, monkeypatch):
+    """An old fixture must still replay. Half size, said out loud."""
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    _, _, recs = cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src(None))
+
+    reg = [r for r in recs if r["event"] == "regime"]
+    assert reg and reg[0]["source"] == "degraded"
+    assert reg[0]["weight"] == C.REGIME_DEGRADED_W
+    assert "closes unavailable" in reg[0]["notes"]
+
+
+def test_a_downtrend_stands_the_name_down_without_any_model(isolated_state,
+                                                            monkeypatch):
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    _, _, recs = cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src("down"))
+
+    reg = [r for r in recs if r["event"] == "regime"][0]
+    assert (reg["stage2"], reg["ribbon_bull"], reg["weight"]) == (False, False, 0.0)
+    assert not [r for r in recs if r["event"] == "position_opened"]
+
+
+def test_the_model_keeps_the_kill_switch_it_did_not_lose_it(isolated_state,
+                                                            monkeypatch):
+    """Sizing moved, standing down did not. A zero from the brain still halts."""
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+
+    class Dead(StubMind):
+        def regime(self, day, vrp):
+            return Advice((), 0.0, None, "llm", "fail closed")
+
+    _, _, recs = cycle(tmp_path=isolated_state, mind=Dead(), ds=Src("up"))
+    ends = [r for r in recs if r["event"] == "cycle_end"]
+    assert ends and ends[0].get("stand_down") is True
+
+
+def test_the_journal_says_the_multiplier_no_longer_sizes(isolated_state,
+                                                         monkeypatch):
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    _, _, recs = cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src("up"))
+    mind_rec = [r for r in recs if r["event"] == "mind"][0]
+    assert "stand-down only" in mind_rec["multiplier_role"]

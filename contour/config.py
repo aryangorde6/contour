@@ -180,3 +180,33 @@ SKEW_PRIOR = {
     "QQQ": (2.81, 1.3),
     "IWM": (3.10, 1.5),
 }
+
+
+# --- regime sizing (contour/regime.py) ---------------------------------------
+# Three published trend systems replace an LLM multiplier that was measured
+# anchoring at 0.5 across sixteen consecutive cycles. See `regime.py` for the
+# sources, the combination rule, and the two transfers it makes.
+#
+# THESE WINDOWS ARE NOT TUNING PARAMETERS. They are the literature-standard
+# values of the source strategies, whose own header says: "DO NOT tune the
+# 52/30/4 lengths -- they are the literature-standard, tested config. A failed
+# forward test rejects the system." Stage-2's weekly windows are expressed in
+# trading days (x5) because the DataSource seam returns undated closes;
+# `tests/test_regime.py` pins that translation against a true weekly resample.
+REGIME_LOOKBACK   = 1300   # daily closes fetched per underlying per cycle
+REGIME_MIN_BARS   = 260    # below this the regime is DEGRADED, never guessed
+REGIME_DEGRADED_W = 0.5    # unmeasurable regime -> half size, as before
+
+STAGE2_ANCHOR_D   = 252    # 52 weeks -- the new-high anchor (reported only)
+STAGE2_SMA_D      = 150    # 30 weeks -- Weinstein's stage line
+STAGE2_RISING_D   = 20     # 4 weeks  -- the SMA must be rising vs this far back
+
+RIBBON_EMAS       = (20, 50, 100, 200)   # fast, mid, slow, trend anchor
+
+LRS_SLOW_D        = 200    # regime SMA
+LRS_FAST_D        = 50     # fast re-entry rung of the two-speed ladder
+LRS_VOL_D         = 20     # realized vol lookback
+LRS_LONGRUN_D     = 1260   # ~5y long-run vol, the scaler's denominator
+LRS_VETO_K        = 1.25   # vol veto fires only above this multiple of long-run
+LRS_WARN_W        = 0.5    # weight in the warning rung (above slow, below fast)
+LRS_EXT_CAP       = 0.25   # trim above this much extension over the slow SMA
