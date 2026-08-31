@@ -47,6 +47,10 @@ jobs:
           echo "ok: no root-relative URLs"
 
       - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on and sets the build type to "workflow" the first
+          # time this runs, so the repo needs no manual settings change.
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
