@@ -2,22 +2,22 @@
  {
   "underlying": "SPY",
   "decision": "VETOED",
-  "reason": "SKEW_NEUTRAL: SPY skew_z +0.27 inside +/-0.80 -- both sides fairly priced, selling both",
+  "reason": "SKEW_NEUTRAL: SPY skew_z +0.02 inside +/-0.80 -- both sides fairly priced, selling both",
   "gates": [
    "G1 ok: NAV $99,990",
    "G2 ok: session P&L $0",
-   "G3 ok: book $1,250 / $2,000 (2% ramp)",
+   "G3 ok: book $1,255 / $2,000 (2% ramp)",
    "G4 already 2 positions in SPY"
   ],
-  "spot": 765.62,
-  "atm_iv": 11.22,
-  "rv10": 7.8216,
-  "vrp_ratio": 1.434,
-  "skew25": 2.85,
-  "skew_z": 0.275,
-  "credit": 0.88,
+  "spot": 765.89,
+  "atm_iv": 11.1825,
+  "rv10": 7.8043,
+  "vrp_ratio": 1.433,
+  "skew25": 2.55,
+  "skew_z": 0.025,
+  "credit": 0.83,
   "contracts": 1,
-  "max_loss_per_contract": 412.0,
+  "max_loss_per_contract": 417.0,
   "legs": [
    "SPY260911P00746000",
    "SPY260911P00741000",
@@ -28,23 +28,23 @@
  {
   "underlying": "QQQ",
   "decision": "NO_TRADE",
-  "reason": "VRP_TOO_LOW: QQQ implied/realized 1.14 < 1.30 -- not paid enough to sell",
-  "spot": 714.62,
-  "atm_iv": 15.9025,
-  "rv10": 13.8924,
+  "reason": "VRP_TOO_LOW: QQQ implied/realized 1.15 < 1.30 -- not paid enough to sell",
+  "spot": 715.06,
+  "atm_iv": 15.9125,
+  "rv10": 13.8913,
   "vrp_ratio": 1.145,
-  "skew25": 3.43,
-  "skew_z": 0.477
+  "skew25": 3.31,
+  "skew_z": 0.385
  },
  {
   "underlying": "IWM",
   "decision": "NO_TRADE",
   "reason": "VRP_TOO_LOW: IWM implied/realized 1.21 < 1.30 -- not paid enough to sell",
-  "spot": 293.07,
-  "atm_iv": 16.0225,
-  "rv10": 13.273,
-  "vrp_ratio": 1.207,
-  "skew25": 3.19,
-  "skew_z": 0.06
+  "spot": 293.23,
+  "atm_iv": 15.9975,
+  "rv10": 13.2472,
+  "vrp_ratio": 1.208,
+  "skew25": 3.27,
+  "skew_z": 0.113
  }
 ]
