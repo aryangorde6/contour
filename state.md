@@ -175,7 +175,7 @@ Each of these cost real time or would have broken the run.
 
 | Fact | Consequence |
 |---|---|
-| **MCP cannot place multi-leg orders** ([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97), open since 2026-07-01) — the `legs` array arrives as a JSON string and fails pydantic validation | Execution routes through the **Alpaca CLI**, which handles it. Verified live: 4-leg condor → `status: accepted`. Read through MCP, write through CLI. |
+| **MCP cannot place multi-leg orders** ([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97), open since 2026-07-01) — the `legs` array arrives as a JSON string and fails pydantic validation | Execution routes through the **Alpaca CLI**, which handles it. Verified live: 4-leg condor → `status: accepted`. **Reads are `alpaca-py`, NOT MCP** — the docs claimed otherwise until 2026-08-31; there is no MCP client in the package. The contest's "MCP server and/or CLI" is satisfied by the CLI write path alone. |
 | **`ALPACA_API_KEY` in the environment silently overrides an explicit `-p profile` flag** | Observed live: `alpaca account get -p dev` returned the *judged* account. `execute.py` never uses profiles; it passes credentials per subprocess and asserts `account_number` before every order. |
 | **Greeks and IV are served free** (10,616 of 13,160 strikes) | No local Black-Scholes needed. |
 | **0DTE contracts never return Greeks or IV** (Black-Scholes divides by time-to-expiry) | G6 vetoes on null and never coerces to zero. Structurally excludes 0DTE. |
