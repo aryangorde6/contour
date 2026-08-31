@@ -237,7 +237,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**109 tests passing.** All core modules complete.
+**133 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -248,14 +248,14 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 | `contour/surface.py` | atm_iv, rv10, **vrp_ratio (a RATIO, not a difference)**, skew25, skew_z |
 | `contour/select.py` | The four-branch structure map — the differentiator |
 | `contour/structures.py` | Strike selection, wings by strike distance, sizing, **signed limit price** |
-| `contour/execute.py` | CLI broker, account assertion, 3-rung ladder, fill reconciliation |
+| `contour/execute.py` | CLI broker, account assertion, 3-rung ladder, fill reconciliation; **cancels a partial rung's residual** before the caller writes the book |
 | `contour/manage.py` | Exits: TP 50% / stop 2.0× / breach 0.30×wing / Thu flatten; shorts-first legout |
 | `contour/data.py` | DataSource seam (snapshots + contracts merged); replay swaps in here |
 | `contour/positions.py` | **The open book, persisted across cron runs.** Without it every exit rule is dead code |
 | `contour/replay.py` | `Recorder` tees the DataSource seam into a fixture; `Replay` serves it back with no credentials |
 | `contour/llm.py` | Provider seam: Bedrock / Featherless / Gemini / Anthropic behind one `parse()` |
-| `contour/state.py` | The dashboard snapshot + the equity series + `written_at.json` per-file timestamps |
-| `contour/clock.py` | Session phase; cron never trusts its firing time |
+| `contour/state.py` | The dashboard snapshot + the equity series + `written_at.json` per-file timestamps + `next_cycle()` |
+| `contour/clock.py` | Session phase; cron never trusts its firing time; `is_preopen()` names the 09:20 ET planning window |
 | `contour/mind.py` | The brain: blackout windows, regime multiplier, structure veto |
 | `contour/loop.py` | One idempotent cycle; exits before entries, always |
 | `contour/__main__.py` | `--once --dry --as-of --dev --verify --brain-check --record --replay` |
@@ -343,19 +343,8 @@ which read as a market-data problem rather than a brain outage.
    are nearly uncontested. Reddit links likely do not qualify.
 6. ~~Featherless `ALPACA26`~~ — **moot.** The brain runs on Bedrock GLM-5 with
    AWS credits; Featherless stays wired as a fallback but needs a card.
-7. **Audit findings not yet fixed** (none on the money path; take before the
-   freeze if there is time):
-   - a partially-filled entry rung does not cancel its residual, and
-     `legs_balanced` is computed but never consumed (`execute.py`)
-   - the dashboard's "Structures opened" counts gate-passing candidates, not
-     fills, so an LLM-vetoed cycle renders as a successful one
-   - `cycle_count` is always 0 in the heartbeat and every journal record
-   - the regime call is handed an empty measurement dict (`loop.py` passes
-     `{}`), so it sizes the book without seeing the surface
-   - the 13:20 UTC "pre-open" cron cannot reach the blackout code (the cycle
-     resolves to a non-TRADE phase and returns first); the docs describe it as
-     if it does
-   - `--replay` prints only failing gate reasons, though the docs say every one
+7. ~~**Audit findings not yet fixed**~~ — **all six done, 2026-08-31.** See
+   "The six audit findings, and what each one turned into" below.
 
 **Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
 verification only. File a draft submission Wednesday night.
@@ -450,6 +439,33 @@ Two process notes worth keeping:
    journal files") was factually right about the files but wrong about the
    consequence — the step above it already covers the case.
 
+### The six audit findings, and what each one turned into
+
+All six were fixed on 2026-08-31, after the book bug. None was on the money
+path, but four of them were the same bug class as the book bug: **something
+was computed and nobody read it, or defaulted and nobody passed it.**
+
+| Finding | Now | Pinned by |
+|---|---|---|
+| a partially-filled rung left its residual working at the broker, and `legs_balanced` was computed but never read | the rung cancels, **re-reads** (the cancel races the book) and records the post-cancel fill; unequal legs journal an `unbalanced_fill` alarm, and `loop.py` stops opening anything else that cycle | `tests/test_execute.py` |
+| the dashboard's "Structures opened" counted gate-passing candidates | counts `position_opened` records; the subtitle splits refusals into gate-vetoed / LLM-vetoed / unfilled | `tests/test_dashboard.py`, running the shipped JS |
+| `cycle_count` was always 0 | `state.next_cycle()` counts from the last published heartbeat, because nothing else survives a container | `tests/test_loop.py` |
+| the regime call was handed `{}` — the model that sizes the whole book never saw the surface | measured VRP per underlying, off a per-cycle chain cache, and journaled alongside the multiplier | `tests/test_loop.py` |
+| the 13:20 UTC pre-open cron could not reach the blackout code | `clock.is_preopen()`; the CLOSED branch plans the day, journals a `plan` record and publishes `state/plan.json`, which the dashboard renders above the decisions | `tests/test_loop.py` |
+| `--replay` printed only failing gate reasons, though README and WRITEUP promise every one | every reason prints, marked `[ok  ]` / `[VETO]`; one `_passed()` helper, matching the dashboard's `/^G\d+ ok/` | `tests/test_replay.py` |
+
+Two things worth carrying forward:
+
+- The regime fix came with a **per-cycle measurement cache**. The exit check,
+  the regime call and the entry loop all ask for the same chain; three round
+  trips can return three different answers inside one cycle, and then the book
+  is sized against numbers it never published.
+- `tests/test_loop.py` exists for exactly one bug class: **a defaulted argument
+  nobody passes is invisible to every test that calls the callee directly.**
+  It asserts on what the cycle *hands* its collaborators, and it pins the
+  `main()` call site by source, because `main()` cannot be reached without live
+  credentials.
+
 ### 2026-08-31: the open book was never passed to the cycle
 
 Found by a five-dimension adversarial audit, **after it had already fired.**
@@ -499,7 +515,7 @@ it is wired in.
 ## 8. Resume commands
 
 ```bash
-.venv/bin/python -m pytest -q                                  # 109 tests
+.venv/bin/python -m pytest -q                                  # 133 tests
 .venv/bin/python -m contour --replay                           # no credentials needed
 .venv/bin/python -m contour --brain-check                      # is the LLM alive?
 .venv/bin/python -m contour --dry --dev --as-of 2026-08-31T11:00

@@ -178,7 +178,10 @@ class Mind:
                 AGENT_BRIEF + REGIME_BRIEF,
                     f"Today is {day:%A %Y-%m-%d}. Measured implied/realized "
                     f"volatility ratios right now: "
-                    + ", ".join(f"{k} {v:.2f}" for k, v in vrp.items())
+                    # An empty dict must read as "we could not measure", never
+                    # as a blank the model quietly fills from its prior.
+                    + (", ".join(f"{k} {v:.2f}" for k, v in vrp.items())
+                       or "UNAVAILABLE -- no chain could be measured this cycle")
                     + ".\n\nChoose a size posture and a cutoff after which no "
                       "new positions may be opened. FULL only when the session "
                       "carries no scheduled macro risk and the vol premium is "

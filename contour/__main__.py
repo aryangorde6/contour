@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +18,15 @@ from .journal import Journal
 from .loop import run_cycle
 from .mind import Mind
 from . import positions as P
+from . import state
 from .replay import Recorder, Replay, ReplayBroker, ReplayError
+
+
+def _passed(reason: str) -> bool:
+    r"""Gate reasons are journaled pass or fail, so the printer has to tell
+    them apart. A pass always reads "G<n> ok"; the dashboard tests the same
+    shape (/^G\d+ ok/), and the two must stay in step."""
+    return re.match(r"^G\d+ ok\b", reason) is not None
 
 
 def main(argv=None) -> int:
@@ -137,9 +146,13 @@ def main(argv=None) -> int:
 
     ds = AlpacaData(key, sec)
     rec = Recorder(ds, args.record) if args.record else None
+    # Counted from the last published heartbeat, not from this process: every
+    # cron run is a fresh container, so an in-process counter reports 0 for
+    # ever -- which is what the journal said for the whole first week.
     res = run_cycle(ds=rec or ds, broker=broker, now_et=now_et,
                     market_open=market_open, journal=journal, dry=args.dry,
-                    mind=mind, open_positions=open_positions)
+                    mind=mind, open_positions=open_positions,
+                    cycle=state.next_cycle())
     if rec is not None:
         print(f"\n[record] wrote {rec.save(now_et)}")
 
@@ -151,9 +164,7 @@ def main(argv=None) -> int:
     for d in res.decisions:
         print(f"  {d['underlying']}: {d['decision']} -- {d['reason']}")
         for g in d.get("gates", []):
-            if not g.startswith(("G1 ok", "G2 ok", "G3 ok", "G4 ok", "G5 ok",
-                                 "G6 ok", "G7 ok", "G8 ok", "G9 ok", "G10 ok",
-                                 "G11 ok", "G12 ok")):
+            if not _passed(g):
                 print(f"      VETO: {g}")
     return 0
 
@@ -164,8 +175,6 @@ def _run_replay(fx: Replay) -> int:
     Journal and state go to their own subdirectories so a replay can never be
     mistaken for -- or appended onto -- the live record.
     """
-    from . import state
-
     now_et = fx.as_of_et
     stem = fx.path.stem if fx.path else "fixture"
     # Deliberately outside journal/ and state/: those two directories are what
@@ -183,9 +192,12 @@ def _run_replay(fx: Replay) -> int:
 
     journal = Journal(out)
     try:
+        # cycle 0, deliberately: the ordinal comes from the last heartbeat,
+        # and a replay that counted up would put a different number in the
+        # chain on every run of the same fixture.
         res = run_cycle(ds=fx, broker=ReplayBroker(), now_et=now_et,
                         market_open=True, journal=journal, dry=True,
-                        mind=Mind(api_key=""))
+                        mind=Mind(api_key=""), cycle=0)
     except ReplayError as exc:
         print(f"\n{exc}", file=sys.stderr)
         return 2
@@ -197,9 +209,11 @@ def _run_replay(fx: Replay) -> int:
               f"skew {m['skew25']:+.2f} (z {m['skew_z']:+.2f})")
     for d in res.decisions:
         print(f"  {d['underlying']}: {d['decision']} -- {d['reason']}")
+        # Every gate, pass and fail. A rehearsal that shows only the refusals
+        # proves the agent stopped, not that it checked -- and README and
+        # WRITEUP both promise the whole evaluation.
         for g in d.get("gates", []):
-            if " ok" not in g.split(":")[0]:
-                print(f"      VETO: {g}")
+            print(f"      [{'ok  ' if _passed(g) else 'VETO'}] {g}")
 
     ok, msg = Journal(out).verify()
     print(f"\n[replay] {out}: {msg}")

@@ -14,7 +14,7 @@ from typing import Any, Callable, Sequence
 
 from . import config as C
 from . import gates, positions as P, select, state, structures as S, surface
-from .clock import Phase, resolve
+from .clock import Phase, is_preopen, resolve
 from .data import DataSource
 from .execute import CLIBroker, submit_with_ladder
 from .journal import Journal
@@ -123,11 +123,22 @@ def run_cycle(
 
     # --- exits first, always. A position must be manageable even when the
     # --- entry window is shut.
+    # One chain read per underlying per cycle. The exit check, the regime call
+    # and the entry loop all ask the same question; asking it three times costs
+    # three round trips and can return three different answers inside one
+    # cycle, which is how a book gets sized against numbers it never showed.
+    chains: dict[str, tuple[Measurement, list[Leg]] | None] = {}
+
+    def measure(und: str) -> tuple[Measurement, list[Leg]] | None:
+        if und not in chains:
+            chains[und] = measure_underlying(ds, und, C.EXPIRY)
+        return chains[und]
+
     exits: list[dict] = []
     live = list(open_positions)
     for pos in open_positions:
         try:
-            m = measure_underlying(ds, pos.candidate.underlying, C.EXPIRY)
+            m = measure(pos.candidate.underlying)
             # The stored legs carry their ENTRY quotes and never change, so
             # pricing off them freezes mark at the entry credit and the profit
             # target and stop can never fire. Re-price from today's chain.
@@ -161,6 +172,26 @@ def run_cycle(
                 P.save(live)
 
     if phase.mode != "TRADE":
+        # The 13:20 UTC cron fires at 09:20 ET to plan the day's event
+        # blackouts before the open. It resolves to CLOSED -- correctly, the
+        # market is shut and nothing may trade -- and CLOSED returned here
+        # having written a heartbeat and nothing else, so the pre-open cycle
+        # never reached the advisory layer the docs credited it with.
+        #
+        # What it publishes is a PLAN, not a commitment: every TRADE cycle
+        # still asks again, because a window computed three hours before the
+        # open is not evidence about now. The value is that the day's schedule
+        # is on the dashboard before the first trade, and the brain is proven
+        # answering every morning rather than only when it matters.
+        if mind is not None and is_preopen(now_et):
+            adv = mind.blackouts(now_et.date())
+            plan = {"day": now_et.date().isoformat(), "brain": mind.brain,
+                    "source": adv.source, "notes": adv.notes,
+                    "windows": [{"start_et": b.start.isoformat(),
+                                 "end_et": b.end.isoformat(),
+                                 "reason": b.reason} for b in adv.blackouts]}
+            journal.append({"event": "plan", **plan})
+            state.write("plan", plan)
         journal.append({"event": "cycle_end", "cycle": cycle,
                         "mode": phase.mode, "entries": 0})
         state.heartbeat(cycle, phase.mode, phase.reason,
@@ -173,7 +204,16 @@ def run_cycle(
     multiplier = 1.0
     if mind is not None:
         adv_b = mind.blackouts(now_et.date())
-        adv_r = mind.regime(now_et.date(), {})
+        # The regime call sizes the entire book, so it has to see the surface
+        # it is sizing against; it used to be handed an empty dict and asked
+        # to judge the vol premium without being shown any. Measuring here is
+        # free -- the entry loop reads the same cache a few lines down.
+        vrp = {}
+        for und in C.UNIVERSE:
+            got = measure(und)
+            if got is not None:
+                vrp[und] = round(got[0].vrp_ratio, 3)
+        adv_r = mind.regime(now_et.date(), vrp)
         blackouts = tuple(blackouts) + adv_b.blackouts
         multiplier = min(adv_b.multiplier, adv_r.multiplier, 1.0)
         if adv_r.no_new_entries_after is not None:
@@ -182,6 +222,7 @@ def run_cycle(
         journal.append({"event": "mind", "brain": mind.brain,
                         "blackouts": adv_b.source,
                         "regime": adv_r.source, "multiplier": multiplier,
+                        "vrp": vrp,
                         "cutoff": llm_cutoff.isoformat() if llm_cutoff else None,
                         "notes": f"{adv_b.notes} | {adv_r.notes}"})
 
@@ -220,7 +261,7 @@ def run_cycle(
                            exits)
 
     for und in C.UNIVERSE:
-        got = measure_underlying(ds, und, C.EXPIRY)
+        got = measure(und)
         if got is None:
             decisions.append({"underlying": und, "decision": "NO_TRADE",
                               "reason": "chain not measurable"})
@@ -285,11 +326,26 @@ def run_cycle(
                 opened_at=now_et, order_id=str(rec["order_id"]))
             live.append(pos)
             P.save(live)
+            balanced = rec.get("legs_balanced", True)
             journal.append({"event": "position_opened", "underlying": und,
                             "order_id": pos.order_id,
                             "contracts": held.contracts,
                             "credit_received": round(pos.credit_received, 4),
+                            "legs_balanced": balanced,
                             "open_book": len(live)})
+            if not balanced:
+                # execute.py has already raised the alarm. The consequence
+                # belongs here: what is at the broker is not the defined-risk
+                # structure G3 sized, so the book's risk is no longer a number
+                # we can compute -- and opening more against an unknown is the
+                # one thing that makes it worse. Stop. Exits above still ran.
+                journal.append({"event": "entries_halted", "underlying": und,
+                                "order_id": pos.order_id,
+                                "reason": "unbalanced fill: book risk is no "
+                                          "longer computable; no further "
+                                          "entries this cycle, repair with "
+                                          "ops/repair_book.py"})
+                break
 
     journal.append({"event": "cycle_end", "cycle": cycle, "mode": phase.mode,
                     "entries": len(opened)})

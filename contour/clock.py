@@ -2,9 +2,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time
 
 from . import config as C
+
+
+BELL = time(9, 30)          # the open. Nothing before it is a session.
+PREOPEN_FROM = time(9, 0)
+
+
+def is_preopen(now_et: datetime) -> bool:
+    """A contest weekday, before the bell.
+
+    `resolve` calls this window CLOSED, correctly -- nothing may trade at
+    09:20 ET. But the 13:20 UTC cron exists to plan the day's event blackouts
+    before the open, and the phase alone cannot tell that cycle apart from a
+    Sunday. This can.
+    """
+    return (now_et.date() in C.BOOK_RISK_RAMP
+            and PREOPEN_FROM <= now_et.time() < BELL)
 
 
 @dataclass(frozen=True)

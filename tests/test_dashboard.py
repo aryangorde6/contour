@@ -148,3 +148,70 @@ def test_equity_series_survives_a_corrupt_file(tmp_path, monkeypatch):
     (tmp_path / "equity.json").write_text("{not json at all")
     state.point("equity", {"nav": 100_000.0})
     assert json.loads((tmp_path / "equity.json").read_text())[0]["nav"] == 100_000.0
+
+
+# --- "structures opened" must mean structures opened --------------------
+COUNT_HARNESS = r"""
+const fs = require("fs");
+const src = fs.readFileSync(process.argv[2], "utf8");
+const js = src.slice(src.lastIndexOf("<script>") + 8, src.lastIndexOf("</script>"));
+let code = "";
+for (const name of ["countOpened", "countRefused"]) {
+  const m = js.match(new RegExp("^function " + name + "\\b[\\s\\S]*?^}", "m"));
+  if (!m) { console.error("could not extract " + name); process.exit(2); }
+  code += m[0] + "\n";
+}
+const input = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+const f = new Function(code + "; return {countOpened, countRefused};")();
+console.log(JSON.stringify({opened: f.countOpened(input.recs),
+                            refused: f.countRefused(input.recs, input.dec)}));
+"""
+
+# One cycle that looked like two successes and was one: SPY passed the gates
+# and then filled; QQQ passed the gates and the LLM vetoed it; IWM passed the
+# gates and all three ladder rungs expired unfilled.
+CYCLE = {
+    "dec": [
+        {"underlying": "SPY", "decision": "CONDOR"},
+        {"underlying": "QQQ", "decision": "PUT_CS"},
+        {"underlying": "IWM", "decision": "CALL_CS"},
+        {"underlying": "SPY", "decision": "VETOED"},
+    ],
+    "recs": [
+        {"seq": 1, "payload": {"event": "decision", "underlying": "SPY"}},
+        {"seq": 2, "payload": {"event": "position_opened", "underlying": "SPY"}},
+        {"seq": 3, "payload": {"event": "mind_confirm", "underlying": "QQQ",
+                               "veto": True}},
+        {"seq": 4, "payload": {"event": "mind_confirm", "underlying": "SPY",
+                               "veto": False}},
+        {"seq": 5, "payload": {"event": "no_fill", "base_id": "contour-iwm-x"}},
+    ],
+}
+
+
+def _counts(tmp_path, payload):
+    harness = tmp_path / "c.js"
+    harness.write_text(COUNT_HARNESS)
+    data = tmp_path / "in.json"
+    data.write_text(json.dumps(payload))
+    out = subprocess.run(["node", str(harness), str(PAGE), str(data)],
+                         capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node not installed")
+def test_opened_counts_fills_not_gate_passing_candidates(tmp_path):
+    """Two things still stand between a gate-passing decision and the account:
+    the LLM veto, which runs after the gates, and the ladder, which can expire
+    unfilled at every rung. Counting decisions renders both as wins."""
+    got = _counts(tmp_path, CYCLE)
+    assert got["opened"] == 1, "counted candidates, not positions"
+    assert got["refused"] == {"gated": 1, "llm": 1, "unfilled": 1}
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node not installed")
+def test_a_cycle_with_no_journal_yet_counts_nothing(tmp_path):
+    got = _counts(tmp_path, {"dec": None, "recs": None})
+    assert got["opened"] == 0
+    assert got["refused"] == {"gated": 0, "llm": 0, "unfilled": 0}

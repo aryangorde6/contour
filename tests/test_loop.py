@@ -1,0 +1,295 @@
+"""What the cycle actually passes to the things it calls.
+
+Every bug in this file's history has the same shape: a function was correct,
+fully unit-tested, and reached with the wrong argument -- or never reached at
+all. `open_positions` defaulted to `()` and nothing passed it, so every exit
+rule was dead code. `cycle` defaulted to 0 and nothing passed it, so the
+published journal numbered every cycle 0 for a week. `regime()` was handed an
+empty dict, so the model that sizes the whole book was asked to judge the vol
+premium without being shown any.
+
+Tests that call the callee directly cannot see any of that. These call the
+cycle.
+"""
+from __future__ import annotations
+
+import inspect
+import json
+from datetime import date, datetime
+
+import pytest
+
+from contour import config as C
+from contour import loop as L
+from contour import positions as P
+from contour import state
+from contour.journal import Journal
+from contour.mind import Advice, Verdict
+from contour.models import Blackout, Measurement
+
+from .test_gates import leg
+from .test_manage import pos
+
+ET = C.ET
+TRADING_DAY = datetime(2026, 9, 2, 12, 0, tzinfo=ET)
+
+
+@pytest.fixture(autouse=True)
+def isolated_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(state, "ROOT", tmp_path)
+    yield tmp_path
+
+
+class Broker:
+    def account(self):
+        return {"equity": 100_000.0, "account_number": "TEST"}
+
+
+class Src:
+    """Never asked anything: every test here patches `measure_underlying`."""
+
+    def spot(self, u):
+        raise AssertionError("the cycle went round the measurement cache")
+
+    def closes(self, u, n=11):
+        raise AssertionError("the cycle went round the measurement cache")
+
+    def legs(self, u, expiry, spot):
+        raise AssertionError("the cycle went round the measurement cache")
+
+
+class StubMind:
+    """Records what the cycle hands it. That is the whole point."""
+
+    brain = "stub:model"
+
+    def __init__(self, windows=()):
+        self.windows = tuple(windows)
+        self.regime_saw: dict | None = None
+        self.blackout_days: list[date] = []
+
+    def blackouts(self, day, headlines=()):
+        self.blackout_days.append(day)
+        return Advice(self.windows, 1.0, None, "llm", "planned")
+
+    def regime(self, day, vrp):
+        self.regime_saw = dict(vrp)
+        return Advice((), 1.0, None, "llm", "carry on")
+
+    def confirm(self, *a, **k):
+        return Verdict(veto=False, reason="fine")
+
+
+# The same quotes test_manage builds its condor from: a real spread, so the
+# structure carries a positive credit and actually reaches the gates.
+QUOTES = ((749.0, -0.13, "put", 1.27, 1.32), (744.0, -0.06, "put", 0.95, 0.96),
+          (785.0, 0.13, "call", 0.85, 0.90), (790.0, 0.06, "call", 0.34, 0.35))
+
+
+def chain(strikes=QUOTES):
+    legs = [leg(side="buy", strike=k, delta=d, otype=t, bid=b, ask=a)
+            for k, d, t, b, a in strikes]
+    for l in legs:
+        object.__setattr__(l, "quote_age_s", 30.0)
+    return legs
+
+
+def measurement(und="SPY", vrp=1.45, skew_z=0.0):
+    return Measurement(underlying=und, spot=769.0, atm_iv=11.4, rv10=7.8,
+                       vrp_ratio=vrp, skew25=2.52, skew_z=skew_z)
+
+
+def patch_chains(monkeypatch, table):
+    """table: underlying -> (Measurement, legs) or None. Counts the calls."""
+    calls: list[str] = []
+
+    def fake(ds, und, expiry):
+        calls.append(und)
+        return table.get(und)
+
+    monkeypatch.setattr(L, "measure_underlying", fake)
+    return calls
+
+
+def cycle(tmp_path, **kw):
+    j = Journal(tmp_path / "j.jsonl")
+    kw.setdefault("ds", Src())
+    kw.setdefault("broker", Broker())
+    kw.setdefault("now_et", TRADING_DAY)
+    kw.setdefault("market_open", True)
+    kw.setdefault("dry", True)
+    res = L.run_cycle(journal=j, **kw)
+    return res, j, [r.payload for r in j.read()]
+
+
+# --- the regime call must see the surface it is sizing --------------------
+def test_the_regime_call_is_shown_the_measured_vol_premium(isolated_state):
+    """It was handed `{}`. The prompt then read "ratios right now: ." and the
+    model sized the book off its prior instead of the market."""
+    mind = StubMind()
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY", vrp=1.45), chain()),
+                          "QQQ": (measurement("QQQ", vrp=1.21), chain()),
+                          "IWM": None})
+        cycle(isolated_state, mind=mind)
+
+    assert mind.regime_saw == {"SPY": 1.45, "QQQ": 1.21}, (
+        "the regime call did not see the surface")
+
+
+def test_an_unmeasurable_name_is_omitted_rather_than_invented(isolated_state):
+    mind = StubMind()
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain())})
+        cycle(isolated_state, mind=mind)
+    assert mind.regime_saw == {"SPY": 1.45}
+    assert "QQQ" not in mind.regime_saw
+
+
+def test_the_vol_premium_reaches_the_journal(isolated_state):
+    mind = StubMind()
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain())})
+        _, _, recs = cycle(isolated_state, mind=mind)
+    rec = next(r for r in recs if r["event"] == "mind")
+    assert rec["vrp"] == {"SPY": 1.45}
+
+
+# --- one chain read per underlying per cycle ------------------------------
+def test_the_chain_is_read_once_per_underlying_not_once_per_caller(
+        isolated_state, monkeypatch):
+    """The exit check, the regime call and the entry loop all ask the same
+    question. Three round trips can return three different answers inside one
+    cycle, and then the book is sized against numbers it never published."""
+    P.save([pos(credit=0.87)])
+    calls = patch_chains(monkeypatch,
+                         {u: (measurement(u), chain()) for u in C.UNIVERSE})
+    cycle(isolated_state, mind=StubMind(), open_positions=P.load())
+
+    assert sorted(calls) == sorted(C.UNIVERSE), (
+        f"expected one read per underlying, got {calls}")
+
+
+# --- the cycle ordinal ----------------------------------------------------
+def test_the_cycle_ordinal_survives_the_container(isolated_state):
+    """Nothing survives a cron run except what was written down, so the count
+    has to come off the last heartbeat."""
+    assert state.next_cycle() == 1
+    state.heartbeat(state.next_cycle(), "TRADE", "first")
+    assert state.next_cycle() == 2
+    state.heartbeat(state.next_cycle(), "TRADE", "second")
+    assert state.next_cycle() == 3
+
+
+def test_a_corrupt_heartbeat_restarts_the_count_instead_of_raising(
+        isolated_state):
+    (isolated_state / "heartbeat.json").write_text("{not json")
+    assert state.next_cycle() == 1
+
+
+def test_the_ordinal_reaches_the_journal_and_the_heartbeat(isolated_state,
+                                                           monkeypatch):
+    patch_chains(monkeypatch, {})
+    _, _, recs = cycle(isolated_state, cycle=7)
+    assert next(r for r in recs if r["event"] == "cycle_start")["cycle"] == 7
+    hb = json.loads((isolated_state / "heartbeat.json").read_text())
+    assert hb["cycle_count"] == 7
+
+
+def test_the_entrypoint_actually_passes_the_ordinal():
+    """The bug class this whole file exists for: a defaulted argument nobody
+    passes is invisible to every test that calls the callee directly. There is
+    no way to reach `main()` without live credentials, so pin the call site."""
+    src = inspect.getsource(__import__("contour.__main__", fromlist=["main"]).main)
+    assert "cycle=state.next_cycle()" in src, (
+        "run_cycle is being called without a cycle number again")
+
+
+# --- the pre-open cron -----------------------------------------------------
+PREOPEN = datetime(2026, 9, 2, 9, 20, tzinfo=ET)
+
+
+def test_the_pre_open_cycle_plans_the_day(isolated_state, monkeypatch):
+    """The 13:20 UTC cron exists to parse the day's event blackouts before the
+    open. It resolves to CLOSED and used to return having written a heartbeat
+    and nothing else, while the docs described it as planning the day."""
+    patch_chains(monkeypatch, {})
+    window = Blackout(datetime(2026, 9, 2, 8, 10, tzinfo=ET),
+                      datetime(2026, 9, 2, 8, 50, tzinfo=ET), "ADP 08:15 ET")
+    mind = StubMind(windows=(window,))
+
+    res, _, recs = cycle(isolated_state, now_et=PREOPEN, market_open=False,
+                         mind=mind)
+
+    assert res.mode == "CLOSED"
+    assert mind.blackout_days == [PREOPEN.date()], "the brain was never asked"
+    plan = next(r for r in recs if r["event"] == "plan")
+    assert plan["windows"][0]["reason"] == "ADP 08:15 ET"
+    assert plan["brain"] == "stub:model"
+    published = json.loads((isolated_state / "plan.json").read_text())
+    assert published["windows"] == plan["windows"]
+
+
+def test_a_closed_day_does_not_wake_the_brain(isolated_state, monkeypatch):
+    """Saturday is CLOSED too. Only a contest weekday before the bell plans."""
+    patch_chains(monkeypatch, {})
+    mind = StubMind()
+    _, _, recs = cycle(isolated_state,
+                       now_et=datetime(2026, 9, 5, 9, 20, tzinfo=ET),
+                       market_open=False, mind=mind)
+    assert mind.blackout_days == []
+    assert not [r for r in recs if r["event"] == "plan"]
+
+
+def test_a_mid_session_manage_only_cycle_does_not_plan(isolated_state,
+                                                       monkeypatch):
+    patch_chains(monkeypatch, {})
+    mind = StubMind()
+    _, _, recs = cycle(isolated_state,
+                       now_et=datetime(2026, 9, 2, 15, 30, tzinfo=ET),
+                       mind=mind)
+    assert mind.blackout_days == []
+    assert not [r for r in recs if r["event"] == "plan"]
+
+
+# --- an unbalanced fill stops the cycle -----------------------------------
+def fake_fill(balanced: bool):
+    def submit(broker, cand, base, journal, **kw):
+        return {"order_id": "abc", "status": "filled",
+                "requested_qty": cand.contracts, "filled_qty": 1,
+                "partial": False, "legs_balanced": balanced,
+                "legs": [{"symbol": "P749", "side": "sell", "filled_qty": 1,
+                          "filled_avg_price": 1.25},
+                         {"symbol": "P744", "side": "buy", "filled_qty": 1,
+                          "filled_avg_price": 0.92}]}
+    return submit
+
+
+def test_an_unbalanced_fill_stops_the_cycle_opening_anything_else(
+        isolated_state, monkeypatch):
+    """What is at the broker is no longer the defined-risk structure G3 sized,
+    so the book's risk is not a number we can compute -- and opening more
+    against an unknown is the one move that makes it worse."""
+    patch_chains(monkeypatch, {"SPY": (measurement("SPY"), chain())})
+    monkeypatch.setattr(L, "submit_with_ladder", fake_fill(balanced=False))
+
+    res, _, recs = cycle(isolated_state, dry=False, mind=None)
+
+    assert [d["underlying"] for d in res.decisions] == ["SPY"], (
+        "the cycle carried on to the next name with an unrepaired book")
+    halt = next(r for r in recs if r["event"] == "entries_halted")
+    assert "repair_book" in halt["reason"]
+    assert len(P.load()) == 1, "the position still has to be written down"
+
+
+def test_a_balanced_fill_lets_the_cycle_finish(isolated_state, monkeypatch):
+    """The control. Without it the test above passes on any early return."""
+    patch_chains(monkeypatch, {"SPY": (measurement("SPY"), chain())})
+    monkeypatch.setattr(L, "submit_with_ladder", fake_fill(balanced=True))
+
+    res, _, recs = cycle(isolated_state, dry=False, mind=None)
+
+    assert [d["underlying"] for d in res.decisions] == list(C.UNIVERSE)
+    assert not [r for r in recs if r["event"] == "entries_halted"]
+    assert next(r for r in recs
+                if r["event"] == "position_opened")["legs_balanced"] is True

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
+from pathlib import Path
 
 import pytest
 
@@ -152,3 +153,35 @@ def test_two_replays_of_one_fixture_produce_identical_journals(tmp_path):
     a, b = once("a"), once("b")
     assert a == b, "the same fixture must yield the same decisions"
     assert any(p.get("event") == "decision" for p in a), "nothing was decided"
+
+
+# --- what the rehearsal actually shows a judge ---------------------------
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "2026-08-31-preopen.json"
+
+
+def test_replay_prints_every_gate_reason_not_only_the_refusals(tmp_path,
+                                                               monkeypatch,
+                                                               capsys):
+    """README and WRITEUP both promise every gate reason. Printing only the
+    failures shows that the agent stopped, not that it checked -- and "it
+    refused" is a much weaker claim than "here is the whole evaluation"."""
+    from contour import state
+    from contour.__main__ import _run_replay
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "ROOT", tmp_path / "state")
+    assert _run_replay(Replay.load(FIXTURE)) == 0
+
+    out = capsys.readouterr().out
+    printed = [l for l in out.splitlines() if "[ok  ]" in l or "[VETO]" in l]
+    assert printed, "no gate reasons were printed at all"
+    assert any("[ok  ] G1 ok" in l for l in printed), (
+        "passing gates are still invisible")
+    assert any("[VETO]" in l for l in printed), "the refusal is not marked"
+
+    # Every reason the engine returned, and nothing invented.
+    reasons = [g for line in Path("replay_out/journal").glob("*.jsonl")
+               for rec in [json.loads(l) for l in line.read_text().splitlines()]
+               if rec["payload"].get("event") == "decision"
+               for g in rec["payload"].get("gates", [])]
+    assert len(printed) == len(reasons)

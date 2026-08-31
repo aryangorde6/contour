@@ -214,7 +214,38 @@ def submit_with_ladder(
         cur = broker.get_order(oid)
         rec = reconcile(cur)
         if rec["filled_qty"] > 0:
+            if cur.get("status") not in TERMINAL:
+                # A partial fill leaves the REMAINDER working at the broker.
+                # We are about to write down a position of rec["filled_qty"]
+                # contracts and stop watching this order, so anything that
+                # fills after we look away is risk nobody manages -- the exact
+                # failure the position book exists to prevent. Cancel first,
+                # then re-read: the cancel races the book, and whatever filled
+                # inside that window is ours whether we wanted it or not.
+                try:
+                    broker.cancel(oid)
+                except BrokerError as exc:            # already terminal, fine
+                    journal({"event": "residual_cancel_failed", "rung": i,
+                             "order_id": oid, "error": str(exc)})
+                cur = broker.get_order(oid)
+                rec = reconcile(cur)
+                journal({"event": "residual_canceled", "rung": i,
+                         "order_id": oid, "filled_qty": rec["filled_qty"],
+                         "requested_qty": rec["requested_qty"]})
             journal({"event": "filled", "rung": i, **rec})
+            if not rec["legs_balanced"]:
+                # Alpaca fills an mleg atomically across its legs, so this
+                # should be unreachable -- which is precisely why it has to be
+                # loud rather than assumed. Unequal leg quantities mean the
+                # thing at the broker is not the defined-risk structure we
+                # designed, and a short without its wing is naked. The caller
+                # stops opening anything else this cycle; the book is repaired
+                # with ops/repair_book.py, not traded out of.
+                journal({"event": "unbalanced_fill", "rung": i,
+                         "order_id": oid, "legs": rec["legs"],
+                         "reason": "legs filled in unequal quantities -- the "
+                                   "structure at the broker is not the one "
+                                   "designed; repair before the next entry"})
             return rec
 
         if cur.get("status") not in TERMINAL:

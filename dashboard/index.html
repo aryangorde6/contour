@@ -37,6 +37,10 @@ header .inner{position:relative;max-width:1120px;margin:0 auto;padding:26px 20px
 .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
   border:1px solid var(--line);background:var(--sunk);color:var(--dim);white-space:nowrap}
 .pill b{color:var(--txt);font-weight:600}
+.planrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px 16px;
+  border-bottom:1px solid var(--line);color:var(--dim);
+  font-family:var(--mono);font-size:12px}
+.planrow:empty{display:none}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
 .dot.live{background:var(--green);box-shadow:0 0 0 3px rgba(70,209,138,.16)}
 .dot.warn{background:var(--amber);box-shadow:0 0 0 3px rgba(240,180,41,.14)}
@@ -171,6 +175,7 @@ svg{display:block;width:100%;height:auto}
 
   <div class="panel">
     <h2>Decisions this cycle <span class="note">every gate, pass or fail</span></h2>
+    <div class="planrow" id="plan"></div>
     <div class="body" id="decisions"><div class="skeleton">loading…</div></div>
   </div>
 
@@ -402,11 +407,45 @@ function drawFeed(recs){
 }
 
 /* ---------- render ---------- */
-function drawStats(hb,dec,eq){
+/* The pre-open cycle's output, and the only place it is visible. It runs at
+   09:20 ET -- before anything can trade -- and publishes the windows the
+   agent will refuse to open inside. A plan nobody can see is indistinguishable
+   from no plan. */
+const hhmm=t=>String(t||"").split("T")[1]?String(t).split("T")[1].slice(0,5):String(t||"");
+function drawPlan(plan){
+  if(!plan){ $("plan").innerHTML=""; return; }
+  const w=(plan.windows||[]).map(x=>
+    `<span class="pill">${esc(hhmm(x.start_et))}–${esc(hhmm(x.end_et))}
+       <b>${esc(x.reason)}</b></span>`).join("");
+  $("plan").innerHTML=`<span>event blackouts planned pre-open for ${esc(plan.day)}
+    — ${esc(plan.brain)}</span>`
+    + (w || `<span class="pill">nothing scheduled</span>`);
+}
+/* A gate-passing candidate is not a position. Two things still stand between
+   the decision list and the account: the LLM veto, which runs AFTER the gates,
+   and the price ladder, which can expire unfilled at all three rungs. Counting
+   decisions renders both of those as successful trades. Only a fill writes
+   position_opened, so that is what "opened" counts. */
+function countOpened(recs){
+  return (recs||[]).filter(r=>r&&r.payload&&r.payload.event==="position_opened").length;
+}
+function countRefused(recs,dec){
+  const ev=e=>(recs||[]).filter(r=>r&&r.payload&&r.payload.event===e);
+  return {
+    gated:(dec||[]).filter(d=>d.decision==="VETOED").length,
+    llm:ev("mind_confirm").filter(r=>r.payload.veto).length,
+    unfilled:ev("no_fill").length,
+  };
+}
+function drawStats(hb,dec,eq,recs){
   const nav = eq&&eq.length ? eq[eq.length-1].nav : (hb&&hb.nav);
   const pnl = nav!=null ? nav-START_NAV : null;
-  const opened = (dec||[]).filter(d=>d.decision&&!["NO_TRADE","VETOED"].includes(d.decision)).length;
-  const vetoed = (dec||[]).filter(d=>d.decision==="VETOED").length;
+  const opened = countOpened(recs);
+  const r = countRefused(recs,dec);
+  const refused = [r.gated?`${r.gated} gate-vetoed`:null,
+                   r.llm?`${r.llm} LLM-vetoed`:null,
+                   r.unfilled?`${r.unfilled} unfilled`:null]
+                  .filter(Boolean).join(" · ") || "none refused today";
   const cell=(k,v,cls,s)=>`<div class="stat"><div class="k">${k}</div>
      <div class="v ${cls||"neu"}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
   $("stats").innerHTML=[
@@ -415,7 +454,7 @@ function drawStats(hb,dec,eq){
          pnl==null?null:(pnl>=0?"pos":"neg"),
          pnl==null?"":`${pnl>=0?"+":""}${(pnl/START_NAV*100).toFixed(2)}%`),
     cell("Mode",hb?esc(hb.mode):"—",null,hb?esc(hb.reason):""),
-    cell("Structures opened",opened,opened?"pos":null,`${vetoed} vetoed this cycle`),
+    cell("Structures opened",opened,opened?"pos":null,refused),
     cell("Cycle",hb?hb.cycle_count:"—",null,hb?ago(hb.last_cycle_utc):""),
   ].join("");
 }
@@ -453,15 +492,27 @@ function drawDecisions(d){
 }
 
 async function load(){
-  const [hb,surf,dec,eq,at]=await Promise.all([
+  const [hb,surf,dec,eq,at,plan]=await Promise.all([
     grab("state/heartbeat.json"), grab("state/surface.json"),
     grab("state/decisions.json"), grab("state/equity.json"),
-    grab("state/written_at.json"),
-  ]).catch(()=>[null,null,null,null,null]);
+    grab("state/written_at.json"), grab("state/plan.json"),
+  ]).catch(()=>[null,null,null,null,null,null]);
 
-  drawStats(hb,dec,eq);
+  /* The journal is fetched BEFORE the stats are drawn, because "structures
+     opened" is a count of fills and fills live in the journal, not in the
+     decision list. */
+  let recs=[], text=null, day=null;
+  for(const d of contestDays().reverse()){
+    text=await grab(`journal/${d}.jsonl`,true);
+    if(text&&text.trim()){ day=d; break; }
+  }
+  const lines=(text||"").split("\n").filter(l=>l.trim());
+  recs=lines.map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean);
+
+  drawStats(hb,dec,eq,recs);
   drawSurface(surf);
   drawMap(surf);
+  drawPlan(plan);
   drawDecisions(dec);
   drawEquity(eq);
   /* Age the measurement by when the measurement was written, NOT by the
@@ -488,16 +539,10 @@ async function load(){
     <button class="rf" id="rf">refresh</button>`;
   $("rf").onclick=load;
 
-  // journal: the newest contest day that exists. Walking back from today
-  // rather than from the end of the calendar means the common case is one
-  // request, not a run of 404s for days that have not happened yet.
-  let recs=[], text=null, day=null;
-  for(const d of contestDays().reverse()){
-    text=await grab(`journal/${d}.jsonl`,true);
-    if(text&&text.trim()){ day=d; break; }
-  }
-  const lines=(text||"").split("\n").filter(l=>l.trim());
-  recs=lines.map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean);
+  // The journal was fetched above: the newest contest day that exists,
+  // walked back from today rather than from the end of the calendar, so the
+  // common case is one request and not a run of 404s for days that have not
+  // happened yet.
   drawFeed(recs);
 
   const box=$("chain");

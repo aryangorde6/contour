@@ -44,6 +44,22 @@ def heartbeat(cycle: int, mode: str, reason: str, extra: dict | None = None) -> 
     })
 
 
+def next_cycle() -> int:
+    """The cycle ordinal, counted across containers rather than inside one.
+
+    Every cron run is a fresh container, so an in-process counter is always 0
+    -- which is exactly what the heartbeat and every journal record published
+    so far reported. The previous heartbeat is the only thing that survives,
+    so it is what we count from. A missing or corrupt heartbeat restarts at 1
+    rather than raising: a wrong ordinal is cosmetic, a failed cycle is not.
+    """
+    try:
+        d = json.loads((ROOT / "heartbeat.json").read_text())
+        return int(d.get("cycle_count", 0)) + 1
+    except Exception:                                            # noqa: BLE001
+        return 1
+
+
 def point(series: str, sample: dict[str, Any], cap: int = 600) -> Path:
     """Append one timestamped sample to a series the dashboard plots.
 
