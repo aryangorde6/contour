@@ -348,11 +348,20 @@ which read as a market-data problem rather than a brain outage.
    its own once `BOOK_RISK_RAMP` runs out.
 4. **Video** — MP4, **3:45–4:30** (under 3 min is explicitly scored "2 —
    Limited"), plus slides needing market analysis, revenue model, roadmap and
-   competitive analysis (four slides most teams skip). **Biggest remaining
-   scoring lever, and it needs the operator — not something the agent can do.**
+   competitive analysis (four slides most teams skip). **Script and all seven
+   slides are written: `ops/video.md`.** Eight timed beats at ~600 words for
+   4:05–4:15, the tab order to set up first, and what to cut if it runs long
+   (never §5 — the twelve green gates are the strongest evidence we have).
+   Live numbers in it are marked ⚠️ and must be re-read off the dashboard at
+   record time. **What remains is recording it, which needs the operator.**
 5. **Social** — 5 posts on X/LinkedIn tagging `@lablabai` and `@AlpacaHQ` **in
    the body**. Only 18 total likes across all 23 submissions; two $500 prizes
-   are nearly uncontested. Reddit links likely do not qualify.
+   are nearly uncontested. Reddit links likely do not qualify. **All five are
+   written: `ops/social.md`** — one per day Mon→Fri, each a different idea,
+   every X version verified under 280 characters, with a longer LinkedIn
+   variant and the image to attach. If only two go out, post the MCP finding
+   and the bug post-mortem: those are the two that engage non-judges.
+   **Posting is the operator's — nothing is published on anyone's behalf.**
 6. ~~Featherless `ALPACA26`~~ — **moot.** The brain runs on Bedrock GLM-5 with
    AWS credits; Featherless stays wired as a fallback but needs a card.
 7. ~~**Audit findings not yet fixed**~~ — **all six done, 2026-08-31.** See
