@@ -46,11 +46,11 @@ jobs:
           fi
           echo "ok: no root-relative URLs"
 
+      # No `enablement: true` here: creating the Pages site is a repo-admin
+      # call, and GITHUB_TOKEN cannot make it even with pages:write -- it
+      # answers "Resource not accessible by integration". The site was created
+      # once out of band; this step only reads its config.
       - uses: actions/configure-pages@v5
-        with:
-          # Turns Pages on and sets the build type to "workflow" the first
-          # time this runs, so the repo needs no manual settings change.
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
