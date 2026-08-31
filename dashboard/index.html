@@ -207,6 +207,12 @@ const START_NAV=100000, VRP_FLOOR=1.30, SKEW_TRIG=0.8, GENESIS="0".repeat(64);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
+/* raw.githubusercontent sends `cache-control: max-age=300` and does NOT key
+   its CDN on the query string -- measured: the ?t= URL and the bare URL return
+   the same stale object from the same edge. So the page can be up to five
+   minutes behind a 15-minute cycle, which is why every panel states the age of
+   what it is showing rather than implying it is live. The buster stays because
+   it costs nothing and does defeat the *browser* cache. */
 async function grab(path,asText){
   const r=await fetch(RAW+path+"?t="+Date.now(),{cache:"no-store"});
   if(!r.ok) return null;

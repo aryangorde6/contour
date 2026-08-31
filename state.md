@@ -329,8 +329,8 @@ verification only. File a draft submission Wednesday night.
 ### The dashboard
 
 One static file. No build, no backend, no framework. It fetches the agent's own
-published state from `agent-state` over raw.githubusercontent (CORS is open,
-`max-age=300`, so every request carries a cache-buster) and draws:
+published state from `agent-state` over raw.githubusercontent (CORS is open)
+and draws:
 
 - **the structure map** — the three names on skew-z against VRP over the four
   decision zones. This is the differentiator made visible in one chart.
@@ -350,6 +350,12 @@ Two bugs the tests caught, both mine, both in code that looked right:
 `\\"` closed the string early in the brace matcher (the escape flag was read
 one character late), and stripping `<`/`>` for XSS turned
 `vrp 1.24 < 1.30` into `vrp 1.24 1.30` — escape, never censor.
+
+**Do not trust the `?t=` cache-buster.** Measured 2026-08-31: raw.githubusercontent sends `max-age=300` and does not key its CDN on the query string --
+the busted and bare URLs returned the same stale object from one edge while
+curl from another edge already had the new one. The page can therefore sit up
+to five minutes behind. That is fine against a 15-minute cycle, and the fix is
+not a cleverer buster: every panel states the age of what it shows.
 
 `state.point()` appends the NAV series the curve is drawn from; it is
 deliberately tolerant of a corrupt file, because a cosmetic curve is never
