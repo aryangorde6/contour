@@ -19,8 +19,16 @@ changes, not when a line of code changes.
 **options in every strategy** · brand-new paper account at **$100,000** · submit the
 account ID · one-page write-up (AI logic / risk gates / Alpaca infra).
 
-**Judged on:** P&L · Technology Implementation · Creativity & Originality ·
-Presentation & Execution · Social engagement. Roughly equal weight.
+**Judged on — four criteria, not five:** P&L performance · Technology
+Implementation · Creativity & Originality · Presentation & Execution.
+**Social engagement is a separate pair of awards, NOT a judged criterion**
+(`alpaca-overview.md`, from the hackathon page). This matters for how effort is
+allocated: the five social posts buy a different prize and contribute *nothing*
+to 1st place. It also means P&L is **25%** of the main score rather than 20%,
+on a criterion this design cannot win -- see the honest P&L note in §3.
+
+**Field size:** ~3,300 participants / ~1,000 teams registered. The "23 visible
+submissions" read on 2026-08-31 is an early snapshot, not the final field.
 
 **Trading window:** Mon Aug 31 → Fri Sep 4, 11:00 ET. Five full sessions
 (Labor Day 2026 is Sep 7, *after* the contest — many sources return 2025 data
