@@ -368,6 +368,50 @@ untracked-elsewhere files — so the live cron would have appended judged record
 onto twelve dev dry-run records and published them as one chain. Journals are
 agent output; they belong on `agent-state` only, exactly like `state/`.
 
+### 2026-08-31: the open book was never passed to the cycle
+
+Found by a five-dimension adversarial audit, **after it had already fired.**
+Two SPY condors filled at 10:09 and 10:39 ET and no later cycle could see them.
+
+`run_cycle(open_positions=())` -- nothing ever passed it, and nothing ever
+constructed a `ManagedPosition`. `submit_with_ladder`'s fill record was
+journaled and dropped. Consequences, all confirmed in code:
+
+- profit target, stop, breach and the **Thursday flatten** all iterated an
+  empty tuple, so no exit rule could ever run
+- `Book(positions=())` reported zero open risk; G4 printed "0 open, 0 in SPY"
+  while two condors sat on the judged account. Only the LLM's 11:00 ET cutoff
+  stopped it re-opening the same condor every 15 minutes all week
+- `TECHNICAL.md`'s "flat before the deadline by design" was false
+
+**Fixes, all live:**
+
+| Was | Now |
+|---|---|
+| no persistence | `contour/positions.py` under `state.ROOT`, restored and published by the existing workflow steps |
+| credit from the mid | credit from per-leg fill prices -- the stop is 2.0x credit, so an inflated credit takes more loss than designed |
+| requested qty recorded | actual `filled_qty` recorded; a partial leaves fewer contracts than the candidate |
+| mark from entry-time legs (frozen at the entry credit forever, so TP/stop could never fire) | re-priced from the live chain each cycle |
+| `spot = 0.0` on a failed measurement -- reads as far below every short put, a phantom BREACH | holds; only the clock rule runs unpriced |
+| exit `base_id` constant per position | 15-min bucketed, or the first failed close poisons every later one incl. the flatten |
+| 12-min job timeout vs a cycle that can take longer; a kill skips publish and loses the fill | 25 min; verify+publish run `if: always()`, gated on the chain verifying |
+| 90s LLM timeout x2 retries x5 calls = 15 min | 45s (measured ~30s) |
+| fail-closed brain journaled as "could not assemble a valid structure from the chain" | explicit `STAND_DOWN` per name |
+| one bad time string failed the whole blackout call closed | that window is dropped and named; a broken brain still fails closed |
+| docs claimed reads go "through MCP" -- they never did | corrected: reads are `alpaca-py`, writes are the CLI |
+
+`ops/repair_book.py` rebuilt the book from the orders Alpaca actually filled
+and it was published to `agent-state`. Verified live: `[book] 2 tracked
+position(s), 4 option leg(s) at the broker`, both exit-checked each cycle with
+marks that move.
+
+**The lesson worth keeping: a default argument nobody passes is invisible.**
+`open_positions: Sequence[ManagedPosition] = ()` looked like a tested, working
+feature -- `manage.py` was fully unit-tested -- because the tests called
+`should_exit` directly and never asked whether anything reached it. There was
+no `tests/test_loop.py`. Unit tests on a function prove nothing about whether
+it is wired in.
+
 ---
 
 ## 8. Resume commands

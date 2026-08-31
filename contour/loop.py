@@ -53,12 +53,27 @@ def measure_underlying(ds: DataSource, underlying: str,
     return m, legs
 
 
+def cycle_bucket(now: datetime) -> str:
+    """The 15-minute window a cycle belongs to. Shared by entry and exit ids so
+    both are idempotent within a cycle and distinct across cycles."""
+    return now.strftime("%Y%m%dT%H") + f"{now.minute // 15:02d}"
+
+
 def order_base_id(underlying: str, structure: str, now: datetime) -> str:
     """Deterministic per (underlying, structure, 15-min bucket), so a retried
     or double-fired cron cannot open the same position twice."""
-    bucket = now.strftime("%Y%m%dT%H") + f"{now.minute // 15:02d}"
-    h = hashlib.sha256(f"{underlying}{structure}{bucket}".encode()).hexdigest()[:8]
+    h = hashlib.sha256(
+        f"{underlying}{structure}{cycle_bucket(now)}".encode()).hexdigest()[:8]
     return f"contour-{underlying.lower()}-{h}"
+
+
+def close_base_id(pos: ManagedPosition, now: datetime) -> str:
+    """Exit ids MUST vary per cycle. Alpaca 422s on a reused client_order_id,
+    and close_position only special-cases the uncovered-leg rejection -- so a
+    constant base id means the first failed close attempt poisons every later
+    one, including Thursday's flatten. The 15-minute bucket keeps a retried
+    cron idempotent while letting the next cycle try again."""
+    return f"{pos.order_id}-x{cycle_bucket(now)}"
 
 
 def _reprice(pos: ManagedPosition, chain: Sequence[Leg]) -> tuple[Leg, ...] | None:
@@ -138,7 +153,7 @@ def run_cycle(
             escalate = (now_et.date() == C.FLATTEN_DAY
                         and now_et.time() >= C.MARKET_ESCALATION_AT)
             out = close_position(broker, pos, mark,
-                                 f"{pos.order_id}-x", journal.append,
+                                 close_base_id(pos, now_et), journal.append,
                                  escalate=escalate)
             journal.append({"event": "exit_done", **out})
             if out.get("closed"):

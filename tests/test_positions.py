@@ -296,3 +296,22 @@ def test_a_failed_closed_brain_is_journaled_as_a_stand_down(isolated_state,
         assert "STAND_DOWN" in d["reason"]
         assert "chain" not in d["reason"].lower()
     assert any(r.payload.get("stand_down") for r in j.read())
+
+
+# --- exit order ids must not poison the next attempt ---------------------
+def test_close_ids_differ_across_cycles_but_not_within_one():
+    """Alpaca 422s on a reused client_order_id and close_position only
+    special-cases the uncovered-leg rejection, so a constant base id means the
+    first failed close permanently blocks every later one -- including the
+    Thursday flatten."""
+    from contour.loop import close_base_id
+
+    p = pos()
+    a = close_base_id(p, datetime(2026, 9, 3, 15, 47, tzinfo=ET))
+    b = close_base_id(p, datetime(2026, 9, 3, 15, 49, tzinfo=ET))   # same bucket
+    c = close_base_id(p, datetime(2026, 9, 3, 16, 2, tzinfo=ET))    # next bucket
+
+    assert a == b, "a retried cron inside one cycle must stay idempotent"
+    assert a != c, "the next cycle must be able to try again"
+    assert p.order_id in a
+    assert len(f"{c}-c5") <= 128, "client_order_id must fit Alpaca's limit"
