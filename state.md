@@ -51,13 +51,33 @@ grants no trial credits to this org. Do not re-propose buying credits. The
 hackathon's only free inference is Featherless, whose $25 covers the ~116
 calls this week needs many times over.
 
-### The brain, and why it is Featherless
+### The brain: three dead ends, measured not guessed
 
-`contour/llm.py` is a provider seam: `AnthropicProvider` and
-`OpenAICompatProvider` behind one `parse(system, user, schema)` contract, so
-the vendor is a config value rather than an architecture. `build_provider()`
-picks Featherless first, Anthropic second, degraded last; `CONTOUR_LLM`
-(`off`/`anthropic`/`featherless`) overrides.
+**There is no card, and every paid path needs one. Do not re-litigate this:**
+
+| Path | Outcome | Evidence |
+|---|---|---|
+| Anthropic first-party | dead | Console grants this org no trial credit; only "Buy credits" |
+| Featherless `ALPACA26` | dead | $25 promo applies, amount due $0, but Stripe still demands a card for future renewals. Cash App Pay is US-only |
+| **AWS Bedrock** | **dead** | Token authenticates fine; first call 200s, then all models 403 `INVALID_PAYMENT_INSTRUMENT`. The first call triggers an AWS Marketplace subscription that needs a payment instrument. **$50 of AWS credits do not substitute for one** |
+| **Google AI Studio** | **works** | Free tier, no card, no payment instrument. 1500 req/day vs our ~29 |
+
+Bedrock probing was not wasted: `ListFoundationModels` works with the bearer
+token and is the way to enumerate entitlements. The catalogue lists models the
+account cannot call -- visibility is not entitlement.
+
+`contour/llm.py` is a provider seam: `AnthropicProvider`, `BedrockProvider` and
+`OpenAICompatProvider` (Featherless + Gemini) behind one
+`parse(system, user, schema)` contract, so the vendor is a config value rather
+than an architecture. `CONTOUR_LLM` (`off`/`anthropic`/`bedrock`/`featherless`/
+`gemini`) forces one; `CONTOUR_LLM_MODEL` overrides the model id.
+
+**Repo variable `CONTOUR_LLM=gemini` is set, deliberately.** A configured brain
+that 403s fails CLOSED -- correct policy, but with the dead Bedrock token in
+place the cron would have vetoed every trade all week. The variable routes
+around it without deleting the secret.
+
+Verify any provider without trading: `python -m contour --brain-check`.
 
 Featherless serves open weights over an OpenAI-compatible endpoint at
 `https://api.featherless.ai/v1`, model `zai-org/GLM-5.2`, and does **not**

@@ -41,9 +41,13 @@ FEATHERLESS_MODEL = "zai-org/GLM-5.2"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
 GEMINI_MODEL = "gemini-3.7-flash"
 
-# Sonnet 5 is Open access on Bedrock; Opus 5 is gated behind an access
-# request. $2/$10 per MTok makes a week of this agent cost about a dollar.
-BEDROCK_MODEL = "anthropic.claude-sonnet-5"
+# Measured against the real account, not chosen from the catalogue. The newest
+# IDs on the bedrock-mantle endpoint 403 as unentitled, Sonnet 4.5 fails with
+# INVALID_PAYMENT_INSTRUMENT, and the 3.x models are marked Legacy in us-east-1.
+# This inference profile answers, and Haiku 4.5 at $1/$5 per MTok puts the whole
+# contest around fifty cents.
+BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+BEDROCK_REGION = "us-east-1"
 
 ANTHROPIC_MODEL = "claude-opus-5"
 
@@ -197,43 +201,69 @@ class OpenAICompatProvider:
 
 
 class BedrockProvider:
-    """Claude through Amazon Bedrock.
+    """Claude through Amazon Bedrock's runtime invoke endpoint.
 
-    Same Messages API shape as first-party, with two differences that matter
-    here: structured outputs are NOT supported, so the schema goes in the
-    prompt and we validate ourselves; and auth is either a bearer token (short
-    lived, 12h) or an AWS key pair (long lived, which is what a four-day cron
-    actually needs).
+    Three things this had to be shaped around, all found by probing a real
+    account rather than reading the catalogue:
 
-    Default model is Sonnet 5 rather than Opus 5 deliberately: Sonnet is Open
-    access on Bedrock while Opus 5 is gated, and for a job that returns three
-    small fixed-shape objects the difference is not worth an access request.
+      - The newer bedrock-mantle endpoint 403s as unentitled, so this targets
+        bedrock-runtime `/model/{id}/invoke` instead.
+      - Model IDs need an inference-profile prefix (`us.`/`apac.`); the bare
+        id is either Legacy or invalid depending on region.
+      - Bedrock does not support structured outputs at all, so the schema
+        travels in the system prompt and we validate it here.
+
+    A bearer token needs no AWS signing, so the working path has no boto3
+    dependency. A key pair does, and says so rather than failing obscurely.
     """
 
     name = "bedrock"
 
-    def __init__(self, model: str = BEDROCK_MODEL, region: str = "us-east-1",
+    def __init__(self, model: str = BEDROCK_MODEL, region: str = BEDROCK_REGION,
                  api_key: str = "", access_key: str = "", secret_key: str = "",
                  session_token: str = ""):
         self.model, self.region = model, region
         self.api_key = api_key
         self.access_key, self.secret_key = access_key, secret_key
         self.session_token = session_token
-        self._client: Any = None
 
-    def _c(self) -> Any:
-        if self._client is None:
-            from anthropic import AnthropicBedrockMantle
-            if self.api_key:
-                self._client = AnthropicBedrockMantle(
-                    api_key=self.api_key, aws_region=self.region)
-            else:
-                self._client = AnthropicBedrockMantle(
-                    aws_access_key=self.access_key,
-                    aws_secret_key=self.secret_key,
-                    aws_session_token=self.session_token or None,
-                    aws_region=self.region)
-        return self._client
+    def _invoke(self, system: str, msgs: list[dict], max_tokens: int) -> str:
+        body = {"anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": max_tokens, "system": system, "messages": msgs}
+        if not self.api_key:
+            # SigV4 is the SDK's job; we do not reimplement request signing.
+            try:
+                from anthropic import AnthropicBedrock
+            except ImportError as exc:                          # pragma: no cover
+                raise LLMError(
+                    "key-pair auth needs `pip install 'anthropic[bedrock]'`; "
+                    "a bearer token in AWS_BEARER_TOKEN_BEDROCK needs nothing"
+                ) from exc
+            c = AnthropicBedrock(aws_access_key=self.access_key,
+                                 aws_secret_key=self.secret_key,
+                                 aws_session_token=self.session_token or None,
+                                 aws_region=self.region)
+            r = c.messages.create(model=self.model, max_tokens=max_tokens,
+                                  system=system, messages=msgs)
+            return "".join(b.text for b in r.content
+                           if getattr(b, "type", None) == "text")
+
+        url = (f"https://bedrock-runtime.{self.region}.amazonaws.com"
+               f"/model/{self.model}/invoke")
+        r = httpx.post(url, headers={"Authorization": f"Bearer {self.api_key}",
+                                     "Content-Type": "application/json"},
+                       json=body, timeout=TIMEOUT)
+        if r.status_code >= 400:
+            detail = r.text[:200]
+            if "INVALID_PAYMENT_INSTRUMENT" in detail:
+                raise LLMError(
+                    f"{self.model} needs a payment method on the AWS account. "
+                    f"Pick a model the account is entitled to.")
+            raise LLMError(f"HTTP {r.status_code} on {self.model}: {detail}")
+        try:
+            return "".join(b.get("text", "") for b in r.json().get("content", []))
+        except ValueError as exc:
+            raise LLMError(f"malformed Bedrock response: {exc}") from exc
 
     def parse(self, system: str, user: str, schema: type[BaseModel],
               effort: str = "low") -> BaseModel:
@@ -241,14 +271,7 @@ class BedrockProvider:
         msgs: list[dict] = [{"role": "user", "content": user}]
         last = ""
         for _ in range(2):
-            try:
-                r = self._c().messages.create(
-                    model=self.model, max_tokens=4000,
-                    system=sys_p, messages=msgs)
-                raw = "".join(b.text for b in r.content
-                              if getattr(b, "type", None) == "text")
-            except Exception as exc:                            # noqa: BLE001
-                raise LLMError(f"{type(exc).__name__}: {exc}") from exc
+            raw = self._invoke(sys_p, msgs, 4000)
             try:
                 return schema.model_validate_json(_first_json_object(raw))
             except (LLMError, ValidationError) as exc:
@@ -274,7 +297,8 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     bedrock_key = (e.get("AWS_BEARER_TOKEN_BEDROCK", "")
                    or e.get("BEDROCK_API_KEY", ""))
     ak, sk = e.get("AWS_ACCESS_KEY_ID", ""), e.get("AWS_SECRET_ACCESS_KEY", "")
-    region = e.get("AWS_REGION", "") or e.get("AWS_DEFAULT_REGION", "") or "us-east-1"
+    region = (e.get("AWS_REGION", "") or e.get("AWS_DEFAULT_REGION", "")
+              or BEDROCK_REGION)
     fw = e.get("FEATHERLESS_API_KEY", "")
     gm = e.get("GEMINI_API_KEY", "") or e.get("GOOGLE_API_KEY", "")
     an = e.get("ANTHROPIC_API_KEY", "")

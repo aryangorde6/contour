@@ -11,7 +11,7 @@ dependencies = [
     "python-dotenv",
     "httpx",
     "tenacity",
-    "anthropic[bedrock]>=0.75",   # [bedrock] pulls boto3 for SigV4 signing
+    "anthropic>=0.75",   # [bedrock] extra only needed for AWS key-pair auth
 ]
 
 [build-system]

@@ -175,7 +175,8 @@ BR = {"AWS_ACCESS_KEY_ID": "AKIA-x", "AWS_SECRET_ACCESS_KEY": "s3cr3t"}
 def test_bedrock_wins_when_configured_because_its_credits_exist():
     got = build_provider({**BR, **FW, **GM, **AN})
     assert isinstance(got, BedrockProvider)
-    assert got.model == "anthropic.claude-sonnet-5", "Opus 5 is gated on Bedrock"
+    assert got.model.startswith("us.anthropic.claude-haiku-4-5"), \
+        "measured: the newer ids 403 as unentitled on this account"
 
 
 def test_bedrock_accepts_a_bearer_token_instead_of_a_key_pair():
@@ -194,31 +195,48 @@ def test_region_falls_back_through_the_usual_aws_names():
 
 
 def test_bedrock_carries_the_schema_in_the_prompt_and_reasks_once(monkeypatch):
-    """Bedrock does not support structured outputs, so the schema has to
-    travel in the system prompt and we validate it ourselves."""
-    seen: list[dict] = []
-
-    class Blk:
-        type = "text"
-        def __init__(self, t): self.text = t
-
-    class Msg:
-        def __init__(self, t): self.content = [Blk(t)]
-
+    """Bedrock supports no structured output at all, so the schema has to
+    travel in the system prompt and be validated here."""
+    seen: list[tuple[str, list[dict]]] = []
     replies = iter(['{"veto": "nope"}', '{"veto": true, "reason": "second try"}'])
 
-    class FakeMessages:
-        def create(self, **kw):
-            seen.append(kw)
-            return Msg(next(replies))
-
-    class FakeClient:
-        messages = FakeMessages()
-
     p = BedrockProvider()
-    monkeypatch.setattr(p, "_c", lambda: FakeClient())
+
+    def fake_invoke(system, msgs, max_tokens):
+        seen.append((system, msgs))
+        return next(replies)
+
+    monkeypatch.setattr(p, "_invoke", fake_invoke)
     got = p.parse("sys", "user", Toy)
 
     assert got.veto is True and len(seen) == 2
-    assert "JSON Schema" in seen[0]["system"]
-    assert "did not validate" in seen[1]["messages"][-1]["content"]
+    assert "JSON Schema" in seen[0][0], "schema must be in the system prompt"
+    assert "did not validate" in seen[1][1][-1]["content"]
+    assert seen[1][1][-2]["role"] == "assistant", \
+        "the model must see its own failed reply, not just the complaint"
+
+
+def test_bedrock_names_the_payment_problem_rather_than_the_status_code(monkeypatch):
+    """INVALID_PAYMENT_INSTRUMENT is an entitlement fact, not a transient 403.
+    Measured on the real account: Sonnet 4.5 returns it, Haiku 4.5 does not."""
+    class R:
+        status_code = 403
+        text = '{"message":"Model access is denied due to INVALID_PAYMENT_INSTRUMENT:A valid..."}'
+
+    monkeypatch.setattr(llm.httpx, "post", lambda *a, **k: R())
+    with pytest.raises(LLMError, match="needs a payment method"):
+        BedrockProvider(api_key="bt-x").parse("sys", "user", Toy)
+
+
+def test_key_pair_without_the_bedrock_extra_says_what_to_install(monkeypatch):
+    import builtins
+    real = builtins.__import__
+
+    def no_bedrock(name, *a, **k):
+        if name == "anthropic":
+            raise ImportError("no boto3")
+        return real(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", no_bedrock)
+    with pytest.raises(LLMError, match=r"anthropic\[bedrock\]"):
+        BedrockProvider(access_key="AKIA", secret_key="s").parse("s", "u", Toy)
