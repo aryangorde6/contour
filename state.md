@@ -373,6 +373,16 @@ which read as a market-data problem rather than a brain outage.
 7. ~~**Audit findings not yet fixed**~~ — **all six done, 2026-08-31.** See
    "The six audit findings, and what each one turned into" below.
 
+8. **The lablab submission itself** — **nothing is filed yet, and that is the
+   largest single risk on the project.** Everything else is finished and none
+   of it scores until a submission exists. `ops/submission.md` holds every
+   form field written out: tagline, short description, the full description in
+   judging order, the tech tags (and which ones *not* to claim -- MCP is a
+   documented blocker, not a dependency), the fixed facts table, and a
+   morning-of pre-flight. **File a draft immediately with a placeholder video
+   link** -- lablab allows edits until the deadline, so the only unrecoverable
+   failure this week is the form not being open at 11:00 ET Friday.
+
 **Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
 verification only. File a draft submission Wednesday night.
 
