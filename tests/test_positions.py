@@ -268,3 +268,31 @@ def test_the_clock_rule_still_fires_when_nothing_can_be_priced(isolated_state,
                     open_positions=P.load(), mind=Mind(api_key=""))
     assert res.exits[0]["exit"] is True
     assert "FLATTEN" in res.exits[0]["reason"]
+
+
+# --- a stand-down must read as a stand-down ------------------------------
+def test_a_failed_closed_brain_is_journaled_as_a_stand_down(isolated_state,
+                                                            tmp_path):
+    """multiplier 0 sizes every candidate to zero contracts, so S.build returns
+    None and the old code journaled "could not assemble a valid structure from
+    the chain" -- a brain outage reading as a market-data problem."""
+    from contour.mind import Mind as RealMind
+
+    m = RealMind(api_key="sk-ant-fake")
+
+    def boom(*_a, **_k):
+        raise RuntimeError("connection reset")
+    m._call = boom                                  # type: ignore[method-assign]
+
+    j = Journal(tmp_path / "j.jsonl")
+    res = run_cycle(ds=Src(), broker=FakeBroker(),
+                    now_et=datetime(2026, 9, 2, 12, 0, tzinfo=ET),
+                    market_open=True, journal=j, dry=True,
+                    open_positions=[], mind=m)
+
+    assert res.decisions, "a stand-down must still journal a decision per name"
+    for d in res.decisions:
+        assert d["decision"] == "NO_TRADE"
+        assert "STAND_DOWN" in d["reason"]
+        assert "chain" not in d["reason"].lower()
+    assert any(r.payload.get("stand_down") for r in j.read())

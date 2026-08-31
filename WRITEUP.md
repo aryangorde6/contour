@@ -79,12 +79,15 @@ long, so the account is never momentarily naked.
 
 ## Alpaca infrastructure
 
-**Read through MCP, write through the CLI** — a finding, not a preference. The
-MCP server cannot place multi-leg orders: the `legs` array arrives as a JSON
-string and fails pydantic validation
-([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97)).
-The CLI places the identical order correctly; a live 4-leg SPY condor returned
-`status: accepted, order_class: mleg`. Entries go out as a three-rung limit
+**Every order goes through the Alpaca CLI, and that is a finding, not a
+preference.** We tried the MCP server first: it cannot place multi-leg orders,
+because the `legs` array arrives as a JSON string and fails pydantic validation
+([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97),
+open since 2026-07-01). The CLI places the identical order correctly — a live
+4-leg SPY condor returned `status: accepted, order_class: mleg`. Market reads
+go through the official `alpaca-py` SDK (option chain snapshots merged with
+Trading API contract objects, since snapshots carry Greeks but no
+`open_interest`). Entries go out as a three-rung limit
 ladder from mid toward the bid, never a market order, and `reconcile()` reads
 actual `filled_qty` and per-leg fills — paper issues random partial fills, and
 trusting the request puts condor legs out of ratio.

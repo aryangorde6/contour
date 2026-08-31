@@ -83,3 +83,35 @@ def test_multiplier_never_widens():
     LLM returning something absurd cannot increase risk."""
     for llm_value in (1.0, 2.0, 99.0):
         assert min(llm_value, 1.0) <= 1.0
+
+
+# --- a malformed window is not a reason to veto the whole cycle ----------
+def test_one_unparseable_window_drops_that_window_not_the_answer():
+    """Failing closed on a bad time string vetoes every entry for the cycle --
+    a far larger action than the defect warrants."""
+    from contour.mind import BlackoutPlan
+
+    class Plan:
+        notes = "two windows"
+        windows = [
+            type("W", (), {"start_et": "09:30", "end_et": "10:20",
+                           "reason": "ISM"})(),
+            type("W", (), {"start_et": "not a time", "end_et": "10:20",
+                           "reason": "garbage"})(),
+        ]
+
+    m = Mind(api_key="sk-ant-fake")
+    m._call = lambda *a, **k: Plan()                 # type: ignore[method-assign]
+
+    a = m.blackouts(DAY)
+    assert a.source == "llm", "one bad window must not fail the call closed"
+    assert a.multiplier == 1.0
+    assert len(a.blackouts) == 1
+    assert a.blackouts[0].reason == "ISM"
+    assert "UNPARSEABLE" in a.notes
+
+
+def test_a_totally_broken_plan_still_fails_closed():
+    """Tolerance for one window must not become tolerance for a broken brain."""
+    m = broken(Mind(api_key="sk-ant-fake"))
+    assert m.blackouts(DAY).source == "failed_closed"

@@ -35,7 +35,13 @@ concurrency:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # Worst case is not the common case but it is reachable: three entry
+    # ladders at 3 rungs x 90s = 810s, plus up to five LLM calls, plus exits.
+    # A job killed at 12 minutes skips the publish step, which now loses the
+    # freshly-recorded position as well as the journal -- i.e. it recreates
+    # the unmanaged-book bug. The concurrency group queues rather than
+    # overlaps, so a long cycle is safe.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -92,10 +98,17 @@ jobs:
           echo "running: python -m contour $ARGS"
           python -m contour $ARGS
 
+      # Both run even when the cycle failed: a crash after a fill still has a
+      # position and a journal worth keeping, and losing them is how an
+      # unmanaged position happens. Publishing is still gated on the chain
+      # verifying, so a corrupt journal is never pushed.
       - name: Verify the hash chain before publishing
+        id: verify
+        if: always()
         run: python -m contour --verify
 
       - name: Publish journal and state to the agent-state branch
+        if: always() && steps.verify.outcome == 'success'
         # Built with a scratch index rather than a branch switch. The old
         # version stashed journal/ and state/, checked out agent-state and
         # popped -- but `stash --include-untracked` skips *ignored* files, and

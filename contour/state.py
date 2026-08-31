@@ -13,7 +13,27 @@ def write(name: str, payload: Any) -> Path:
     ROOT.mkdir(parents=True, exist_ok=True)
     p = ROOT / f"{name}.json"
     p.write_text(json.dumps(payload, indent=1, default=str) + "\n")
+    _stamp(name)
     return p
+
+
+def _stamp(name: str) -> None:
+    """Record when each file was last actually rewritten.
+
+    The heartbeat updates every cycle including CLOSED ones, but surface and
+    decisions only change on a TRADE cycle. Without a per-file time the
+    dashboard labels Thursday's last measurement with Sunday's heartbeat and
+    reports it as "measured 2m ago" for the whole judging window.
+    """
+    p = ROOT / "written_at.json"
+    try:
+        d = json.loads(p.read_text())
+        if not isinstance(d, dict):
+            d = {}
+    except Exception:                                        # noqa: BLE001
+        d = {}
+    d[name] = datetime.now(timezone.utc).isoformat()
+    p.write_text(json.dumps(d, indent=1, sort_keys=True) + "\n")
 
 
 def heartbeat(cycle: int, mode: str, reason: str, extra: dict | None = None) -> Path:

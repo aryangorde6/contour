@@ -27,7 +27,11 @@ from typing import Any, Protocol
 import httpx
 from pydantic import BaseModel, ValidationError
 
-TIMEOUT = 90.0
+# Measured ~30s per Converse call. A cycle can make five of them
+# (blackouts, regime, and one confirm per underlying), each with one
+# retry, so 90s here put the worst case at 15 minutes -- longer than
+# the cron interval itself.
+TIMEOUT = 45.0
 
 # Featherless' own recommendation in the ALPACA26 setup guide. Any model in
 # their catalogue works; this one is provisioned warm, which matters when the

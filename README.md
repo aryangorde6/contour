@@ -15,7 +15,7 @@ which means half the time you are selling the underpriced side. Contour measures
 shows put spreads, some call spreads, some condors, and the dashboard shows the
 measurement that chose.
 
-## Reads through MCP, writes through the CLI
+## Writes through the CLI, and why
 
 Deliberately, and worth stating plainly: Alpaca's MCP server **cannot currently
 place multi-leg options orders**. Its `place_option_order` receives the `legs`
@@ -24,8 +24,10 @@ array as a JSON string and fails pydantic validation
 open since 2026-07-01). A direct REST POST of the identical payload returns 200,
 and the CLI's generated `--order-class mleg --legs` path handles it correctly.
 
-So Contour reads the market through MCP v2 and writes every order through the
-Alpaca CLI. Both are exercised for real.
+So Contour writes every order through the Alpaca CLI, and reads the market
+through the official `alpaca-py` SDK — option chain snapshots merged with
+Trading API contract objects, because snapshots carry Greeks and quotes but no
+`open_interest`.
 
 ## Status
 
@@ -38,7 +40,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 84 passing
+- [x] `tests/` — 108 passing
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)

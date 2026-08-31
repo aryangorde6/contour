@@ -453,17 +453,30 @@ function drawDecisions(d){
 }
 
 async function load(){
-  const [hb,surf,dec,eq]=await Promise.all([
+  const [hb,surf,dec,eq,at]=await Promise.all([
     grab("state/heartbeat.json"), grab("state/surface.json"),
     grab("state/decisions.json"), grab("state/equity.json"),
-  ]).catch(()=>[null,null,null,null]);
+    grab("state/written_at.json"),
+  ]).catch(()=>[null,null,null,null,null]);
 
   drawStats(hb,dec,eq);
   drawSurface(surf);
   drawMap(surf);
   drawDecisions(dec);
   drawEquity(eq);
-  $("surf-age").textContent = hb ? "measured "+ago(hb.last_cycle_utc) : "";
+  /* Age the measurement by when the measurement was written, NOT by the
+     heartbeat: the heartbeat ticks on every cycle including CLOSED ones, so
+     borrowing it would label Thursday's last surface "measured 2m ago" for
+     the whole judging window. */
+  const measuredAt = at && at.surface;
+  $("surf-age").textContent = measuredAt ? "measured "+ago(measuredAt)
+    : (hb ? "last cycle "+ago(hb.last_cycle_utc) : "");
+  const decAt = at && at.decisions;
+  const decHdr = document.querySelector("#decisions").closest(".panel")
+                   .querySelector("h2 .note");
+  if (decHdr) decHdr.textContent = decAt
+    ? `every gate, pass or fail — ${ago(decAt)}`
+    : "every gate, pass or fail";
 
   const live = hb && (Date.now()-new Date(hb.last_cycle_utc).getTime())<40*60*1000;
   const brain = (hb && hb.brain) || null;

@@ -181,6 +181,29 @@ def run_cycle(
                      p.credit_received) for p in live))
 
     measurements, decisions, opened = [], [], []
+
+    # A zero multiplier is the advisory layer standing the agent down, not the
+    # chain being unreadable. Without this the fail-closed path reports
+    # "could not assemble a valid structure from the chain" for every name --
+    # a brain outage reads in the journal as a market-data problem.
+    if multiplier == 0.0:
+        reason = ("STAND_DOWN: advisory layer returned multiplier 0 "
+                  "(fail-closed brain or a hard event blackout); no entries "
+                  "this cycle. Exits above still ran.")
+        for und in C.UNIVERSE:
+            decisions.append({"underlying": und, "decision": "NO_TRADE",
+                              "reason": reason})
+            journal.append({"event": "decision", **decisions[-1]})
+        journal.append({"event": "cycle_end", "cycle": cycle,
+                        "mode": phase.mode, "entries": 0,
+                        "stand_down": True})
+        state.heartbeat(cycle, phase.mode, phase.reason,
+                        {"nav": nav, "entries": 0, "stand_down": True,
+                         "brain": mind.brain if mind else "none"})
+        state.write("decisions", decisions)
+        return CycleResult(phase.mode, phase.reason, measurements, decisions,
+                           exits)
+
     for und in C.UNIVERSE:
         got = measure_underlying(ds, und, C.EXPIRY)
         if got is None:

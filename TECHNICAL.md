@@ -161,12 +161,19 @@ is never momentarily naked.
 
 ## Alpaca infrastructure
 
-**Read through MCP, write through the CLI** — and that split is a finding, not
-a preference. The MCP server cannot place multi-leg orders: the `legs` array
-arrives as a JSON string and fails pydantic validation
+**Every order goes through the Alpaca CLI, and that is a finding, not a
+preference.** MCP was the first choice and cannot place multi-leg orders: the
+`legs` array arrives as a JSON string and fails pydantic validation
 ([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97)).
 The CLI places the identical order correctly; a live 4-leg SPY condor returned
 `status: accepted, order_class: mleg`, then cancelled clean.
+
+Market reads go through the official `alpaca-py` SDK rather than MCP —
+`OptionHistoricalDataClient` and `StockHistoricalDataClient` for the chain and
+bars, `TradingClient` for contract metadata. Earlier drafts of this document
+said reads went "through MCP"; they never did, and the claim is corrected here
+rather than left to be discovered. The contest requires the Trading API plus
+"MCP server and/or CLI", which the CLI write path satisfies on its own.
 
 Other things the live environment taught us:
 

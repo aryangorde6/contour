@@ -91,7 +91,12 @@ class Advice:
 
 
 def _et(day: date, hhmm: str) -> datetime:
-    h, m = (int(x) for x in hhmm.split(":"))
+    """Raises on anything that is not HH:MM. Callers drop the single window
+    rather than the whole answer: one mis-formatted time in one blackout is
+    not a reason to fail the cycle closed and veto every entry."""
+    h, m = (int(x) for x in str(hhmm).strip().split(":")[:2])
+    if not (0 <= h <= 23 and 0 <= m <= 59):
+        raise ValueError(f"time out of range: {hhmm!r}")
     return datetime.combine(day, time(h, m), tzinfo=C.ET)
 
 
@@ -145,11 +150,20 @@ class Mind:
                     f"inventing caution.\n\nOvernight headlines:\n"
                     + ("\n".join(f"- {h}" for h in headlines) or "- (none)"),
                 BlackoutPlan, effort="medium")
-            return Advice(
-                tuple(Blackout(_et(day, w.start_et), _et(day, w.end_et), w.reason)
-                      for w in plan.windows),
-                1.0, None, "llm", plan.notes,
-            )
+            # Drop a window we cannot parse; do not drop the answer. Failing
+            # the whole call closed on one bad time string would veto every
+            # entry for the cycle -- a far larger action than the defect.
+            windows, dropped = [], []
+            for w in plan.windows:
+                try:
+                    windows.append(Blackout(_et(day, w.start_et),
+                                            _et(day, w.end_et), w.reason))
+                except (ValueError, TypeError, AttributeError):
+                    dropped.append(f"{w.start_et!r}-{w.end_et!r}")
+            notes = plan.notes
+            if dropped:
+                notes = f"{notes} | UNPARSEABLE windows dropped: {', '.join(dropped)}"
+            return Advice(tuple(windows), 1.0, None, "llm", notes)
         except Exception as exc:                                # noqa: BLE001
             return Advice((), 0.0, None, "failed_closed",
                           f"blackout parse failed: {type(exc).__name__}: {exc}")
