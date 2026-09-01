@@ -2,80 +2,84 @@
  {
   "underlying": "SPY",
   "decision": "VETOED",
-  "reason": "PUT_SKEW_RICH: SPY skew_z +1.02 >= +0.80 -- selling puts only, not the cheap calls",
+  "reason": "SKEW_NEUTRAL: SPY skew_z +0.72 inside +/-0.80 -- both sides fairly priced, selling both",
   "gates": [
-   "G1 ok: NAV $98,464",
+   "G1 ok: NAV $98,571",
    "G2 ok: session P&L $0",
-   "G3 book risk $1,760 would exceed 2% ramp cap $1,652 for 2026-09-01"
+   "G3 book risk $1,678 would exceed 2% ramp cap $1,654 for 2026-09-01"
   ],
-  "spot": 760.22,
-  "atm_iv": 12.8625,
-  "rv10": 8.1793,
-  "vrp_ratio": 1.573,
-  "skew25": 3.74,
-  "skew_z": 1.017,
+  "spot": 761.41,
+  "atm_iv": 12.3875,
+  "rv10": 7.855,
+  "vrp_ratio": 1.577,
+  "skew25": 3.38,
+  "skew_z": 0.717,
   "regime_weight": 1.0,
   "regime_source": "measured",
-  "credit": 0.39,
+  "credit": 0.8,
   "contracts": 2,
-  "max_loss_per_contract": 461.0,
+  "max_loss_per_contract": 420.0,
   "legs": [
-   "SPY260911P00738000",
-   "SPY260911P00733000"
+   "SPY260911P00740000",
+   "SPY260911P00735000",
+   "SPY260911C00777000",
+   "SPY260911C00782000"
   ]
  },
  {
   "underlying": "QQQ",
   "decision": "VETOED",
-  "reason": "PUT_SKEW_RICH: QQQ skew_z +1.42 >= +0.80 -- selling puts only, not the cheap calls",
+  "reason": "PUT_SKEW_RICH: QQQ skew_z +1.22 >= +0.80 -- selling puts only, not the cheap calls",
   "gates": [
-   "G1 ok: NAV $98,464",
+   "G1 ok: NAV $98,571",
    "G2 ok: session P&L $0",
-   "G3 ok: book $1,305 / $1,652 (2% ramp)",
+   "G3 ok: book $1,300 / $1,654 (2% ramp)",
    "G4 ok: 2 open, 0 in QQQ",
-   "G5 QQQ260911P00677000 OI 295 < 500"
+   "G5 QQQ260911P00674000 OI 114 < 500"
   ],
-  "spot": 705.77,
-  "atm_iv": 18.1675,
-  "rv10": 13.49,
-  "vrp_ratio": 1.347,
-  "skew25": 4.66,
-  "skew_z": 1.423,
+  "spot": 707.26,
+  "atm_iv": 17.2275,
+  "rv10": 12.9006,
+  "vrp_ratio": 1.335,
+  "skew25": 4.4,
+  "skew_z": 1.223,
   "regime_weight": 0.5,
   "regime_source": "measured",
-  "credit": 0.33,
+  "credit": 0.375,
   "contracts": 1,
-  "max_loss_per_contract": 467.0,
+  "max_loss_per_contract": 462.5,
   "legs": [
-   "QQQ260911P00677000",
-   "QQQ260911P00672000"
+   "QQQ260911P00679000",
+   "QQQ260911P00674000"
   ]
  },
  {
   "underlying": "IWM",
   "decision": "VETOED",
-  "reason": "PUT_SKEW_RICH: IWM skew_z +0.91 >= +0.80 -- selling puts only, not the cheap calls",
+  "reason": "SKEW_NEUTRAL: IWM skew_z +0.55 inside +/-0.80 -- both sides fairly priced, selling both",
   "gates": [
-   "G1 ok: NAV $98,464",
+   "G1 ok: NAV $98,571",
    "G2 ok: session P&L $0",
-   "G3 ok: book $1,382 / $1,652 (2% ramp)",
+   "G3 ok: book $1,324 / $1,654 (2% ramp)",
    "G4 ok: 2 open, 0 in IWM",
-   "G5 IWM260911P00278000 OI 260 < 500"
+   "G5 round-trip friction $0.40 > 30% of $0.38 credit ($0.11)"
   ],
-  "spot": 290.25,
-  "atm_iv": 18.1675,
-  "rv10": 13.027,
-  "vrp_ratio": 1.395,
-  "skew25": 4.47,
-  "skew_z": 0.913,
+  "spot": 290.57,
+  "atm_iv": 17.8225,
+  "rv10": 12.8218,
+  "vrp_ratio": 1.39,
+  "skew25": 3.92,
+  "skew_z": 0.547,
   "regime_weight": 0.5,
   "regime_source": "measured",
-  "credit": 0.185,
+  "credit": 0.38,
   "contracts": 3,
-  "max_loss_per_contract": 181.5,
+  "max_loss_per_contract": 162.0,
   "legs": [
-   "IWM260911P00278000",
-   "IWM260911P00276000"
+   "IWM260911P00279000",
+   "IWM260911P00277000",
+   "IWM260911C00299000",
+   "IWM260911C00301000"
   ]
  }
 ]
