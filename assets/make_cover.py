@@ -91,7 +91,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewB
 <text x="502" y="643" fill="#C8C8CD" font-family="DejaVu Sans" font-size="17" font-weight="bold">CALL SPREAD</text>
 
 <line x1="96" y1="740" x2="1500" y2="740" stroke="#2A2A2E" stroke-width="1.5"/>
-<text x="96" y="790" fill="#6E6E73" font-family="DejaVu Sans" font-size="18">Alpaca Trading API  ·  MCP  ·  CLI  ·  Claude  ·  12 deterministic risk gates</text>
+<text x="96" y="790" fill="#6E6E73" font-family="DejaVu Sans" font-size="18">Alpaca Trading API  ·  MCP  ·  CLI  ·  GLM-5 on Bedrock  ·  19 deterministic risk gates</text>
 <text x="1500" y="790" fill="#6E6E73" font-family="DejaVu Sans" font-size="18" text-anchor="end">Alpaca AI Trading Agents Hackathon 2026</text>
 </svg>'''
 

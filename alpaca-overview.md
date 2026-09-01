@@ -65,7 +65,7 @@ From the [live results page](https://lablab.ai/ai-hackathons/alpaca-ai-trading-a
 - ~3,300 participants
 - ~1,000 teams
 - Submissions open; Options Alpha Agents is the active track
-- Common tools in use: Alpaca, Claude Code, Anthropic Claude, Gemini, Codex, Cursor, Streamlit, etc.
+- Common tools in use include Alpaca, Gemini, Codex, Cursor and Streamlit
 
 ## Community & links
 
