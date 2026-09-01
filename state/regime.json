@@ -1,0 +1,29 @@
+[
+ {
+  "underlying": "SPY",
+  "stage2": true,
+  "ribbon_bull": true,
+  "lrs_weight": 1.0,
+  "weight": 1.0,
+  "source": "measured",
+  "notes": "Stage-2 and ribbon both confirm; LRS 1.00 (clear of every trim) taken whole"
+ },
+ {
+  "underlying": "QQQ",
+  "stage2": true,
+  "ribbon_bull": true,
+  "lrs_weight": 0.5,
+  "weight": 0.5,
+  "source": "measured",
+  "notes": "Stage-2 and ribbon both confirm; LRS 0.50 (above the 200d but below the 50d -- the breakdown rung) taken whole"
+ },
+ {
+  "underlying": "IWM",
+  "stage2": true,
+  "ribbon_bull": true,
+  "lrs_weight": 0.5,
+  "weight": 0.5,
+  "source": "measured",
+  "notes": "Stage-2 and ribbon both confirm; LRS 0.50 (above the 200d but below the 50d -- the breakdown rung) taken whole"
+ }
+]
