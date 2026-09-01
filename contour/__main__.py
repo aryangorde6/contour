@@ -470,7 +470,8 @@ def _held_symbols(broker) -> set[str]:
     read must not stop a cycle that could otherwise manage exits."""
     try:
         return {str(p.get("symbol")) for p in broker.positions()
-                if str(p.get("symbol", "")).startswith(("SPY2", "QQQ2", "IWM2"))}
+                if str(p.get("symbol", "")).startswith(
+                    ("SPY2", "QQQ2", "IWM2", "TQQQ2"))}
     except Exception as exc:                                 # noqa: BLE001
         print(f"[book] could not read broker positions: {exc}", file=sys.stderr)
         return set()

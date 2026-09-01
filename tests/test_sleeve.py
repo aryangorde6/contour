@@ -111,8 +111,12 @@ def test_turning_the_sleeve_off_restores_the_options_book_exactly(monkeypatch):
     shrunk by a feature nobody is running."""
     import importlib
     monkeypatch.setenv("PYTHONHASHSEED", "0")
+    # BOTH carve-outs off. The invariant is that the ceiling is DERIVED, so
+    # every feature funded out of it gives its room back when switched off --
+    # not that the sleeve is the only such feature.
     src = open(C.__file__).read().replace(
-        "SLEEVE_NOTIONAL = 30_000.0", "SLEEVE_NOTIONAL = 0.0")
+        "SLEEVE_NOTIONAL = 30_000.0", "SLEEVE_NOTIONAL = 0.0").replace(
+        "TAIL_RISK_BUDGET_PCT = 1_122.0 / START_NAV", "TAIL_RISK_BUDGET_PCT = 0.0")
     ns: dict = {"__file__": C.__file__, "__name__": "contour._cfgprobe"}
     exec(compile(src, C.__file__, "exec"), ns)
     assert ns["BOOK_RISK_CEILING_PCT"] == pytest.approx(0.04)

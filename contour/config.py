@@ -112,13 +112,44 @@ SLEEVE_FILL_WAIT_S = 60
 # 4% halt -- the identical decoration bug, reintroduced by addition. The
 # options ceiling is therefore the halt distance MINUS whatever the sleeve has
 # committed, so `SLEEVE_NOTIONAL = 0` restores the pre-sleeve numbers exactly.
+# The manually-placed TQQQ tail is carved out for exactly the reason the
+# sleeve is, and the reason is in the paragraph above: risk the options book
+# cannot SEE is risk that sits behind the same halt without being counted
+# against it. 6 x TQQQ260911C00070000 filled at $1.87 = $1,122, and a long
+# call's max loss is the premium, so the number is exact rather than modelled.
+# Set to 0.0 when the position is closed and the options book gets its room
+# back automatically.
+TAIL_RISK_BUDGET_PCT = 1_122.0 / START_NAV                      # 0.01122
 BOOK_RISK_CEILING_PCT = ((START_NAV - NAV_HARD_HALT) / START_NAV
-                         - SLEEVE_RISK_BUDGET_PCT)              # 0.028
+                         - SLEEVE_RISK_BUDGET_PCT
+                         - TAIL_RISK_BUDGET_PCT)                # 0.0168
+# The opening rung is a FRACTION of the ceiling rather than a constant: a
+# hard-coded 0.02 survived the sleeve carve-out by luck and inverts the ramp
+# outright once the tail carve-out shrinks the ceiling.
 BOOK_RISK_RAMP = {
-    date(2026, 8, 31): 0.02,
+    date(2026, 8, 31): round(BOOK_RISK_CEILING_PCT * 0.71, 5),
     date(2026, 9, 1): BOOK_RISK_CEILING_PCT,
-    date(2026, 9, 2): BOOK_RISK_CEILING_PCT,
-    date(2026, 9, 3): BOOK_RISK_CEILING_PCT,
+    # CLOSED EARLY, 2026-09-01 18:25 UTC. The ceiling above is derived from
+    # START_NAV, so it answers "how much may the book risk on day one". That
+    # is no longer the binding number: the halt is a fixed NAV LEVEL and
+    # $1,408 of realised loss has already eaten the distance to it.
+    #
+    #     NAV                                        $98,592
+    #     distance to the $96,000 hard halt           $2,592
+    #       sleeve stop, 21 QQQ at 679.51               $589
+    #       SPY Sep-11 condor, max loss                 $838
+    #       TQQQ Sep-11 70C x6, premium = max loss    $1,122
+    #     committed                                   $2,549
+    #     UNCOMMITTED                                    $43
+    #
+    # $43 buys nothing, so the honest number is zero rather than a ramp
+    # fitted to it. The sizing constants are deliberately NOT bent to make
+    # room -- rewriting a per-position cap to accommodate a drawdown is how a
+    # capital floor stops meaning anything. Exits are untouched: the exit loop
+    # runs ahead of the gates, so targets, stops, breaches and the scheduled
+    # flatten all still fire, and the agent keeps journaling every cycle.
+    date(2026, 9, 2): 0.00,
+    date(2026, 9, 3): 0.00,
     date(2026, 9, 4): 0.00,
 }
 # The previous 1.0% x 2 left the whole ramp unreachable and, with only SPY
@@ -328,7 +359,14 @@ LRS_EXT_CAP       = 0.25   # trim above this much extension over the slow SMA
 # provider that ANSWERS never does, which is what keeps the anchored 0.5 out.
 DEGRADED_BRAIN_SIZE = 0.5
 # --- positions the book holds but does not manage --------------------------
-# EMPTY as of 2026-09-01 17:59 UTC. The long QQQ 720C tail was closed at $2.83
+# 2026-09-01 18:14 UTC: 6 x TQQQ Sep-11 70C at $1.87 ($1,122), placed on an
+# explicit instruction after the evidence against it was put on the record --
+# a gap-down bounce tests as noise (t = +0.42) and the calls cost 1.4x realised
+# vol. It is sized INSIDE the per-position cap and carved out of the book
+# ceiling above, so it breaks no gate; it is acknowledged here so the orphan
+# check reports it rather than discovering it.
+#
+# Earlier the same day: the long QQQ 720C tail was closed at $2.83
 # for $3,113 against $4,433 paid -- a realised loss of $1,320, which was the
 # entire account drawdown. It went on as a deliberate variance bet and came
 # off for a measured reason: at 15.1% implied against 13.1% realised it was
@@ -338,4 +376,4 @@ DEGRADED_BRAIN_SIZE = 0.5
 # The mechanism stays because it is the honest way to hold an unmanaged leg:
 # an acknowledged symbol is excluded from the orphan check but still counted
 # and reported, so the book never silently disowns something it holds.
-ACKNOWLEDGED_SYMBOLS: tuple[str, ...] = ()
+ACKNOWLEDGED_SYMBOLS: tuple[str, ...] = ("TQQQ260911C00070000",)

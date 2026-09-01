@@ -545,7 +545,17 @@ $3,113 against $4,433 paid, realising -$1,320, which was the whole account
 drawdown. It was closed once `research/strategy_backtest.py` showed no edge
 anywhere in the book to justify paying ~15% over fair value to hold variance.
 What follows is what it was and why it went on, kept rather than rewritten.
-On 2026-09-01 the book bought 11 QQQ Sep-11 720 calls for $4,433. It is *long* premium: it pays the variance risk premium this
+On 2026-09-01 the book bought 11 QQQ Sep-11 720 calls for $4,433.
+
+**And a second tail went on the same evening.** 6 x TQQQ Sep-11 70C at $1.87
+($1,122), placed on an explicit instruction after the evidence against it was
+put on the record: a TQQQ gap-down bounce tests as noise over five years
+(t = +0.42 at the matching gap size, and the mean turns negative at gaps below
+-4%), and the calls cost about 1.4x realised vol. It is sized inside the
+per-position cap and carved out of the book ceiling, so it breaks no gate --
+but it consumed the last of the room in front of the capital floor, and the
+entry ramp is therefore closed to zero for the remaining sessions. The floor
+was held by stopping new risk, not by rewriting the cap that measures it. It is *long* premium: it pays the variance risk premium this
 document argues is worth harvesting, at 15.2% implied against 12.07% realized
 -- a 1.23x premium, about **-0.32% of NAV in expectation**. Calling it anything
 else would be the one dishonest line in a submission whose whole claim is that

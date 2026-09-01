@@ -64,17 +64,33 @@ def test_g1_blocks_below_capital_floor():
 
 # --- 2. book risk ramp ----------------------------------------------------
 def test_g3_ramp_is_tighter_on_monday_than_wednesday():
-    """820 of new risk on top of 1200 open = 2020. Monday's cap is 2000."""
-    open_pos = (OpenPosition("QQQ", "CONDOR", 3, 400.0, 0.95),)  # 1200
-    cand = put_spread(contracts=2, max_loss_per_contract=410.0)  # 820
+    """The INVARIANT, derived rather than hard-coded: a book that Monday's
+    rung refuses, Wednesday's rung admits. Fixed dollar figures used to stand
+    in for this and silently stopped testing it when the ceiling moved -- the
+    ramp had actually inverted, Monday looser than Wednesday, and the assert
+    still passed on its own arithmetic."""
+    mon_cap = C.BOOK_RISK_RAMP[date(2026, 8, 31)] * 100_000
+    wed_cap = C.BOOK_RISK_RAMP[date(2026, 9, 1)] * 100_000
+    assert wed_cap > mon_cap, "the ramp must loosen after the opening rung"
+
+    # Sits above Monday's rung and below Wednesday's, whatever they are.
+    open_risk = mon_cap - 100.0
+    open_pos = (OpenPosition("QQQ", "CONDOR", 1, open_risk, 0.95),)
+    cand = put_spread(contracts=1, max_loss_per_contract=200.0)
+    assert mon_cap < open_risk + 200.0 < wed_cap
 
     mon = ctx(datetime(2026, 8, 31, 11, 0, tzinfo=ET))
     ok, why = gates.g3_book_risk_ramp(cand, book(positions=open_pos), mon)
-    assert not ok and "ramp cap $2,000" in why
+    assert not ok and "ramp cap" in why
 
-    wed = ctx(datetime(2026, 9, 2, 11, 0, tzinfo=ET))
-    ok, _ = gates.g3_book_risk_ramp(cand, book(positions=open_pos), wed)
-    assert ok, "the Wednesday ramp should admit the same position"
+    tue = ctx(datetime(2026, 9, 1, 11, 0, tzinfo=ET))
+    ok, _ = gates.g3_book_risk_ramp(cand, book(positions=open_pos), tue)
+    assert ok, "the later rung should admit the same position"
+
+    # And it closes to zero at the end rather than trailing off: 2026-09-02
+    # onward is a deliberate stop, not an omission.
+    for d in (date(2026, 9, 2), date(2026, 9, 3), date(2026, 9, 4)):
+        assert C.BOOK_RISK_RAMP[d] == 0.0, f"{d} should admit no new risk"
 
 
 def test_g3_rejects_a_position_over_the_per_position_cap():

@@ -762,3 +762,38 @@ Book now: 21 QQQ shares (stop resting) + the SPY Sep-11 condor. NAV $98,692
 **Open, and now the largest thing by far: the lablab submission and the video.**
 Neither is filed. P&L is the first thing judged, but an unfiled entry scores
 zero regardless of it.
+
+## 2026-09-01 ~18:25 UTC — a second tail, and the ramp closed to pay for it
+
+Bought **6 TQQQ Sep-11 70C at $1.87 ($1,122)** on an explicit instruction. The
+evidence against it was put on the record first and is worth keeping: across
+five years, a TQQQ gap down does **not** predict a bounce (next-day mean +0.19%
+at gaps ≤ −3%, t = +0.42; **negative** at ≤ −4%, which is where today's −3.96%
+sits), and simulating the call purchase at *realised* vol with *zero* spread
+still returns −3.39% on premium at the matching gap size. Live, the calls cost
+~1.4× realised vol on the agent's own rv10 measure.
+
+It breaks no gate — inside the $1,250 per-position cap, and carved out of the
+book ceiling via `TAIL_RISK_BUDGET_PCT` exactly as the sleeve is.
+
+**What it did break, and how that was fixed.** Three things surfaced:
+
+1. `_held_symbols` matched `("SPY2","QQQ2","IWM2")`, so `TQQQ2…` was invisible
+   to the book check. Added the prefix; the leg is now acknowledged, not an
+   orphan, and `_orphan_legs` returns empty against the live broker.
+2. G3's ceiling is derived from `START_NAV`, but the halt is a fixed NAV
+   *level*, and $1,408 of realised loss had already eaten the distance to it.
+   Committed risk $2,549 against $2,592 of room left **$43**.
+3. The opening ramp rung was hard-coded at 0.02 and inverted the ramp once the
+   ceiling shrank — Monday looser than Wednesday. Now a fraction of the ceiling.
+
+The ramp is **0.00 from 2026-09-02**. Sizing constants were deliberately left
+alone: bending a per-position cap to accommodate a drawdown is how a capital
+floor stops meaning anything. Exits are unaffected — the exit loop runs ahead
+of the gates, so targets, stops, breaches and the scheduled flatten still fire
+and every cycle still journals.
+
+A `HALT` file was tried first and reverted: `HALT_FILE` is cwd-relative, so it
+switched off 27 tests as well as the agent. The ramp is the honest place.
+
+NAV $98,592 (−1.41%). Book: 21 QQQ + SPY condor + 6 TQQQ 70C. 253 tests pass.

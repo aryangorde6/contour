@@ -32,7 +32,11 @@ from .test_gates import leg
 from .test_manage import pos
 
 ET = C.ET
-TRADING_DAY = datetime(2026, 9, 2, 12, 0, tzinfo=ET)
+# Dated to a session whose ramp still admits risk. The ramp closes to zero
+# from 2026-09-02 (see config), and these tests are about fill handling
+# rather than calendar policy -- pinning them to a closed day would test
+# the ramp twice and the thing they name not at all.
+TRADING_DAY = datetime(2026, 9, 1, 12, 0, tzinfo=ET)
 
 
 @pytest.fixture(autouse=True)

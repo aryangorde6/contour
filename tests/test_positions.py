@@ -192,7 +192,7 @@ def test_a_fill_is_persisted_with_the_quantity_that_actually_filled(
 
     j = Journal(tmp_path / "j.jsonl")
     run_cycle(ds=Src(), broker=FakeBroker(),
-              now_et=datetime(2026, 9, 2, 12, 0, tzinfo=ET),
+              now_et=datetime(2026, 9, 1, 12, 0, tzinfo=ET),
               market_open=True, journal=j, dry=False,
               open_positions=[], mind=None)
 
@@ -286,7 +286,7 @@ def test_a_failed_closed_brain_is_journaled_as_a_stand_down(isolated_state,
 
     j = Journal(tmp_path / "j.jsonl")
     res = run_cycle(ds=Src(), broker=FakeBroker(),
-                    now_et=datetime(2026, 9, 2, 12, 0, tzinfo=ET),
+                    now_et=datetime(2026, 9, 1, 12, 0, tzinfo=ET),
                     market_open=True, journal=j, dry=True,
                     open_positions=[], mind=m)
 
