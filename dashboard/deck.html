@@ -274,8 +274,11 @@ tr:last-child td{border-bottom:none}
             systems say that is the wrong default; skew alone should not decide</li>
           <li>Expiry laddering and rolls</li>
           <li>Skew priors <b>learned</b> per underlying instead of hard-coded</li>
-          <li>Backtest harness — a data problem now, not a rewrite, because the
-            recorder already exists</li>
+          <li><b>More backtest history.</b> The harness is built and has run —
+            387 cycles against real historical option prices, importing the
+            agent's own selection and gate code rather than a reimplementation.
+            Alpaca's option history starts 2024-01-18, so 2.5 years is the
+            entire available sample, and t = +0.37 is what that sample supports</li>
           <li>Portfolio vega and gamma caps, not per-position max loss alone</li>
           <li>Paid feed to close the indicative-vs-NBBO gap</li>
         </ul>
