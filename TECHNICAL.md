@@ -63,6 +63,30 @@ So the floor stays where it is: the premium that exists elsewhere this week
 is on instruments too thin to harvest, which is the same friction argument
 that excluded single names, now measured across ETFs rather than asserted.
 
+**And now measured on the single names too.** That exclusion had been reasoned
+from quoted spreads rather than sampled, so on 2026-09-01 with the market open
+it was measured across ten liquid Nasdaq large caps on the same Sep-11 expiry,
+short strikes ~2.5% out and wings ~0.7% wider:
+
+| | credit | round-trip friction | friction / credit |
+|---|---:|---:|---:|
+| NVDA | $1.39 | $0.54 | **39%** |
+| AAPL | $1.40 | $0.72 | 51% |
+| MSFT | $2.25 | $1.36 | 60% |
+| NFLX | $0.51 | $0.34 | 66% |
+| TSLA | $1.71 | $1.28 | 75% |
+| META | $2.11 | $3.76 | 178% |
+| AVGO | $2.84 | $6.64 | 234% |
+| GOOGL | $0.57 | $1.40 | 246% |
+| AMD | $1.80 | $4.42 | 246% |
+| AMZN | $0.00 | $0.60 | collects nothing |
+
+G5 caps friction at 30% of credit. The *best* name on the board is 39%, a
+third above the limit, and the median is 75%. On META, AMD, GOOGL and AVGO the
+round trip costs two to three times the entire credit -- you would lose money
+on a trade that won. The universe is three ETFs because that is what the
+spreads permit, not because the list was never revisited.
+
 A second, quieter blocker: `skew_z` needs a per-underlying `SKEW_PRIOR`, and
 these names have none. Adding one would mean guessing the mean and standard
 deviation of a distribution we have not observed — which is exactly the
@@ -424,6 +448,26 @@ rather than evidence.
 **The options book** harvests the variance risk premium with defined risk. It is
 designed to be *right often and wrong small*: most weeks it collects a modest
 credit, and its bad outcome is bounded by the wing width on every position.
+
+**The tail position is a third thing, and it is the one trade here with
+negative expected value.** On 2026-09-01 the book bought 11 QQQ Sep-11 720
+calls for $4,433. It is *long* premium: it pays the variance risk premium this
+document argues is worth harvesting, at 15.2% implied against 12.07% realized
+-- a 1.23x premium, about **-0.32% of NAV in expectation**. Calling it anything
+else would be the one dishonest line in a submission whose whole claim is that
+you can check it.
+
+Two things are true about it at once. It repairs a real structural flaw: the
+condor is short the SPY 781 call, so across the joint book a +3 sigma rally
+paid *less* than +1 sigma (+0.11% against +0.22%) -- the book was short its own
+upside, and long calls convert that into positive convexity. And it is a
+variance decision taken under a contest whose payoff is convex in rank, the
+same reasoning as the sleeve and disclosed the same way. Its loss is bounded by
+the premium paid and cannot exceed it, which is why it carries no stop: a long
+option needs none. It is not managed by the options book, and rather than
+letting it read as an unmanaged leg, `config.ACKNOWLEDGED_SYMBOLS` names it so
+the discrepancy check *reports* it every cycle instead of flagging it -- the
+check still fires for anything genuinely unexplained.
 
 **The sleeve is a different animal and we will not blur the two.** It is a
 directional long. Its loss is *bounded* by a resting stop, not *defined* by a

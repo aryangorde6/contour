@@ -125,6 +125,18 @@ differentiator first, the safety argument second, the proof third.
 > exactly. The sleeve costs the options book its third position per name, and
 > that trade-off is stated in the write-up rather than discovered in the
 > order history.
+>
+> **And one trade that breaks my own rule, named rather than buried.** On
+> 2026-09-01 I bought 11 QQQ Sep-11 720 calls for $4,433. It is *long* premium
+> — it pays the variance risk premium the rest of this agent harvests, 15.2%
+> implied against 12.07% realised, about **−0.32% of NAV in expectation**. It
+> fixes something real: the condor is short the SPY 781 call, so across the
+> joint book a +3σ rally paid *less* than +1σ, meaning the book was short its
+> own upside. But unlike the sleeve it does **not** fit behind the −4% floor —
+> it adds 4.4% of bounded loss on top of it. I took it as a variance decision
+> and I would rather a judge read that here than find it in the positions.
+> Its loss is capped at the premium and cannot gap, and `ACKNOWLEDGED_SYMBOLS`
+> makes the agent report it every cycle instead of flagging it as an orphan.
 
 ## Technologies / tags
 

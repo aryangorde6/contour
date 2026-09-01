@@ -103,7 +103,39 @@ position.
 budget is *subtracted* from G3's ramp, which falls 4.0% → 2.8% and costs the
 options book its third position per name. Both books at simultaneous max loss
 still sit exactly on G1's −4% halt, and a test asserts it. Set
-`SLEEVE_NOTIONAL = 0` and the previous numbers return exactly.
+`SLEEVE_NOTIONAL = 0` and the previous numbers return exactly. *The tail
+position below sits outside this arithmetic, and says so.*
+
+## The tail position, and the floor it does not fit behind
+
+On 2026-09-01 the agent also bought **11 QQQ Sep-11 720 calls for $4,433**.
+Three things about it need saying plainly.
+
+**It is long premium.** It *pays* the variance risk premium the rest of this
+document argues is worth harvesting — 15.2% implied against 12.07% realized, a
+1.23× premium, about **−0.32% of NAV in expectation**. It is the only
+negative-expectancy trade in the book, and it is not dressed up as anything
+else.
+
+**It repairs a real flaw.** The condor is short the SPY 781 call, so across the
+joint book a +3σ rally paid *less* than +1σ (+0.11% against +0.22%) — the book
+was short its own upside. Long calls convert that into positive convexity, and
+that is a genuine structural improvement independent of how the bet lands.
+
+**It does not fit behind the capital floor, and that is the honest cost.** The
+two books at simultaneous max loss sit exactly on the −4% halt; this adds a
+further **4.43%** of bounded loss on top, so total reachable loss is about
+**8.4% behind a 4% halt**. That is precisely the arithmetic `config.py` names
+as *decoration* — reintroduced knowingly, at the operator's direction, as a
+variance decision under a contest whose payoff is convex in rank.
+
+The mitigations are real but partial, and worth stating exactly. The loss is
+**bounded by the premium paid** and cannot gap through a stop the way the
+sleeve can — a long option is the one instrument here whose worst case is
+known in advance and unconditional. G1 still blocks new entries below −3% and
+−4%. What G1 does **not** do is flatten: it is an entry gate, and no exit rule
+in `manage.py` reads NAV at all. Anyone auditing this account should know that
+before inferring a protection that is not there.
 
 ## Alpaca infrastructure
 

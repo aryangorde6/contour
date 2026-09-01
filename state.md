@@ -189,6 +189,29 @@ lever. It is capped, stopped, gated S1–S7 and funded *out of* G3's ramp rather
 than beside it. Do not describe the submission as pure defined-risk anywhere —
 `TECHNICAL.md` states the difference explicitly and the deck must match.
 
+**Plus a long-call tail, added 2026-09-01, also at the operator's explicit
+direction and over a documented recommendation against it.** 11 QQQ Sep-11 720
+calls at $4.03 = $4,433. Three facts to keep straight, because every judged
+document now states them and they must not drift:
+
+1. **It is negative EV.** The strike implies 15.2% vol against rv10 of 12.07%
+   — a 1.23x premium, about −0.32% of NAV expected. It *pays* the VRP the
+   options book harvests. This is stated in WRITEUP, TECHNICAL, the deck and
+   `config.ACKNOWLEDGED_SYMBOLS`; do not soften it anywhere.
+2. **It fixes a real flaw.** The condor is short the SPY 781 call, so the joint
+   book paid *less* at +3σ (+0.11%) than at +1σ (+0.22%) — short its own
+   upside. This half is genuine and independent of the outcome.
+3. **It sits OUTSIDE the capital floor.** 2.8% + 1.2% + 4.43% ≈ 8.4% of
+   reachable loss behind a 4% halt. That is the decoration bug `config.py`
+   warns about, reintroduced knowingly. Mitigations: loss bounded by premium
+   (cannot gap through a stop), and G1 still blocks entries below −3%/−4%.
+
+**Correction to an earlier belief in this file's lineage: G1 does NOT flatten.**
+`g1_capital_floor` is an *entry gate*; `should_exit` has four rules (clock,
+profit target, credit-multiple stop, breach) and **none reads NAV**. There is
+no NAV-triggered liquidation anywhere. Do not describe the −4% halt as a
+stop-out of open positions — it stops new ones.
+
 ---
 
 ## 4. Hard-won facts — do not re-derive these
