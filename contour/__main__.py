@@ -58,7 +58,7 @@ def main(argv=None) -> int:
         if not mind.configured:
             print("no provider configured -- set one of AWS_BEARER_TOKEN_BEDROCK,"
                   "\n  AWS_ACCESS_KEY_ID+AWS_SECRET_ACCESS_KEY, FEATHERLESS_API_KEY,"
-                  "\n  GEMINI_API_KEY, ANTHROPIC_API_KEY")
+                  "\n  GEMINI_API_KEY -- or check CONTOUR_LLM names one of them")
             return 1
         day = datetime.now(C.ET).date()
         ok = True

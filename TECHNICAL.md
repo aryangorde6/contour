@@ -151,9 +151,9 @@ which reads IWM as the weakest of the three.
 - **Brain configured but answering off-schema** → **fail closed**: veto, size
   zero. A configured brain returning garbage is a real signal, not a hiccup.
 
-`llm.py` is a **provider seam**: Amazon Bedrock, Featherless, Google AI Studio
-and Anthropic sit behind one `parse(system, user, schema)` contract, so the
-vendor is a config value rather than an architecture — `CONTOUR_LLM` picks one
+`llm.py` is a **provider seam**: Amazon Bedrock, Featherless and Google AI
+Studio sit behind one `parse(system, user, schema)` contract, so the vendor is
+a config value rather than an architecture — `CONTOUR_LLM` picks one
 and `CONTOUR_LLM_MODEL` overrides the model id. The judged run is **GLM-5 on
 Bedrock**, reached through the **Converse API**: Nova, Qwen, Mistral, Llama and
 GLM each take a different `invoke` body, while Converse takes the same one for

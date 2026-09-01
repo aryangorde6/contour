@@ -45,7 +45,7 @@ def test_unconfigured_runs_degraded_and_keeps_trading():
 
 # --- tier 2: a configured brain returning garbage is a real signal --------
 def test_configured_but_failing_fails_closed():
-    m = broken(Mind(api_key="sk-ant-fake"))
+    m = broken(Mind(api_key="fake-key"))
     assert m.configured
 
     a = m.blackouts(DAY)
@@ -100,7 +100,7 @@ def test_one_unparseable_window_drops_that_window_not_the_answer():
                            "reason": "garbage"})(),
         ]
 
-    m = Mind(api_key="sk-ant-fake")
+    m = Mind(api_key="fake-key")
     m._call = lambda *a, **k: Plan()                 # type: ignore[method-assign]
 
     a = m.blackouts(DAY)
@@ -113,5 +113,5 @@ def test_one_unparseable_window_drops_that_window_not_the_answer():
 
 def test_a_totally_broken_plan_still_fails_closed():
     """Tolerance for one window must not become tolerance for a broken brain."""
-    m = broken(Mind(api_key="sk-ant-fake"))
+    m = broken(Mind(api_key="fake-key"))
     assert m.blackouts(DAY).source == "failed_closed"

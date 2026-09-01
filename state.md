@@ -55,9 +55,13 @@ Secrets set on the repo: `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`,
 $25, first-come-first-served), then key from profile -> API Keys, `fw-...`.
 
 `ANTHROPIC_API_KEY` is **dead**: there is no card available and the Console
-grants no trial credits to this org. Do not re-propose buying credits. The
-hackathon's only free inference is Featherless, whose $25 covers the ~116
-calls this week needs many times over.
+grants no trial credits to this org. Do not re-propose buying credits.
+
+**The provider was deleted from `llm.py` on 1 Sep 2026.** It was unreachable
+(no key, and last in the preference order), it was the only importer of the
+`anthropic` dependency, and its secret was being piped into the job that holds
+the live broker keys. The evidence table below is kept so the finding is not
+rediscovered the hard way, not because the code still exists.
 
 ### The brain: Bedrock GLM-5, on AWS credits
 
@@ -89,11 +93,12 @@ Nova and Llama lifted Tuesday's ISM out of the regime brief and applied it to
 Monday, which would stand the agent down on the one clear day of the week.
 `zai.glm-5` on `us-east-1`, ~30s per call against a 15-minute cycle.
 
-`contour/llm.py` is a provider seam: `AnthropicProvider`, `BedrockProvider` and
+`contour/llm.py` is a provider seam: `BedrockProvider` and
 `OpenAICompatProvider` (Featherless + Gemini) behind one
 `parse(system, user, schema)` contract, so the vendor is a config value rather
-than an architecture. `CONTOUR_LLM` (`off`/`anthropic`/`bedrock`/`featherless`/
-`gemini`) forces one; `CONTOUR_LLM_MODEL` overrides the model id.
+than an architecture. `CONTOUR_LLM` (`off`/`bedrock`/`featherless`/`gemini`)
+forces one; `CONTOUR_LLM_MODEL` overrides the model id. An unrecognised name
+degrades rather than quietly answering as a different vendor.
 
 Bedrock speaks the **Converse API**, not per-provider `invoke` schemas: one
 body shape across all 93 models, so switching model is a string change.
@@ -254,7 +259,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**221 tests passing.** All core modules complete.
+**220 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -270,7 +275,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 | `contour/data.py` | DataSource seam (snapshots + contracts merged); replay swaps in here |
 | `contour/positions.py` | **The open book, persisted across cron runs.** Without it every exit rule is dead code |
 | `contour/replay.py` | `Recorder` tees the DataSource seam into a fixture; `Replay` serves it back with no credentials |
-| `contour/llm.py` | Provider seam: Bedrock / Featherless / Gemini / Anthropic behind one `parse()` |
+| `contour/llm.py` | Provider seam: Bedrock / Featherless / Gemini behind one `parse()` |
 | `contour/state.py` | The dashboard snapshot + the equity series + `written_at.json` per-file timestamps + `next_cycle()` |
 | `contour/clock.py` | Session phase; cron never trusts its firing time; `is_preopen()` names the 09:20 ET planning window |
 | `contour/mind.py` | The brain: blackout windows, regime multiplier, structure veto |

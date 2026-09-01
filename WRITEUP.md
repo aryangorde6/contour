@@ -47,8 +47,8 @@ asked of it.
 because a model is absent is not autonomous. Brain configured but answering
 off-schema → **fail closed**: veto, size zero.
 
-`llm.py` is a provider seam — Bedrock, Featherless, Google and Anthropic behind
-one `parse(system, user, schema)` contract — so the vendor is a config value.
+`llm.py` is a provider seam — Bedrock, Featherless and Google behind one
+`parse(system, user, schema)` contract — so the vendor is a config value.
 The model was picked by **bake-off, not reputation**: all six candidates
 returned schema-valid output, so the tiebreak was blackout accuracy, where Nova
 Pro and Llama-4 both invented a Monday ISM window that would have stood the

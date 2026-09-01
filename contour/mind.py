@@ -24,7 +24,7 @@ from typing import Literal, Sequence
 from pydantic import BaseModel, Field
 
 from . import config as C
-from .llm import AnthropicProvider, Provider, build_provider
+from .llm import Provider, build_provider, provider_from_key
 from .models import Blackout
 
 # The macro regime is hard-coded into the prompt on purpose. A model left to
@@ -101,8 +101,9 @@ def _et(day: date, hhmm: str) -> datetime:
 
 
 class Mind:
-    """Wraps Claude. Every method is total -- it returns a safe value rather
-    than raising, because a cycle must never die on the advisory layer."""
+    """Wraps whichever brain llm.py picked. Every method is total -- it
+    returns a safe value rather than raising, because a cycle must never die
+    on the advisory layer."""
 
     def __init__(self, api_key: str | None = None,
                  provider: Provider | None = None):
@@ -111,7 +112,7 @@ class Mind:
         elif api_key is not None:
             # An explicit key names an explicit vendor. Empty means absent,
             # which is tier one of the failure policy, not an error.
-            self.provider = AnthropicProvider(api_key) if api_key else None
+            self.provider = provider_from_key(api_key) if api_key else None
         else:
             self.provider = build_provider()
 

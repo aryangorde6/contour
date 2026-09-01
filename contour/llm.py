@@ -45,11 +45,6 @@ FEATHERLESS_MODEL = "zai-org/GLM-5.2"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
 GEMINI_MODEL = "gemini-3.7-flash"
 
-# Measured against the real account, not chosen from the catalogue. The newest
-# IDs on the bedrock-mantle endpoint 403 as unentitled, Sonnet 4.5 fails with
-# INVALID_PAYMENT_INSTRUMENT, and the 3.x models are marked Legacy in us-east-1.
-# This inference profile answers, and Haiku 4.5 at $1/$5 per MTok puts the whole
-# contest around fifty cents.
 # Chosen by probing the real account (ops/probe_bedrock.py), not the catalogue.
 # Anthropic models on Bedrock are AWS Marketplace subscriptions and 403 with
 # INVALID_PAYMENT_INSTRUMENT; 93 non-Anthropic models bill as ordinary AWS
@@ -61,9 +56,6 @@ GEMINI_MODEL = "gemini-3.7-flash"
 # of the brief -- which would stand the agent down on the one clear day.
 BEDROCK_MODEL = "zai.glm-5"
 BEDROCK_REGION = "us-east-1"
-
-ANTHROPIC_MODEL = "claude-opus-5"
-
 
 class LLMError(RuntimeError):
     """Any failure to obtain a schema-valid answer. Callers fail closed."""
@@ -112,34 +104,6 @@ def _schema_instruction(schema: type[BaseModel]) -> str:
     return ("Reply with a single JSON object and nothing else -- no prose, no "
             "code fence. It must validate against this JSON Schema:\n"
             + json.dumps(schema.model_json_schema()))
-
-
-class AnthropicProvider:
-    """First-party path. Kept whole: if credits ever appear, this is a
-    one-line switch, not a rewrite."""
-
-    name = "anthropic"
-
-    def __init__(self, api_key: str, model: str = ANTHROPIC_MODEL):
-        self.api_key, self.model = api_key, model
-        self._client: Any = None
-
-    def _c(self) -> Any:
-        if self._client is None:
-            import anthropic
-            self._client = anthropic.Anthropic(api_key=self.api_key)
-        return self._client
-
-    def parse(self, system: str, user: str, schema: type[BaseModel],
-              effort: str = "low") -> BaseModel:
-        r = self._c().messages.parse(
-            model=self.model, max_tokens=8000,
-            output_config={"effort": effort},
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            output_format=schema,
-        )
-        return r.parsed_output
 
 
 class OpenAICompatProvider:
@@ -214,15 +178,16 @@ class OpenAICompatProvider:
 
 
 class BedrockProvider:
-    """Claude through Amazon Bedrock's runtime invoke endpoint.
+    """GLM-5 through Amazon Bedrock's Converse API.
 
     Three things this had to be shaped around, all found by probing a real
     account rather than reading the catalogue:
 
       - The newer bedrock-mantle endpoint 403s as unentitled, so this targets
-        bedrock-runtime `/model/{id}/invoke` instead.
-      - Model IDs need an inference-profile prefix (`us.`/`apac.`); the bare
-        id is either Legacy or invalid depending on region.
+        bedrock-runtime instead.
+      - Some ids are inference-profile only and need a regional prefix
+        (`us.`/`apac.`); ops/probe_bedrock.py adds it where the catalogue says
+        ON_DEMAND is unsupported, because visibility is not entitlement.
       - Bedrock does not support structured outputs at all, so the schema
         travels in the system prompt and we validate it here.
 
@@ -295,6 +260,13 @@ class BedrockProvider:
         raise LLMError(f"bedrock returned nothing schema-valid: {last}")
 
 
+def provider_from_key(api_key: str) -> Provider:
+    """A bare key with no vendor named. Google AI Studio is the only path that
+    takes a single key and needs no card, so that is what a bare key means --
+    and mind.py stays the layer that does not know who is answering."""
+    return OpenAICompatProvider(api_key, GEMINI_BASE, GEMINI_MODEL)
+
+
 def build_provider(env: dict[str, str] | None = None) -> Provider | None:
     """Pick a brain from the environment. None means run degraded.
 
@@ -312,7 +284,6 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
               or BEDROCK_REGION)
     fw = e.get("FEATHERLESS_API_KEY", "")
     gm = e.get("GEMINI_API_KEY", "") or e.get("GOOGLE_API_KEY", "")
-    an = e.get("ANTHROPIC_API_KEY", "")
 
     def bedrock():
         if not (bedrock_key or (ak and sk)):
@@ -330,16 +301,17 @@ def build_provider(env: dict[str, str] | None = None) -> Provider | None:
         return OpenAICompatProvider(
             gm, GEMINI_BASE, override or GEMINI_MODEL) if gm else None
 
-    def claude():
-        return AnthropicProvider(an, override or ANTHROPIC_MODEL) if an else None
-
     if choice == "off":
         return None
-    if choice in ("bedrock", "featherless", "gemini", "anthropic"):
-        return {"bedrock": bedrock, "featherless": feather, "gemini": gemini,
-                "anthropic": claude}[choice]()
+    if choice:
+        # A named vendor that cannot be built degrades rather than quietly
+        # answering as a different one. An unrecognised name lands here too:
+        # trading on a brain nobody asked for is worse than trading on none,
+        # and `--brain-check` exits non-zero rather than leaving it to be
+        # noticed in the journal.
+        return {"bedrock": bedrock, "featherless": feather,
+                "gemini": gemini}.get(choice, lambda: None)()
     # Preference order is availability, not taste. Bedrock first, because AWS
-    # credits pay for every non-Anthropic model there. Featherless needs a card
-    # we do not have, Gemini is the no-card fallback, and first-party Anthropic
-    # has no credits at all.
-    return bedrock() or feather() or gemini() or claude()
+    # credits pay for every model there that bills as ordinary usage.
+    # Featherless needs a card we do not have; Gemini is the no-card fallback.
+    return bedrock() or feather() or gemini()

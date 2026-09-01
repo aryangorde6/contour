@@ -278,7 +278,7 @@ def test_a_failed_closed_brain_is_journaled_as_a_stand_down(isolated_state,
     the chain" -- a brain outage reading as a market-data problem."""
     from contour.mind import Mind as RealMind
 
-    m = RealMind(api_key="sk-ant-fake")
+    m = RealMind(api_key="fake-key")
 
     def boom(*_a, **_k):
         raise RuntimeError("connection reset")

@@ -83,7 +83,6 @@ jobs:
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           ALPACA_DEV_API_KEY: ${{ secrets.ALPACA_DEV_API_KEY }}
           ALPACA_DEV_SECRET_KEY: ${{ secrets.ALPACA_DEV_SECRET_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           FEATHERLESS_API_KEY: ${{ secrets.FEATHERLESS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}

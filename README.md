@@ -40,7 +40,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 221 passing
+- [x] `tests/` — 220 passing
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)

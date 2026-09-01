@@ -14,7 +14,7 @@ import pytest
 from pydantic import BaseModel
 
 from contour import llm
-from contour.llm import (AnthropicProvider, BedrockProvider, LLMError,
+from contour.llm import (BedrockProvider, LLMError,
                          OpenAICompatProvider,
                          _first_json_object, build_provider)
 
@@ -111,23 +111,20 @@ def test_gated_model_says_what_to_click_and_does_not_burn_retries(monkeypatch):
 
 
 # --- which brain answers -------------------------------------------------
-FW, AN = {"FEATHERLESS_API_KEY": "fw-x"}, {"ANTHROPIC_API_KEY": "sk-x"}
+FW = {"FEATHERLESS_API_KEY": "fw-x"}
 
 
 def test_featherless_wins_by_default_because_it_is_the_funded_path():
-    assert isinstance(build_provider({**FW, **AN}), OpenAICompatProvider)
-
-
-def test_anthropic_is_used_when_it_is_the_only_key():
-    assert isinstance(build_provider(dict(AN)), AnthropicProvider)
+    got = build_provider(dict(FW))
+    assert isinstance(got, OpenAICompatProvider)
+    assert got.base_url.startswith("https://api.featherless.ai")
 
 
 @pytest.mark.parametrize("env,want", [
     ({}, None),
-    ({"CONTOUR_LLM": "off", **FW, **AN}, None),
-    ({"CONTOUR_LLM": "anthropic", **FW, **AN}, AnthropicProvider),
-    ({"CONTOUR_LLM": "featherless", **FW, **AN}, OpenAICompatProvider),
-    ({"CONTOUR_LLM": "featherless", **AN}, None),
+    ({"CONTOUR_LLM": "off", **FW}, None),
+    ({"CONTOUR_LLM": "featherless", **FW}, OpenAICompatProvider),
+    ({"CONTOUR_LLM": "featherless"}, None),
 ])
 def test_explicit_choice_overrides_and_missing_key_means_degraded(env, want):
     got = build_provider(env)
@@ -140,7 +137,7 @@ GM = {"GEMINI_API_KEY": "AIza-x"}
 
 def test_gemini_is_used_when_featherless_is_unavailable():
     """The card wall on Featherless is the reason this seam exists."""
-    got = build_provider({**GM, **AN})
+    got = build_provider(dict(GM))
     assert isinstance(got, OpenAICompatProvider)
     assert "generativelanguage" in got.base_url and got.model.startswith("gemini")
 
@@ -150,11 +147,18 @@ def test_google_api_key_is_accepted_as_an_alias():
                       OpenAICompatProvider)
 
 
-def test_preference_order_is_featherless_then_gemini_then_anthropic():
-    assert build_provider({**FW, **GM, **AN}).base_url.startswith(
+def test_preference_order_is_featherless_then_gemini():
+    assert build_provider({**FW, **GM}).base_url.startswith(
         "https://api.featherless.ai")
-    assert "generativelanguage" in build_provider({**GM, **AN}).base_url
-    assert isinstance(build_provider(dict(AN)), AnthropicProvider)
+    assert "generativelanguage" in build_provider(dict(GM)).base_url
+
+
+def test_an_unrecognised_vendor_name_degrades_instead_of_picking_another():
+    """CONTOUR_LLM is a repo variable, so a stale or misspelt value is a live
+    possibility. Handing the account to a brain nobody asked for is worse than
+    handing it to none: degraded still trades, at half size, and says so."""
+    assert build_provider({"CONTOUR_LLM": "anthropic", **FW, **GM}) is None
+    assert build_provider({"CONTOUR_LLM": "typo", **FW, **GM}) is None
 
 
 def test_model_override_survives_provider_selection():
@@ -168,12 +172,12 @@ def test_explicit_gemini_choice_ignores_a_present_featherless_key():
     assert "generativelanguage" in got.base_url
 
 
-# --- Bedrock: Claude, on credits that actually exist ---------------------
+# --- Bedrock: the path the credits actually pay for ----------------------
 BR = {"AWS_ACCESS_KEY_ID": "AKIA-x", "AWS_SECRET_ACCESS_KEY": "s3cr3t"}
 
 
 def test_bedrock_wins_when_configured_because_its_credits_exist():
-    got = build_provider({**BR, **FW, **GM, **AN})
+    got = build_provider({**BR, **FW, **GM})
     assert isinstance(got, BedrockProvider)
     assert got.model == "zai.glm-5", \
         "bake-off winner: the only candidate that got all three test dates right"
