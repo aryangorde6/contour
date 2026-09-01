@@ -113,8 +113,8 @@ the only reliable engagement mechanic. **Link the actual issue.**
 >
 > There's a second half to this. `python -m contour --replay` runs a fixture of
 > real SPY/QQQ/IWM quotes, recorded mid-session, through the same measurement,
-> selection and gate code the live agent runs — twelve risk gates, every reason
-> printed whether it passes or fails. No Alpaca account required.
+> selection and gate code the live agent runs — nineteen risk gates, every
+> reason printed whether it passes or fails. No Alpaca account required.
 >
 > A trading agent you can't rerun is a screenshot. Clone it and get the same
 > decisions back.

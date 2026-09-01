@@ -40,7 +40,7 @@ Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
 > Everyone sells iron condors. A condor sells both wings unconditionally, so
 > half the time you are selling the side that isn't rich. Contour measures
 > 25-delta skew first and sells only the rich side, on SPY, QQQ and IWM —
-> behind twelve deterministic risk gates and an append-only hash-chained
+> behind nineteen deterministic risk gates and an append-only hash-chained
 > journal.
 
 ## Full description
