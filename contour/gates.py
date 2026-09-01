@@ -41,7 +41,7 @@ def g3_book_risk_ramp(cand: Candidate, book: Book, ctx: Context) -> Result:
                        f"exceeds per-position cap ${per_cap:,.0f}")
     if cand.total_max_loss > per_cap:
         return False, (f"G3 position risk ${cand.total_max_loss:,.0f} > "
-                       f"1.0% NAV cap ${per_cap:,.0f}")
+                       f"{C.MAX_POSITION_RISK_PCT:.2%} NAV cap ${per_cap:,.0f}")
     projected = book.open_risk + cand.total_max_loss
     if projected > cap:
         return False, (f"G3 book risk ${projected:,.0f} would exceed "

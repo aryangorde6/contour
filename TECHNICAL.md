@@ -177,8 +177,8 @@ fails**, so a no-trade cycle is exactly as auditable as a trade.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 5% Tue / 8% Wed–Thu; ≤ 1.0% NAV per position |
-| G4 | Max 6 concurrent, 2 per underlying, 1 new per underlying per cycle |
+| G3 | Book risk ≤ 2% Mon / 4% Tue–Thu; ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 3 per underlying, 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, `close_price` present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never coerced to zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |

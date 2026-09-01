@@ -73,7 +73,7 @@ def test_multiplier_scales_size_down_and_zero_stands_down():
     half = condor_at(100_000 * 0.5)
     none = condor_at(100_000 * 0.0)
 
-    assert full is not None and full.contracts == 2
+    assert full is not None and full.contracts == 3
     assert half is not None and half.contracts == 1
     assert none is None, "multiplier 0 must yield no position at all"
 

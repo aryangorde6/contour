@@ -47,18 +47,29 @@ NAV_HARD_HALT = 96_000.0   # -4.0% -> flatten + halt for the week
 DAILY_LOSS_HALT_PCT = -0.015
 
 # --- G3 book risk ramp ----------------------------------------------------
+# The ceiling is DERIVED, not chosen. G1 hard-halts and flattens at -4.0%, so
+# a book carrying more simultaneous max loss than that can breach the capital
+# floor without a single gate objecting on the way. The old top rung was 8%:
+# twice the floor it was supposed to sit behind, and unreachable anyway --
+# G4 capped the book at 6% with all three names qualifying and at 2% with
+# one, which is the live case. A rung no configuration can touch is not a
+# risk control, it is decoration.
+BOOK_RISK_CEILING_PCT = (START_NAV - NAV_HARD_HALT) / START_NAV     # 0.040
 BOOK_RISK_RAMP = {
     date(2026, 8, 31): 0.02,
-    date(2026, 9, 1): 0.05,
-    date(2026, 9, 2): 0.08,
-    date(2026, 9, 3): 0.08,
+    date(2026, 9, 1): 0.04,
+    date(2026, 9, 2): BOOK_RISK_CEILING_PCT,
+    date(2026, 9, 3): BOOK_RISK_CEILING_PCT,
     date(2026, 9, 4): 0.00,
 }
-MAX_POSITION_RISK_PCT = 0.010
+# 1.25% x 3 positions = 3.75% on a single name, inside the ceiling above. The
+# previous 1.0% x 2 left the whole ramp unreachable and, with only SPY
+# clearing the VRP floor all week, deployed 0.84% of a 4% allowance.
+MAX_POSITION_RISK_PCT = 0.0125
 
 # --- G4 concentration -----------------------------------------------------
 MAX_CONCURRENT_POSITIONS = 6
-MAX_POSITIONS_PER_UNDERLYING = 2
+MAX_POSITIONS_PER_UNDERLYING = 3
 MAX_NEW_PER_UNDERLYING_PER_CYCLE = 1
 
 # --- G5 liquidity ---------------------------------------------------------

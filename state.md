@@ -227,8 +227,8 @@ write-up's risk content.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 5% Tue / 8% Wed–Thu; ≤ 1.0% NAV per position |
-| G4 | Max 6 concurrent, 2 per underlying, 1 new per underlying per cycle |
+| G3 | Book risk ≤ 2% Mon / 4% Tue–Thu (ceiling = G1 halt); ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 3 per underlying, 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, close_price present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |
@@ -245,7 +245,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**178 tests passing.** All core modules complete.
+**179 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -297,9 +297,20 @@ neither is zero. Bounded at 1.0, so "can only trade less" still holds. Every
 gate runs against the result; G3 caps book and per-position risk regardless.
 
 **Blast radius is bounded by gates that already existed.** At weight 1.0 a
-condor sizes to ~$840 max loss against G3's $1,000 per-position cap, and G4
-still caps 6 concurrent / 2 per underlying — so the ceiling is ~5% of NAV,
-inside the Wed/Thu 8% ramp.
+condor sizes to ~$1,230 max loss against G3's $1,250 per-position cap, and G4
+caps 3 per underlying — so a single name tops out at 3.69% of NAV, inside
+G3's $4,000 ceiling, which is itself *derived* from G1's −4% hard halt rather
+than chosen. No reachable book can reach max loss through the capital floor;
+`tests/test_gates.py` asserts it.
+
+**Why these moved on 2026-09-01.** The old 1.0% × 2-per-name made G3's ramp
+unreachable: 6% with all three names qualifying, 2% with one — and one is the
+live case, because QQQ (1.13) and IWM (1.21) sat under the 1.30 VRP floor all
+week. The book deployed 0.84% of a 4% allowance while the top rung of the
+ramp was arithmetically untouchable. A rung no configuration can reach is not
+a risk control. The VRP floor and the skew bands were **not** touched — those
+are the thesis, and loosening them to book more premium is the one change
+that would make the whole write-up dishonest.
 
 **Live first reading: SPY 1.0, QQQ 1.0, IWM 0.5.** The ladder drops IWM to its
 warning rung (below its 50d SMA), independently agreeing with the surface,

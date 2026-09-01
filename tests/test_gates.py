@@ -74,13 +74,30 @@ def test_g3_ramp_is_tighter_on_monday_than_wednesday():
 
     wed = ctx(datetime(2026, 9, 2, 11, 0, tzinfo=ET))
     ok, _ = gates.g3_book_risk_ramp(cand, book(positions=open_pos), wed)
-    assert ok, "8% Wednesday ramp should admit the same position"
+    assert ok, "the Wednesday ramp should admit the same position"
 
 
-def test_g3_rejects_position_over_one_percent_nav():
-    cand = put_spread(contracts=3, max_loss_per_contract=410.0)  # 1230 > 1000
+def test_g3_rejects_a_position_over_the_per_position_cap():
+    cap = C.MAX_POSITION_RISK_PCT * 100_000
+    cand = put_spread(contracts=4, max_loss_per_contract=410.0)   # 1640
+    assert cand.total_max_loss > cap
     ok, why = gates.g3_book_risk_ramp(cand, book(), ctx())
-    assert not ok and "1.0% NAV cap" in why
+    assert not ok and f"{C.MAX_POSITION_RISK_PCT:.2%} NAV cap" in why
+
+
+def test_no_reachable_book_can_max_loss_through_the_capital_floor():
+    """The ramp used to top out at 8% while G1 hard-halts at -4%. Every
+    position could reach max loss at once and the book would sit twice
+    through the floor with no gate having objected on the way. The ceiling is
+    derived from the halt now, so that configuration cannot be built."""
+    worst = max(C.BOOK_RISK_RAMP.values()) * C.START_NAV
+    assert worst <= C.START_NAV - C.NAV_HARD_HALT
+
+    # ... and the per-name ceiling has to fit underneath it too, or G4 hands
+    # G3 a book it must refuse on the last position of every full name.
+    per_name = (C.MAX_POSITIONS_PER_UNDERLYING
+                * C.MAX_POSITION_RISK_PCT * C.START_NAV)
+    assert per_name <= worst
 
 
 # --- 3. null-Greek veto ---------------------------------------------------

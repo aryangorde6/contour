@@ -86,12 +86,13 @@ def test_net_credit_shorts_add_longs_subtract():
     assert S.net_credit_from_mids(legs) == pytest.approx(0.870, abs=0.001)
 
 
-def test_contracts_sizing_respects_one_percent_cap():
-    # $410 max loss, $100k NAV -> 1% cap is $1000 -> 2 contracts
-    assert S.contracts_for(100_000, 410.0) == 2
+def test_contracts_sizing_respects_the_per_position_cap():
+    cap = C.MAX_POSITION_RISK_PCT * 100_000                       # $1,250
+    # $410 max loss against that cap -> 3 contracts
+    assert S.contracts_for(100_000, 410.0) == 3
     # a single contract over the cap means skip the name entirely
-    assert S.contracts_for(100_000, 1_200.0) == 0
-    assert S.contracts_for(100_000, 1_000.0) == 1
+    assert S.contracts_for(100_000, cap + 1) == 0
+    assert S.contracts_for(100_000, cap) == 1
 
 
 def test_pick_by_delta_never_coerces_a_null():
@@ -132,4 +133,5 @@ def test_build_matches_the_live_measured_condor():
     assert cand is not None
     assert cand.net_credit == pytest.approx(0.870, abs=0.001)
     assert cand.max_loss_per_contract == pytest.approx(413.0, abs=0.5)
-    assert cand.contracts == 2, "1% of $100k / $413 = 2 contracts"
+    assert cand.contracts == 3, (
+        f"{C.MAX_POSITION_RISK_PCT:.2%} of $100k / $413 = 3 contracts")

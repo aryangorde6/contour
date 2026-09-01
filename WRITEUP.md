@@ -64,7 +64,7 @@ is exactly as auditable as a trade.
 |---|---|---|---|
 | G1 | NAV floor: no entries under $97k, halt under $96k | G7 | Short delta 0.10–0.16, wings 0.04–0.10, condor net ≤ 0.08 |
 | G2 | Session P&L worse than −1.5% NAV stops entries | G8 | Expiry must equal 2026-09-11 exactly |
-| G3 | Book risk ramp 2/5/8% by weekday; ≤ 1% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
+| G3 | Book risk ramp 2/4/4% by weekday, ceiling = G1's halt distance; ≤ 1.25% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
 | G4 | ≤ 6 concurrent, 2 per name, 1 new per name per cycle | G10 | No entries inside an event blackout |
 | G5 | OI ≥ 500, spread pct **or** $0.10, quote < 20 min, friction ≤ 30% | G11 | 10:05–15:15 ET; last entry Thu 11:00; flatten Thu 15:45 |
 | G6 | Null delta or IV on any leg is a hard veto, never zero | G12 | Committed `HALT` stops trading; unique `client_order_id` |
