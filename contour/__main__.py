@@ -21,6 +21,7 @@ from .mind import Mind
 from . import positions as P
 from . import state
 from .replay import Recorder, Replay, ReplayBroker, ReplayError
+from .sleeve import SleevePosition
 
 
 def _passed(reason: str) -> bool:
@@ -131,7 +132,7 @@ def main(argv=None) -> int:
     # container, so a position opened at 10:09 is invisible at 10:24 unless it
     # was written down. Without this, every exit rule is dead code.
     open_positions = P.load()
-    sleeve_pos = _reconcile_sleeve(broker, P.load_sleeve(), journal)
+    sleeve_pos = _reconcile_sleeve(broker, P.load_sleeve(), journal, now_et)
     held = _held_symbols(broker)
     tracked = {l.symbol for p in open_positions for l in p.candidate.legs}
     print(f"[book] {len(open_positions)} tracked position(s), "
@@ -205,26 +206,37 @@ def _passed_sleeve(reason: str) -> bool:
     return re.match(r"^S\d+ ok\b", reason) is not None
 
 
-def _reconcile_sleeve(broker, pos, journal):
-    """Did the resting stop fire while the agent was not running?
+def _reconcile_sleeve(broker, pos, journal, now_et=None):
+    """Reconcile the sleeve against the broker, which is the authority.
 
-    The whole point of a GTC stop at the broker is that it works overnight,
-    which means the position can be gone before any cycle looks. Trusting the
-    saved file would then have the agent managing -- and on Thursday, trying
-    to SELL -- shares it no longer owns. The broker is the authority.
+    Two directions, and the file can be wrong in both.
+
+    *The position is gone.* The whole point of a GTC stop at the broker is
+    that it works overnight, which means the position can be closed before
+    any cycle looks. Trusting the saved file would then have the agent
+    managing -- and on Thursday, trying to SELL -- shares it no longer owns.
+
+    *The position is there and the file does not know it.* A fill is a fact
+    at the broker the instant it happens; the file only catches up when the
+    cycle finishes writing. Anything in between -- the 25-minute job timeout,
+    a runner killed mid-cycle, an exception raised after the fill -- leaves
+    shares nobody is managing and no stop resting under them. Worse, the
+    entry gate would see a flat sleeve and buy a SECOND position, spending a
+    carve-out that funds exactly one stop loss twice and putting the two
+    books back through the capital floor. So an unexplained holding in the
+    sleeve's underlying is adopted rather than ignored.
     """
-    if pos is None:
-        return None
     try:
-        held = {str(p.get("symbol")): int(float(p.get("qty") or 0))
-                for p in broker.positions()
+        held = {str(p.get("symbol")): p for p in broker.positions()
                 if str(p.get("asset_class", "us_equity")) == "us_equity"}
     except Exception as exc:                                 # noqa: BLE001
         # Unknown is not "gone". Keep managing what we wrote down.
         print(f"[sleeve] could not read broker positions: {exc}",
               file=sys.stderr)
         return pos
-    qty = held.get(pos.underlying, 0)
+    if pos is None:
+        return _adopt_orphan_sleeve(held, journal, now_et)
+    qty = int(float((held.get(pos.underlying) or {}).get("qty") or 0))
     if qty <= 0:
         print(f"[sleeve] {pos.underlying} is no longer at the broker -- the "
               f"resting stop fired while the agent was down", file=sys.stderr)
@@ -247,6 +259,45 @@ def _reconcile_sleeve(broker, pos, journal):
                         "reason": "managing the broker's count, not ours"})
         return replace(pos, shares=qty)
     return pos
+
+
+def _adopt_orphan_sleeve(held, journal, now_et):
+    """Shares in the sleeve's underlying that no saved state accounts for.
+
+    Priced off the broker's own average entry, so the 4% stop is the stop the
+    risk budget was actually derived from. `stop_order_id` is deliberately
+    None: that is the flag the cycle's retry looks for, so adopting a position
+    also schedules its protection.
+    """
+    row = held.get(C.SLEEVE_UNDERLYING)
+    qty = int(float((row or {}).get("qty") or 0))
+    if qty <= 0:
+        return None
+    entry = float((row or {}).get("avg_entry_price") or 0.0)
+    if entry <= 0:
+        # A stop priced off nothing is not a stop. Loud, and left alone.
+        print(f"[sleeve] WARNING: {qty} {C.SLEEVE_UNDERLYING} at the broker "
+              f"with no usable entry price; NOT adopted", file=sys.stderr)
+        journal.append({"event": "sleeve_orphan_unpriced",
+                        "underlying": C.SLEEVE_UNDERLYING, "shares": qty,
+                        "reason": "broker reports no average entry price; a "
+                                  "stop cannot be derived, so this needs a "
+                                  "human"})
+        return None
+    stop = round(entry * (1.0 - C.SLEEVE_STOP_PCT), 2)
+    print(f"[sleeve] ADOPTED {qty} orphaned {C.SLEEVE_UNDERLYING} @ "
+          f"${entry:.2f} -- stop ${stop:.2f} to be placed this cycle",
+          file=sys.stderr)
+    journal.append({"event": "sleeve_orphan_adopted",
+                    "underlying": C.SLEEVE_UNDERLYING, "shares": qty,
+                    "entry_price": entry, "stop_price": stop,
+                    "reason": "shares at the broker with no saved position: a "
+                              "fill that outlived the cycle that made it. "
+                              "Adopted so it is managed and not re-bought"})
+    return SleevePosition(
+        underlying=C.SLEEVE_UNDERLYING, shares=qty, entry_price=entry,
+        stop_price=stop, opened_at=now_et or datetime.now(C.ET),
+        order_id="", stop_order_id=None)
 
 
 def _run_replay(fx: Replay) -> int:

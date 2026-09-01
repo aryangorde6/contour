@@ -227,7 +227,7 @@ structures from measured skew.* Third row: *runnable without our credentials —
   registration. Saying this out loud is a credibility win, not a weakness.
 
 **7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-220 tests. Next:
+223 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of

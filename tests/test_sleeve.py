@@ -552,6 +552,73 @@ def test_a_stop_that_fired_overnight_is_not_managed_as_though_it_were_open(
                              Journal(tmp_path / "m.jsonl")) == position()
 
 
+def test_a_fill_that_outlived_its_cycle_is_adopted_not_re_bought(
+        isolated_state, tmp_path):
+    """The dangerous direction of the same disagreement.
+
+    A fill is a fact at the broker the instant it happens; the file only
+    catches up when the cycle finishes writing. A job killed in between --
+    the 25-minute timeout, a dead runner, an exception after the fill --
+    leaves shares with no stop under them AND a sleeve that reads flat, so
+    the entry gate would buy a second one. That spends a carve-out sized for
+    exactly one stop loss twice.
+    """
+    from contour.__main__ import _reconcile_sleeve
+
+    class Orphan:
+        def positions(self):
+            return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity",
+                     "avg_entry_price": "717.01"},
+                    {"symbol": "SPY260911P00749000", "qty": "2",
+                     "asset_class": "us_option"}]
+
+    j = Journal(tmp_path / "j.jsonl")
+    got = _reconcile_sleeve(Orphan(), None, j)          # saved file says flat
+    assert got is not None, "41 shares of QQQ are not nothing"
+    assert got.shares == 41 and got.underlying == "QQQ"
+    assert got.entry_price == 717.01, "priced off the broker's own average"
+    assert got.stop_price == round(717.01 * (1 - C.SLEEVE_STOP_PCT), 2)
+    assert got.stop_order_id is None, \
+        "None is the flag the cycle's retry looks for; adopting must also " \
+        "schedule the protection that was never placed"
+    rec = next(r.payload for r in j.read()
+               if r.payload["event"] == "sleeve_orphan_adopted")
+    assert rec["shares"] == 41
+
+
+def test_an_orphan_with_no_usable_entry_price_is_flagged_not_guessed(
+        isolated_state, tmp_path):
+    """A stop priced off nothing is not a stop. Better to say so."""
+    from contour.__main__ import _reconcile_sleeve
+
+    class NoPrice:
+        def positions(self):
+            return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity"}]
+
+    j = Journal(tmp_path / "j.jsonl")
+    assert _reconcile_sleeve(NoPrice(), None, j) is None
+    assert any(r.payload["event"] == "sleeve_orphan_unpriced" for r in j.read())
+
+
+def test_a_flat_account_stays_flat_and_says_nothing(isolated_state, tmp_path):
+    """Adoption must not invent a position out of an empty account, and an
+    option leg is not a sleeve."""
+    from contour.__main__ import _reconcile_sleeve
+
+    class OptionsOnly:
+        def positions(self):
+            return [{"symbol": "SPY260911P00749000", "qty": "2",
+                     "asset_class": "us_option"},
+                    {"symbol": "AAPL", "qty": "10", "asset_class": "us_equity",
+                     "avg_entry_price": "200.00"}]
+
+    j = Journal(tmp_path / "j.jsonl")
+    assert _reconcile_sleeve(OptionsOnly(), None, j) is None, \
+        "AAPL is not the sleeve's underlying and must never be adopted"
+    assert not [r for r in j.read()
+                if str(r.payload["event"]).startswith("sleeve_orphan")]
+
+
 # --- 7. one entry, and only one ------------------------------------------
 def test_a_stop_that_fires_is_not_re_bought_in_the_same_cycle(isolated_state,
                                                               monkeypatch):
