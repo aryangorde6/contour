@@ -12,7 +12,7 @@ have changed by the time you record — re-read it off the dashboard first.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 171 passed
+git pull && .venv/bin/python -m pytest -q          # expect 178 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -94,6 +94,12 @@ four zones.*
 > Weinstein Stage-2, an EMA ribbon, and Leverage for the Long Run with
 > Moreira-Muir volatility scaling. Deterministic, testable, and I can show you
 > the profit factor behind each one.
+
+*Cut to the dashboard's **Position sizing** panel.*
+
+> And it publishes its own reasoning. IWM sits at half size — above its
+> 200-day but below its 50-day, the breakdown rung. That sentence is written
+> by the sizer, not by me. ⚠️
 >
 > I picked the model by bake-off, not reputation. All six candidates returned
 > valid output, so the tiebreak was blackout accuracy — and Nova Pro and
@@ -202,7 +208,7 @@ structures from measured skew.* Third row: *runnable without our credentials —
 - **Not** signal subscriptions — that is investment advice and needs
   registration. Saying this out loud is a credibility win, not a weakness.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 171 tests. Next:
+**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 178 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of

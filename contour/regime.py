@@ -135,8 +135,15 @@ def ribbon_bull(closes: Sequence[float]) -> bool:
             and closes[-1] > _ema(closes, slow))
 
 
-def lrs_weight(closes: Sequence[float]) -> float:
-    """LRS-VT2 target weight: regime ladder x vol veto x overextension trim."""
+def lrs_parts(closes: Sequence[float]) -> tuple[float, float, float, str]:
+    """The three LRS-VT2 terms and the name of whichever one is binding.
+
+    Split out of `lrs_weight` so the published note can say *why* a name sits
+    at half size without recomputing anything. "LRS weight taken whole" next
+    to a 0.50 reads like a contradiction on the dashboard; it is not one --
+    the composition took the LRS number whole and the LRS number was itself
+    0.50 -- but a reader cannot tell which unless the binding term is named.
+    """
     px = closes[-1]
     slow, fast = _sma(closes, C.LRS_SLOW_D), _sma(closes, C.LRS_FAST_D)
 
@@ -160,6 +167,18 @@ def lrs_weight(closes: Sequence[float]) -> float:
     ext = px / slow - 1.0
     trim = C.LRS_EXT_CAP / ext if (C.LRS_EXT_CAP > 0 and ext > C.LRS_EXT_CAP) else 1.0
 
+    driver = ("above the 200d but below the 50d -- the breakdown rung"
+              if base == C.LRS_WARN_W else
+              "below both trend lines" if base == 0.0 else
+              f"20d vol running hot, scaled to {veto:.2f}" if veto < 1.0 else
+              f"overextended {ext:+.0%} above the 200d, trimmed to {trim:.2f}"
+              if trim < 1.0 else "clear of every trim")
+    return base, veto, trim, driver
+
+
+def lrs_weight(closes: Sequence[float]) -> float:
+    """LRS-VT2 target weight: regime ladder x vol veto x overextension trim."""
+    base, veto, trim, _ = lrs_parts(closes)
     return max(0.0, min(1.0, base * veto * trim))
 
 
@@ -182,17 +201,20 @@ def assess(underlying: str, closes: Sequence[float]) -> Regime:
                         f"need {C.REGIME_MIN_BARS}")
 
     s2, rb = stage2(closes), ribbon_bull(closes)
-    lrs = lrs_weight(closes)
+    base, veto, trim, driver = lrs_parts(closes)
+    lrs = max(0.0, min(1.0, base * veto * trim))
 
     confirmations = int(s2) + int(rb)
     if confirmations == 0:
         w, note = 0.0, "no trend support: neither Stage-2 nor the ribbon stands"
     elif confirmations == 1:
         w = lrs * 0.5
-        note = ("partial confirmation: "
-                f"{'Stage-2' if s2 else 'ribbon'} only, LRS weight halved")
+        note = (f"partial confirmation: {'Stage-2' if s2 else 'ribbon'} only; "
+                f"LRS {lrs:.2f} ({driver}), halved")
     else:
-        w, note = lrs, "Stage-2 and ribbon both confirm; LRS weight taken whole"
+        w = lrs
+        note = (f"Stage-2 and ribbon both confirm; "
+                f"LRS {lrs:.2f} ({driver}) taken whole")
 
     return Regime(underlying, s2, rb, lrs, max(0.0, min(1.0, w)),
                   "measured", note)

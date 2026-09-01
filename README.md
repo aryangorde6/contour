@@ -63,12 +63,16 @@ _Submission write-up: [WRITEUP.md](WRITEUP.md) · engineering detail:
 
 `dashboard/index.html` is one static file with no build step and no backend. It
 reads the agent's own published state from the orphan **`agent-state`** branch
-over `raw.githubusercontent.com` and renders four things:
+over `raw.githubusercontent.com` and renders five things:
 
 - **the structure map** — SPY, QQQ and IWM plotted on 25-delta skew z-score
   against the VRP ratio, over the four decision zones. The chart *is* the
   strategy: where a name lands decides what gets sold, or whether anything does.
 - the surface measurement and every gate result, pass or fail
+- **what sized the book** — the per-underlying regime weight and the three
+  trend systems behind it, each with the term that bound it. No language model
+  sets that number; every decision below carries the weight it was sized at,
+  including the refusals.
 - the equity curve against the $100,000 starting NAV
 - **the hash chain, recomputed in your browser.** The page does not take the
   agent's word for it. It fetches the raw journal, walks the chain with

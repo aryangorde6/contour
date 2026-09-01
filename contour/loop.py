@@ -304,11 +304,16 @@ def run_cycle(
 
         reg = trend(und)
         journal.append({"event": "regime", **reg.as_dict()})
+        # Stamped onto every decision below, not just the ones that trade. A
+        # NO_TRADE row whose weight was 0.5 was refused on a HALF-SIZE book,
+        # and the reader cannot reconstruct that from the contracts count of
+        # a trade that never happened.
+        rd = {"regime_weight": reg.weight, "regime_source": reg.source}
 
         structure, why = select.choose_structure(m)
         if structure == "NO_TRADE":
             decisions.append({"underlying": und, "decision": "NO_TRADE",
-                              "reason": why, **m.as_dict()})
+                              "reason": why, **m.as_dict(), **rd})
             journal.append({"event": "decision", **decisions[-1]})
             continue
 
@@ -319,7 +324,7 @@ def run_cycle(
         if reg.weight == 0.0:
             decisions.append({"underlying": und, "decision": "NO_TRADE",
                               "reason": f"STAND_DOWN: {reg.notes}",
-                              **m.as_dict()})
+                              **m.as_dict(), **rd})
             journal.append({"event": "decision", **decisions[-1]})
             continue
 
@@ -340,7 +345,8 @@ def run_cycle(
         if cand is None:
             decisions.append({"underlying": und, "decision": "NO_TRADE",
                               "reason": f"{structure}: could not assemble a "
-                                        f"valid structure from the chain"})
+                                        f"valid structure from the chain",
+                              **rd})
             journal.append({"event": "decision", **decisions[-1]})
             continue
 
@@ -352,7 +358,7 @@ def run_cycle(
         allowed, reasons = gates.evaluate(cand, book, ctx)
         decisions.append({
             "underlying": und, "decision": structure if allowed else "VETOED",
-            "reason": why, "gates": reasons, **m.as_dict(),
+            "reason": why, "gates": reasons, **m.as_dict(), **rd,
             "credit": round(cand.net_credit, 3), "contracts": cand.contracts,
             "max_loss_per_contract": round(cand.max_loss_per_contract, 2),
             "legs": [l.symbol for l in cand.legs],
@@ -409,4 +415,11 @@ def run_cycle(
                      "brain": mind.brain if mind else "none"})
     state.write("surface", measurements)
     state.write("decisions", decisions)
+    # Only when something was actually measured. Writing an empty list on a
+    # cycle that stood down before the entry loop would blank the panel and
+    # stamp `written_at`, reporting "no sizing published" as though it were
+    # fresh; leaving the last real measurement in place ages honestly instead.
+    if regimes:
+        state.write("regime", [regimes[u].as_dict()
+                               for u in C.UNIVERSE if u in regimes])
     return CycleResult(phase.mode, phase.reason, measurements, decisions, exits)

@@ -174,6 +174,11 @@ svg{display:block;width:100%;height:auto}
   </div>
 
   <div class="panel">
+    <h2>Position sizing <span class="note" id="reg-age"></span></h2>
+    <div class="body" id="regime"><div class="skeleton">loading…</div></div>
+  </div>
+
+  <div class="panel">
     <h2>Decisions this cycle <span class="note">every gate, pass or fail</span></h2>
     <div class="planrow" id="plan"></div>
     <div class="body" id="decisions"><div class="skeleton">loading…</div></div>
@@ -474,6 +479,27 @@ function drawSurface(s){
      VRP is a <em>ratio</em>, not a difference. Below ${VRP_FLOOR.toFixed(2)} the agent
      is not being paid enough to sell, whatever the skew says.</div>`;
 }
+function drawRegime(r){
+  if(!r||!r.length){ $("regime").innerHTML='<div class="skeleton">no sizing published yet.</div>'; return; }
+  const mark=b=>`<span class="${b?"pos":"neg"}">${b?"✓":"✕"}</span>`;
+  $("regime").innerHTML=`<div class="scroller"><table>
+   <thead><tr><th>·</th><th>weight</th><th>Stage-2</th><th>ribbon</th><th>LRS-VT2</th><th>why</th></tr></thead>
+   <tbody>${r.map(g=>{
+     const w=g.weight;
+     const cls=w>=1?"pos":w<=0?"neg":"";
+     return `<tr><td class="tick">${esc(g.underlying)}</td>
+       <td class="${cls}"><b>${num(w,2)}×</b>${g.source==="degraded"?' <span class="badge b-none">degraded</span>':""}</td>
+       <td>${mark(g.stage2)}</td><td>${mark(g.ribbon_bull)}</td>
+       <td>${num(g.lrs_weight,2)}</td>
+       <td style="color:var(--faint);font-size:12px">${esc(g.notes)}</td></tr>`;}).join("")}
+   </tbody></table></div>
+   <div style="margin-top:12px;font-size:12.5px;color:var(--faint);line-height:1.6">
+     No language model sets this number. LRS-VT2 supplies the magnitude — the only
+     one of the three carrying a sizing formula; Stage-2 and the ribbon are binary
+     states, so they confirm rather than scale. Both confirming takes the LRS weight
+     whole, one halves it, neither stands the name down. Bounded at 1.00× — it can
+     only shrink the book, and every gate still runs on the result.</div>`;
+}
 function drawDecisions(d){
   if(!d||!d.length){ $("decisions").innerHTML='<div class="skeleton">no decisions published yet.</div>'; return; }
   $("decisions").innerHTML=d.map(x=>{
@@ -481,23 +507,26 @@ function drawDecisions(d){
     const gates=(x.gates||[]).map(g=>{
       const ok=/^G\d+ ok/.test(g);
       return `<div class="g ${ok?"":"fail"}"><span class="m">${ok?"✓":"✕"}</span><span>${esc(g)}</span></div>`;}).join("");
-    const extra=x.credit!=null?`<span class="pill">credit <b>$${num(x.credit,2)}</b></span>
+    const rw=x.regime_weight!=null
+      ?`<span class="pill">sized at <b>${num(x.regime_weight,2)}×</b></span>`:"";
+    const extra=x.credit!=null?`${rw}<span class="pill">credit <b>$${num(x.credit,2)}</b></span>
        <span class="pill">contracts <b>${x.contracts}</b></span>
        <span class="pill">max loss/ct <b>$${num(x.max_loss_per_contract,0)}</b></span>`:"";
     return `<div class="dec"><div class="top">
         <span class="tick" style="font-family:var(--mono);font-size:14px">${esc(x.underlying)}</span>
-        <span class="badge ${cls}">${esc(x.decision)}</span>${extra}</div>
+        <span class="badge ${cls}">${esc(x.decision)}</span>${extra||rw}</div>
       <div class="why">${esc(x.reason)}</div>
       ${gates?`<div class="gates">${gates}</div>`:""}</div>`;
   }).join("");
 }
 
 async function load(){
-  const [hb,surf,dec,eq,at,plan]=await Promise.all([
+  const [hb,surf,dec,eq,at,plan,reg]=await Promise.all([
     grab("state/heartbeat.json"), grab("state/surface.json"),
     grab("state/decisions.json"), grab("state/equity.json"),
     grab("state/written_at.json"), grab("state/plan.json"),
-  ]).catch(()=>[null,null,null,null,null,null]);
+    grab("state/regime.json"),
+  ]).catch(()=>[null,null,null,null,null,null,null]);
 
   /* The journal is fetched BEFORE the stats are drawn, because "structures
      opened" is a count of fills and fills live in the journal, not in the
@@ -514,6 +543,7 @@ async function load(){
   drawSurface(surf);
   drawMap(surf);
   drawPlan(plan);
+  drawRegime(reg);
   drawDecisions(dec);
   drawEquity(eq);
   /* Age the measurement by when the measurement was written, NOT by the
@@ -523,6 +553,10 @@ async function load(){
   const measuredAt = at && at.surface;
   $("surf-age").textContent = measuredAt ? "measured "+ago(measuredAt)
     : (hb ? "last cycle "+ago(hb.last_cycle_utc) : "");
+  const regAt = at && at.regime;
+  $("reg-age").textContent = regAt
+    ? "three trend systems, no model — measured "+ago(regAt)
+    : "three trend systems, no model";
   const decAt = at && at.decisions;
   const decHdr = document.querySelector("#decisions").closest(".panel")
                    .querySelector("h2 .note");

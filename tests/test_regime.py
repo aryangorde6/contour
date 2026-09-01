@@ -186,3 +186,33 @@ def test_the_daily_translation_agrees_with_a_true_weekly_resample():
 
         assert R.stage2(daily) == weekly_verdict, (
             f"seed {seed}: daily translation disagreed with the weekly form")
+
+
+# --- the note has to survive being read by someone who did not write it ----
+def test_the_note_names_the_term_that_bound_the_weight():
+    """Live on 2026-08-31 IWM published "LRS weight taken whole" beside a
+    0.50, which reads as a contradiction. It was not one -- the composition
+    took the LRS number whole and the LRS number was 0.50 -- but nothing on
+    the page said which term did it."""
+    up = rising(400)
+    s = up + [up[-1] * (1 - 0.001 * i) for i in range(1, 26)]
+    r = R.assess("SPY", s)
+    assert r.lrs_weight == pytest.approx(C.LRS_WARN_W)
+    assert "breakdown rung" in r.notes, r.notes
+    assert f"{r.lrs_weight:.2f}" in r.notes, r.notes
+
+
+def test_a_clean_trend_says_so_rather_than_naming_a_trim_that_did_not_fire():
+    r = R.assess("SPY", rising())
+    assert r.weight == 1.0
+    assert "clear of every trim" in r.notes, r.notes
+
+
+def test_the_split_out_terms_still_multiply_to_the_published_weight():
+    """`lrs_parts` exists only so the note can name a term. If it ever drifts
+    from `lrs_weight` the dashboard starts explaining a number the agent did
+    not size on."""
+    for s in (rising(), rising(400, drift=0.004), rising(drift=-0.0006)):
+        base, veto, trim, _ = R.lrs_parts(s)
+        assert R.lrs_weight(s) == pytest.approx(
+            max(0.0, min(1.0, base * veto * trim)))

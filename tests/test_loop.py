@@ -475,3 +475,71 @@ def test_a_measured_stand_down_is_not_blamed_on_the_option_chain(
     assert d["reason"].startswith("STAND_DOWN:")
     assert "no trend support" in d["reason"]
     assert "could not assemble" not in d["reason"]
+
+
+# --- the sizer is published, not only journaled ---------------------------
+# The regime replaced the model as the thing that sizes the book, and for a
+# day it existed only inside `journal/*.jsonl`. The dashboard is the artifact
+# anyone actually opens; a sizing policy nothing renders is a sizing policy
+# nobody can check.
+def test_the_sizer_is_published_and_not_only_journaled(isolated_state):
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain()),
+                          "QQQ": (measurement("QQQ", vrp=1.05), chain())})
+        cycle(isolated_state)
+
+    rows = json.loads((isolated_state / "regime.json").read_text())
+    assert [r["underlying"] for r in rows] == ["SPY", "QQQ"], (
+        "published in universe order, and only what was measured")
+    for r in rows:
+        assert set(r) >= {"weight", "source", "stage2", "ribbon_bull",
+                          "lrs_weight", "notes"}
+        assert 0.0 <= r["weight"] <= 1.0
+
+
+def test_the_publish_time_is_stamped_so_the_page_can_age_it(isolated_state):
+    """Without the stamp the panel borrows the heartbeat, which ticks on
+    CLOSED cycles too, and reports Thursday's sizing as 2 minutes old."""
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain())})
+        cycle(isolated_state)
+    assert "regime" in json.loads((isolated_state / "written_at.json").read_text())
+
+
+def test_every_decision_carries_the_weight_that_sized_it(isolated_state):
+    """Including the refusals. A name refused on a half-size book was refused
+    on different terms than one refused at full size, and the contracts field
+    cannot say so for a trade that never happened."""
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain()),
+                          "QQQ": (measurement("QQQ", vrp=1.05), chain())})
+        res, _, _ = cycle(isolated_state)
+
+    qqq = next(d for d in res.decisions if d["underlying"] == "QQQ")
+    assert qqq["decision"] == "NO_TRADE" and "VRP" in qqq["reason"]
+    for d in res.decisions:
+        if d["underlying"] == "IWM":
+            # Unmeasurable: no chain, so no regime was ever computed. Stamping
+            # one here would be inventing a reading, not reporting one.
+            assert "regime_weight" not in d
+            continue
+        assert d["regime_source"] == "measured", d
+        assert d["regime_weight"] is not None
+
+
+def test_a_stand_down_does_not_blank_the_published_sizing(isolated_state):
+    """A cycle that halts before the entry loop measured no regime. Writing
+    `[]` would erase the last real reading AND stamp it fresh, so the page
+    would report "no sizing published" as though that were current news."""
+    (isolated_state / "regime.json").write_text('[{"underlying": "SPY"}]\n')
+
+    class Halt(StubMind):
+        def regime(self, day, vrp):
+            return Advice((), 0.0, None, "llm", "stand down")
+
+    with pytest.MonkeyPatch().context() as mp:
+        patch_chains(mp, {"SPY": (measurement("SPY"), chain())})
+        cycle(isolated_state, mind=Halt())
+
+    kept = json.loads((isolated_state / "regime.json").read_text())
+    assert kept == [{"underlying": "SPY"}], "the last real reading was erased"
