@@ -187,7 +187,19 @@ MAX_NET_DELTA_CONDOR = 0.08
 # is NOT tuned: 20 trading days is one calendar month, chosen to match the
 # horizon the agent actually trades, and the effect is stable across every
 # vol regime in the sample rather than living at one window length.
-PROFILE_ENABLED = True
+# TURNED OFF, on the evidence of research/strategy_backtest.py. The touch-rate
+# finding below is real and reproducible -- but touch probability is the WRONG
+# OBJECTIVE. Across 387 cycles of real option prices (Jan 2024 - Aug 2026) the
+# filter cut total P&L from +$926 to +$230 and profit factor from 1.09 to 1.02.
+# It avoided no losses at all: the stop count barely moved (43 -> 44) while
+# profit-target proceeds fell $11,463 -> $10,890. Dropping a condor's call side
+# forfeits credit that is collected 73% of the time in order to dodge a touch
+# that was not what actually hurt the book -- and CONDOR (PF 1.20) is a better
+# structure than the PUT_CS (PF 1.10) the filter downgrades it to.
+#
+# The code and its research are kept rather than deleted, because a measured
+# negative result is worth more than a quiet revert. Set this True to re-enable.
+PROFILE_ENABLED = False
 PROFILE_LOOKBACK_D = 20
 PROFILE_MIN_BARS = 10          # below this the value area is noise, not shape
 PROFILE_BINS = 240

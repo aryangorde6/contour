@@ -1,0 +1,26 @@
+
+=== delta strikes only (the strategy as it shipped) ===
+  cycles evaluated   387   traded 159 (41%)
+  total P&L          $926   (+0.93% of a $100k account)
+  per trade          $6  sd $199
+  win rate           73.0%  (116W / 43L)
+  profit factor      1.09
+  avg win / avg loss $99 / $245
+  worst trade        $-1,193
+  max drawdown       $-3,541
+  t-stat vs zero     +0.37
+  exits: PROFIT_TARGET 116 ($11,463), STOP 43 ($-10,537)
+
+=== delta strikes + volume-profile filter ===
+  cycles evaluated   387   traded 158 (41%)
+  total P&L          $230   (+0.23% of a $100k account)
+  per trade          $1  sd $197
+  win rate           72.2%  (114W / 44L)
+  profit factor      1.02
+  avg win / avg loss $96 / $242
+  worst trade        $-1,193
+  max drawdown       $-3,482
+  t-stat vs zero     +0.09
+  exits: PROFIT_TARGET 114 ($10,890), STOP 44 ($-10,660)
+
+trades written to strategy_backtest_trades.json

@@ -135,7 +135,18 @@ def chain(spot=100.0):
     return legs
 
 
-def test_a_condor_is_unchanged_when_the_profile_is_below_the_call_strikes():
+@pytest.fixture
+def filter_on(monkeypatch):
+    """The filter SHIPS DISABLED -- `research/strategy_backtest.py` measured it
+    cutting P&L from +$926 to +$230 across 387 cycles, and config.py carries
+    the reasoning. Its mechanics are still pinned here, because a feature kept
+    as a documented negative result has to keep working if anyone turns it back
+    on. These tests therefore enable it explicitly rather than relying on a
+    default that now says the opposite."""
+    monkeypatch.setattr(C, "PROFILE_ENABLED", True)
+
+
+def test_a_condor_is_unchanged_when_the_profile_is_below_the_call_strikes(filter_on):
     p = VP.value_area("SPY", flat_window(high=101.0, low=99.0))
     legs, structure, note = S.assemble("CONDOR", chain(), "SPY", p)
     assert structure == "CONDOR"
@@ -143,7 +154,7 @@ def test_a_condor_is_unchanged_when_the_profile_is_below_the_call_strikes():
     assert note == "assembled as requested"
 
 
-def test_a_condor_drops_its_call_side_when_the_value_area_covers_it():
+def test_a_condor_drops_its_call_side_when_the_value_area_covers_it(filter_on):
     """The value area reaches 110, so every in-band call strike is inside the
     traded band. The book must end up short puts only -- and must SAY so."""
     p = VP.value_area("SPY", [bar(112.0, 99.0) for _ in range(20)])
@@ -153,14 +164,14 @@ def test_a_condor_drops_its_call_side_when_the_value_area_covers_it():
     assert "value area" in note
 
 
-def test_a_call_spread_becomes_no_trade_when_every_strike_is_inside():
+def test_a_call_spread_becomes_no_trade_when_every_strike_is_inside(filter_on):
     p = VP.value_area("SPY", [bar(112.0, 99.0) for _ in range(20)])
     legs, structure, note = S.assemble("CALL_CS", chain(), "SPY", p)
     assert legs is None
     assert structure == "NO_TRADE"
 
 
-def test_the_put_side_is_never_filtered_by_the_profile():
+def test_the_put_side_is_never_filtered_by_the_profile(filter_on):
     """The put-side test returned the wrong sign, so the filter must not
     reach it even when the value area sits far below every put strike."""
     p = VP.value_area("SPY", [bar(101.0, 85.0) for _ in range(20)])
@@ -169,18 +180,18 @@ def test_the_put_side_is_never_filtered_by_the_profile():
     assert len(legs) == 2
 
 
-def test_a_degraded_profile_leaves_the_structure_exactly_as_chosen():
+def test_a_degraded_profile_leaves_the_structure_exactly_as_chosen(filter_on):
     legs, structure, _ = S.assemble("CONDOR", chain(), "SPY",
                                     VP.degraded("SPY", "no bars"))
     assert structure == "CONDOR" and len(legs) == 4
 
 
-def test_no_profile_at_all_leaves_the_structure_exactly_as_chosen():
+def test_no_profile_at_all_leaves_the_structure_exactly_as_chosen(filter_on):
     legs, structure, _ = S.assemble("CONDOR", chain(), "SPY", None)
     assert structure == "CONDOR" and len(legs) == 4
 
 
-def test_the_wing_is_still_measured_from_the_short_that_survived_the_filter():
+def test_the_wing_is_still_measured_from_the_short_that_survived_the_filter(filter_on):
     """The filter judges where we are SHORT. The protective wing is chosen by
     strike distance from that short and must not itself be filtered out --
     a vetoed wing would leave the position naked."""
@@ -200,3 +211,14 @@ def test_turning_the_filter_off_restores_the_original_behaviour(monkeypatch):
     p = VP.value_area("SPY", [bar(112.0, 99.0) for _ in range(20)])
     legs, structure, _ = S.assemble("CONDOR", chain(), "SPY", p)
     assert structure == "CONDOR" and len(legs) == 4
+
+
+def test_the_filter_is_disabled_by_default_because_it_lost_money():
+    """The one test that would have caught this being shipped on a touch-rate
+    study alone. `research/strategy_backtest.py` is the evidence; this pins the
+    conclusion so nobody flips the default back without re-reading it."""
+    assert C.PROFILE_ENABLED is False
+    p = VP.value_area("SPY", [bar(112.0, 99.0) for _ in range(20)])
+    legs, structure, _ = S.assemble("CONDOR", chain(), "SPY", p)
+    assert structure == "CONDOR", "a disabled filter must not touch the book"
+    assert len(legs) == 4

@@ -92,6 +92,37 @@ these names have none. Adding one would mean guessing the mean and standard
 deviation of a distribution we have not observed — which is exactly the
 hard-coding the roadmap wants replaced by learned priors, not extended.
 
+### A measured edge that did not survive a P&L test
+
+**This filter is built, tested, documented -- and turned OFF.** It is kept as a
+negative result because how it failed is more useful than the fact that it did.
+
+The finding below is real: a call strike inside the traded value area is touched
+far more often than one the same distance away outside it, at z = +6.20 over
+five years. It reproduces. It survives every slice.
+
+It also loses money. Across 387 cycles of real option prices through the
+agent's own code (`research/strategy_backtest.py`, Jan 2024 - Aug 2026):
+
+```
+                        total P&L   profit factor   stops
+delta strikes only          +$926            1.09      43
++ volume-profile filter     +$230            1.02      44
+```
+
+It avoided *no losses*. The stop count went UP by one; what fell was
+profit-target income, $11,463 to $10,890. The reason is that touch probability
+is the wrong objective. A condor's losses come from the put side in a selloff,
+and the call credit forfeited to dodge a touch is collected 73% of the time.
+Downgrading a CONDOR (PF 1.20) to a PUT_CS (PF 1.10) trades a better structure
+for a worse one to solve a problem the book did not have.
+
+The lesson is specific: **a statistically robust signal measured against the
+wrong objective is still a losing feature.** The touch study was sound and the
+conclusion drawn from it was not, because P&L was never tested until afterwards.
+
+What follows is the original measurement, kept intact.
+
 ### The strike comes from the traded distribution, not only the modelled one
 
 The structure map above chooses *which side* to sell. `SHORT_DELTA_BAND` then
@@ -142,7 +173,7 @@ not what the skew map first asked for. An unreadable window, an absent
 `bars` seam, or fewer than 10 bars all produce a `degraded` profile that vetoes
 nothing, because a profile we could not read is not evidence of a busy strike.
 
-Live on 2026-09-01 it bound on exactly one name. SPY (spot 762, VAH 775, strike
+Live on 2026-09-01 it bound on exactly one name (with the flag on). SPY (spot 762, VAH 775, strike
 778) and QQQ (spot 709, VAH 723, strike 730) were clear. IWM was trading at 291
 against a value area of 298–303 — price sitting *below* its own recent range —
 and the 0.13-delta call was 300, inside it. The condor became a put spread, and

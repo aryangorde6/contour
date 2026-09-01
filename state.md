@@ -282,7 +282,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**252 tests passing.** All core modules complete.
+**253 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|

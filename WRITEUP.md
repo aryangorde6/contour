@@ -25,37 +25,23 @@ not just the README: across a week the account shows put spreads, call spreads,
 condors and flat sessions because the surface moved, not because a model changed
 its mind. SPY, QQQ and IWM, one locked expiry (2026-09-11).
 
-## The strike comes from the traded distribution too
+## An edge we measured, shipped, and then switched off
 
-The rule above picks *which side* to sell. A 0.13-delta band then picks *where*
-— and delta is a modelled number: the probability of finishing in the money
-under a lognormal centred on spot. A volume profile measures the other thing,
-where price has actually traded, and the two disagree often enough to matter.
+Delta picks strikes from a model. A volume profile measures where price has
+actually traded. Five years of bars said a call strike inside the traded value
+area is touched **32.8%** of the time against **21.9%** outside it (z = +6.20),
+holding in every vol regime, all three names and five of six years.
 
-Five years of SPY/QQQ/IWM daily bars, distance held fixed in sigma units so the
-strike is identical in both arms and only the value area moves. At the distance
-the agent actually sells, an eight-day touch happens **32.8%** of the time when
-the call strike sits inside the traded value area and **21.9%** when it sits
-outside (z = +6.20). It holds in every volatility regime, all three names and
-five of six years, and 2026 is the strongest year in the sample.
+So we built the filter. Then we backtested it on 387 cycles of real option
+prices, and it cut total P&L from **+$926 to +$230** while avoiding not one
+single loss -- the stop count went *up*. Touch probability was simply the wrong
+thing to optimise: a condor is hurt by the put side in a selloff, and the call
+credit given away to dodge a touch is collected 73% of the time.
 
-So Contour declines to sell upside into the band where price has been living.
-
-Calls only — and that is a result, not a shortcut. The same test on puts comes
-back with the *wrong sign* and no significance (−1.6 points, z = −1.08),
-because downside gaps over the profile instead of grinding through it. Filtering
-puts would be decoration.
-
-It can only ever *remove* a strike. If every in-band call strike is inside the
-value area, the call side is dropped and the condor is sized, gated and
-journaled as a put spread — what the book holds, not what it first asked for.
-An unreadable profile vetoes nothing.
-
-On 2026-09-01 it bound on one of three names: SPY and QQQ were clear, while IWM
-traded at 291 against a 298–303 value area, making its 0.13-delta 300 call a
-strike sitting inside the zone. That condor became a put spread.
-
-Both tables regenerate from live bars via `research/profile_edge.py`.
+It is off. The code, the tests and both research scripts stay in the repo,
+because the failure is the interesting part: a robust signal pointed at the
+wrong objective is still a losing feature, and the only thing that caught it
+was testing P&L instead of the metric we had already convinced ourselves of.
 
 ## AI logic
 

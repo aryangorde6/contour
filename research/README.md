@@ -29,3 +29,39 @@ the time against 21.9% outside it (z = +6.20) at the 1.13-sigma distance the
 agent actually sells. On the PUT side the same test returns the wrong sign and
 no significance. `contour/profile.py` therefore filters calls only, and the
 put-side null is why — not an oversight.
+
+## strategy_backtest
+
+Does the strategy make money? This drives the agent's OWN code —
+`select.choose_structure`, `structures.assemble`, `structures.build` and
+`manage.should_exit` — against real historical option prices. One cycle per
+weekly expiry per name, entered 10 days out, walked forward daily to expiry.
+Implied vol is solved from each contract's close and delta derived from it,
+because historical option bars carry no greeks.
+
+```bash
+python research/strategy_backtest.py | tee research/strategy_backtest.txt
+```
+
+387 cycles, Jan 2024 – Aug 2026, 159 trades:
+
+```
+                        total P&L   PF     t      win rate
+delta strikes only          +$926   1.09  +0.37   73.0%
++ volume-profile filter     +$230   1.02  +0.09   72.2%
+```
+
+**The honest reading: the strategy makes approximately nothing.** +0.93% over
+two and a half years, t = +0.37, which is indistinguishable from zero. It is
+also unstable — 2024 lost $2,546 (PF 0.53), 2025 made $3,475 (PF 2.38), 2026 is
+flat to the dollar. One good year out of three is not an edge.
+
+Two things cut the other way and are stated rather than buried. Exits are
+evaluated on daily closes while the live agent polls every 15 minutes, so stops
+overshoot their 2x trigger badly: the 43 stops lost $10,537 against $4,951 if
+each had filled at its trigger. Closing that gap entirely would put the total at
++$6,512 — an upper bound, not a result, and untested. And Alpaca's option
+history begins 2024-01-18, so the sample cannot include 2022, the worst regime
+for a short-premium book. The number above is flattered by that omission.
+
+The filter's result is why `PROFILE_ENABLED` is False.
