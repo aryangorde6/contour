@@ -250,3 +250,24 @@ def test_a_degraded_regime_says_so_on_screen(tmp_path, monkeypatch, capsys):
     _run_replay(Replay.load(FIXTURE))          # pre-regime fixture
     out = capsys.readouterr().out
     assert "[degraded]" in out, "silent degradation is invisible to a judge"
+
+
+def test_the_replay_names_the_absent_brain_floor_that_also_sized_it(
+        tmp_path, monkeypatch, capsys):
+    """`--replay` runs with no provider, so the absent-brain tier halves the
+    book on top of the trend weight. Printing "regime weight 1.0" beside a
+    one-contract condor -- against a per-position cap that admits three --
+    leaves a reader no way to reconcile the two numbers they can see."""
+    from contour import config as C
+    from contour import state
+    from contour.__main__ import _run_replay
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "ROOT", tmp_path / "state")
+    assert _run_replay(Replay.newest(
+        Path(__file__).resolve().parents[1] / "fixtures")) == 0
+
+    out = capsys.readouterr().out
+    assert "absent-brain floor" in out, (
+        "the replay sized on a floor it never showed")
+    assert str(C.DEGRADED_BRAIN_SIZE) in out

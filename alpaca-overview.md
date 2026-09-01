@@ -77,4 +77,4 @@ From the [live results page](https://lablab.ai/ai-hackathons/alpaca-ai-trading-a
 
 ## Contour (this repo)
 
-This repository implements **Contour** — an autonomous options agent aimed at this hackathon: measure the vol surface, pick structure (put/call credit spread, iron condor, or flat), trade SPY/QQQ/IWM via MCP reads and CLI multi-leg writes. See `README.md`.
+This repository implements **Contour** — an autonomous options agent aimed at this hackathon: measure the vol surface, pick structure (put/call credit spread, iron condor, or flat), trade SPY/QQQ/IWM. Writes go through the **Alpaca CLI**; reads go through the official **`alpaca-py`** SDK. Not MCP: its server cannot place multi-leg option orders ([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97)), and the brief asks for "MCP server **and/or** CLI", which the CLI write path satisfies on its own. See `README.md` and `TECHNICAL.md`.

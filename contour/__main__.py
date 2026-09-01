@@ -214,6 +214,17 @@ def _run_replay(fx: Replay) -> int:
                   f"[{p['source']}] stage2={p['stage2']} "
                   f"ribbon={p['ribbon_bull']} lrs={p['lrs_weight']}"
                   + (f"  -- {p['notes']}" if p["source"] != "measured" else ""))
+    # The regime is not the only floor. A replay runs `Mind(api_key="")`, so
+    # the ABSENT-brain tier halves the book on top of whatever the trend says
+    # -- and printing "regime weight 1.0" beside a one-contract condor with a
+    # $1,250 per-position cap leaves a reader no way to reconcile the two.
+    for rec in Journal(out).read():
+        if rec.payload.get("event") == "mind":
+            bf = rec.payload.get("brain_floor", 1.0)
+            if bf < 1.0:
+                print(f"  brain: no provider configured -- absent-brain floor "
+                      f"{bf} applies on top; sizing NAV x min(weight, {bf})")
+            break
     for m in res.measurements:
         print(f"  {m['underlying']}: spot {m['spot']}  atm_iv {m['atm_iv']:.1f}  "
               f"rv10 {m['rv10']:.1f}  vrp {m['vrp_ratio']:.2f}  "
