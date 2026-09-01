@@ -209,8 +209,8 @@ fails**, so a no-trade cycle is exactly as auditable as a trade.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 4% Tue–Thu; ≤ 1.25% NAV per position |
-| G4 | Max 6 concurrent, 3 per underlying, 1 new per underlying per cycle |
+| G3 | Book risk ≤ 2% Mon / 2.8% Tue–Thu; ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 2 per underlying, 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, `close_price` present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never coerced to zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |
@@ -243,6 +243,126 @@ respected.
 on a multi-leg position — the management code was written before go-live, not
 after. Legout buys back every **short** before selling any long, so the account
 is never momentarily naked.
+
+---
+
+## The directional sleeve
+
+**The problem it answers.** Everything above is capped at the credit it
+collects. A defined-risk premium seller's median week is under one percent, and
+tightening gates does not change the shape of that payoff. The sleeve is the
+deliberate answer: **one long QQQ position, $30,000 ceiling, buying variance
+rather than edge.** It is stated in those words in `contour/sleeve.py` and on
+the dashboard, because dressing it up as anything else would be false.
+
+**What sizes it.** `regime.lrs_weight` — the vol-scaling rule of LRS-Fortress
+(Gayed & Bilello 2016 + Moreira & Muir 2017 + a 30% gold sleeve): 28.0% CAGR,
+Sharpe 0.94, max drawdown −49.3% over 55 years, against 0.75 and −66.6% for
+LRS-VT2 alone. That function already exists and already sizes the options book,
+so the sleeve adds a *position*, not a second model. Notional is
+`SLEEVE_NOTIONAL × lrs_weight`, which genuinely binds: a warning-rung entry
+(above the 200d, below the 50d) deploys half, a vol-hot tape deploys less again,
+below the 200d nothing opens.
+
+**What is not transferred, said out loud.** Fortress is 70/30 equity/gold and
+the gold leg earns most of that drawdown improvement. Only the equity leg runs
+here, because the instrument was specified. Quoting the 0.94 Sharpe as though
+this were the whole system would be false.
+
+**Two deliberate deviations from the source system.** (1) *It does not
+re-size.* Fortress trims continuously as `lrs_weight` decays; over a four-day
+window each trim pays a spread to express a distinction the horizon cannot
+resolve, so the halving rung is treated as an **exit** — strictly more
+conservative than the source. (2) *It has a hard price stop the source does
+not.* Fortress exits on trend, which on daily closes means an overnight gap is
+worn in full.
+
+### Seven more gates, S1–S7
+
+| # | Gate |
+|---|---|
+| S1 | G1's capital floor, read from the same constants — one floor per account |
+| S2 | G2's daily loss halt |
+| S3 | **Both** Stage-2 and the ribbon standing, and `lrs_weight ≥ 0.5`. A degraded regime refuses: degraded is not bullish |
+| S4 | One sleeve position; notional ≤ the $30,000 ceiling |
+| S5 | Modeled stop loss ≤ the 1.2%-of-NAV carve-out G3's ramp was reduced by |
+| S6 | G11's window; never opened after the Thursday flatten deadline |
+| S7 | G12's `HALT` file and unique `client_order_id` |
+
+S1, S2, S6 and S7 restate their G-equivalents rather than importing them,
+because the options gates take a `Candidate` with legs, a wing width and an
+expiry — none of which a share of QQQ has. The **thresholds** are shared, so
+there is one capital floor and one kill switch, not two.
+
+S3 is *stricter* than the options book on purpose. The composite sizer trades
+at half size on a single confirmation; the sleeve does not trade at all. A
+leveraged long is not a position to open on one of two trend systems.
+
+### It is paid for out of the same capital floor
+
+This is the part that could have gone wrong quietly. Before the sleeve, the
+options book could reach 4.0% of simultaneous max loss and G1 hard-halts at
+−4.0% — exactly flush. Adding a sleeve that can lose 1.2% *alongside* that puts
+5.2% of reachable loss behind a 4% halt: the identical decoration bug this
+project already fixed once in G3, reintroduced by addition.
+
+So the ceiling is **derived**:
+
+```python
+SLEEVE_RISK_BUDGET_PCT = SLEEVE_NOTIONAL * SLEEVE_STOP_PCT / START_NAV   # 0.012
+BOOK_RISK_CEILING_PCT  = (START_NAV - NAV_HARD_HALT) / START_NAV \
+                         - SLEEVE_RISK_BUDGET_PCT                        # 0.028
+MAX_POSITIONS_PER_UNDERLYING = int(BOOK_RISK_CEILING_PCT
+                                   / MAX_POSITION_RISK_PCT)              # 2
+```
+
+2.8% + 1.2% = 4.0%, exactly G1's halt distance, and
+`test_the_two_books_together_still_fit_behind_the_hard_halt` asserts it.
+**What the sleeve costs is real and stated**: the options book drops from three
+positions per name to two. Setting `SLEEVE_NOTIONAL = 0` restores 4.0% and 3
+per name exactly — a test asserts that too, so the sleeve cannot leave the
+options book permanently shrunk by a feature nobody is running.
+
+### One entry, and only one
+
+The exit block runs before the entry block, which creates a trap: a sleeve
+stopped out at 11:00 would be re-bought at 11:00, because a 4% drop does not
+necessarily break the 50-day line that S3 gates on. That is not a subtle
+inefficiency — the carve-out funds **exactly one** stop loss. Spend it twice
+and the account carries 2.4% of sleeve risk behind a −4% halt that also has to
+cover a 2.8% options book, which is the same decoration bug arriving by a
+different route.
+
+So `SLEEVE_ONE_SHOT` retires the sleeve the moment it closes, for any reason,
+and the flag is persisted in `state/sleeve.json` because every cycle is a fresh
+container. `_reconcile_sleeve` sets it too when it finds the GTC stop fired
+overnight. Independently of the arithmetic, it is also the right trading call:
+a stop that immediately re-buys is not a stop, and on a four-day horizon there
+is no second trend to catch.
+
+### The stop rests at the broker, and the exit cancels it first
+
+Alpaca serves no resting stop on a multi-leg options position — which is why
+`manage.py` polls. A **single equity leg can**, so the sleeve's 4% stop is
+submitted GTC immediately on fill, priced off the **actual fill** rather than
+the pre-trade quote (S5 approved a specific dollar loss, and a stop 4% below a
+price we never traded at is not that stop). It is the only exit that works
+while the agent is not running: cron covers 10:00–15:45 ET, and the gap risk is
+overnight.
+
+That creates a hazard worth naming. Two orders now want the same shares, so
+`close_sleeve` **cancels the resting stop before it sells**, and if the cancel
+fails it re-reads the order: a stop that already *filled* means the position is
+already flat and there is nothing to sell. Selling anyway would leave the
+account **short QQQ** — the one position this repo exists to make impossible.
+`test_the_exit_cancels_the_resting_stop_before_it_sells` asserts the ordering,
+not just the outcome. On the next cycle after a stop that would not place, the
+protection is retried; and `_reconcile_sleeve` trusts the **broker's** share
+count over our file, because a GTC stop can fire while no cycle is watching.
+
+**The sleeve is additive and cannot take the options book down with it.** It is
+entered last, after the options loop has already measured, gated and filled, and
+a broker fault inside it is caught, journaled as `sleeve_error` and contained.
 
 ---
 
@@ -301,12 +421,25 @@ rather than evidence.
 
 ## What we claim, and what we don't
 
-The strategy harvests the variance risk premium with defined risk. It is
+**The options book** harvests the variance risk premium with defined risk. It is
 designed to be *right often and wrong small*: most weeks it collects a modest
 credit, and its bad outcome is bounded by the wing width on every position.
-The realistic distribution over five sessions is a small positive return, not a
-moonshot — `P(>+15%)` is under 1% by construction, because nothing here has
-undefined risk.
+
+**The sleeve is a different animal and we will not blur the two.** It is a
+directional long. Its loss is *bounded* by a resting stop, not *defined* by a
+long wing, and those are not the same guarantee: an overnight gap through the
+stop turns it into a market sell at the gap price, so the realized loss can
+exceed the $1,176 the budget models. That is the sleeve's real tail, it is
+named in `SleeveCandidate.modeled_max_loss`, and it is the reason the whole
+sleeve is capped at 1.2% of NAV rather than sized to what the trend systems
+would justify.
+
+What the two together mean for the distribution: the options book alone made
+`P(>+2%)` negligible over the remaining sessions. QQQ's measured 20-day
+volatility is 17.4%, giving a 3-day sigma of 1.90% on the sleeve's $29,398 —
+about ±$559 at one sigma. So the sleeve roughly triples the width of the
+outcome distribution in both directions. **It is not an edge claim. It is a
+variance claim, taken deliberately, with a −4% floor underneath it.**
 
 The account is flat before the deadline by design: the Thursday flatten
 converts an open mark-to-market into a settled number, so the P&L a judge sees

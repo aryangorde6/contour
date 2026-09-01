@@ -179,12 +179,17 @@ def test_replay_prints_every_gate_reason_not_only_the_refusals(tmp_path,
         "passing gates are still invisible")
     assert any("[VETO]" in l for l in printed), "the refusal is not marked"
 
-    # Every reason the engine returned, and nothing invented.
+    # Every reason the engine returned, and nothing invented -- across BOTH
+    # books. The sleeve is a second set of gates on the same account, and a
+    # rehearsal that printed twelve green G-gates while saying nothing about
+    # S1-S7 would be showing a judge half the risk surface.
     reasons = [g for line in Path("replay_out/journal").glob("*.jsonl")
                for rec in [json.loads(l) for l in line.read_text().splitlines()]
-               if rec["payload"].get("event") == "decision"
+               if rec["payload"].get("event") in ("decision", "sleeve_decision")
                for g in rec["payload"].get("gates", [])]
     assert len(printed) == len(reasons)
+    assert any("[ok  ] S1 ok" in l for l in printed), (
+        "the sleeve's gates are not shown at all")
 
 
 # --- picking the fixture to demo -------------------------------------------

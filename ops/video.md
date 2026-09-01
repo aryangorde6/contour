@@ -3,8 +3,10 @@
 **Target 4:05–4:15.** The rubric scores anything under 3:00 as "2 — Limited",
 and the ceiling is 4:30. Do not run short to be safe; run long and cut.
 
-Narration below is ~600 words, which is 4:05–4:15 at an unhurried 145 wpm.
-**Read it slower than feels natural.** Every number marked ⚠️ is live and will
+Narration below is ~700 words, which is 4:20–4:30 at an unhurried 145 wpm —
+right at the ceiling, because §8 now has to explain the directional sleeve. If
+you run over, cut from the list at the bottom of this file **before** you speed
+up. **Read the rest slower than feels natural.** Every number marked ⚠️ is live and will
 have changed by the time you record — re-read it off the dashboard first.
 
 ---
@@ -12,7 +14,7 @@ have changed by the time you record — re-read it off the dashboard first.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 180 passed
+git pull && .venv/bin/python -m pytest -q          # expect 221 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -110,7 +112,9 @@ four zones.*
 
 > Twelve risk gates. Pure functions, no I/O, fixed order, evaluated before
 > every order — and the reason is journaled whether the gate passes or fails,
-> so a no-trade cycle is exactly as auditable as a trade.
+> so a no-trade cycle is exactly as auditable as a trade. The directional
+> sleeve adds seven more, sharing the same capital floor and the same kill
+> switch rather than declaring its own.
 >
 > You don't have to take my word for any of it. This is `--replay`: a fixture
 > of real SPY, QQQ and IWM quotes recorded mid-session, run through the same
@@ -120,7 +124,9 @@ four zones.*
 *Let the terminal fill. Say nothing for two seconds — the twelve green gates
 are the strongest image in the video.*
 
-> All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough.
+> All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough. And
+> S1 through S7 green underneath, at half notional — because a replay runs with
+> no brain configured, and the absent-brain floor sizes the sleeve too.
 
 ### 6 · Alpaca, and one real finding — 2:55–3:20 · *slide 3*
 
@@ -156,9 +162,19 @@ are the strongest image in the video.*
 > and a backtest harness — which is a data problem now, not a rewrite, because
 > the recorder already exists.
 >
-> And the honest number: defined-risk premium selling is capped at the credit.
-> Median outcome is under one percent for the week. Whoever posts the winning
-> P&L will have won a coin flip. I optimised the four criteria that aren't luck.
+> And the honest number. Defined-risk premium selling is capped at the credit
+> it collects — median under one percent for the week. So there is also a
+> thirty-thousand-dollar long QQQ sleeve, sized by the same trend systems, and
+> I will say exactly what it is: it buys **variance, not edge**.
+>
+> Seven gates of its own. A four percent stop that rests at the broker, which
+> the options book cannot do, because Alpaca serves no resting stop on a
+> multi-leg position. And the part I actually care about — its risk budget is
+> *subtracted* from the options book's, not added beside it. Both books at
+> maximum loss land exactly on the minus-four percent floor. A test asserts it,
+> and turning the sleeve off restores the old numbers exactly.
+>
+> I would rather show you a leash than a forecast.
 
 *Final card: repo URL, dashboard URL, `PA35XVXLIO0E`.*
 
@@ -178,7 +194,9 @@ FluffyMargins, the four-line rule, account `PA35XVXLIO0E`.
 `WRITEUP.md`. Footer: *`execute.py` never imports `mind.py`.*
 
 **3 — Alpaca infrastructure.** CLI vs MCP (link issue 97), the three-rung
-ladder, `reconcile()` reading actual fills, the hash chain. One line each.
+ladder, `reconcile()` reading actual fills, the hash chain, and the resting-stop
+asymmetry: none on a multi-leg position, so the options book polls; a single
+equity leg can rest one, so the sleeve does, GTC. One line each.
 
 **4 — Market analysis.** The three VRP figures on this slide are **live** —
 fetched from `state/surface.json` on the `agent-state` branch, with the last
@@ -208,7 +226,8 @@ structures from measured skew.* Third row: *runnable without our credentials —
 - **Not** signal subscriptions — that is investment advice and needs
   registration. Saying this out loud is a credibility win, not a weakness.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 180 tests. Next:
+**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
+221 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of
@@ -219,6 +238,8 @@ per-position max loss only; the `HALT` file becomes a kill switch with paging.
 ## Cutting, if you run over 4:30
 
 In this order: the bake-off detail in §4 (keep the sentence, drop the models),
-then the friction numbers in §7, then §6's second paragraph. **Never cut §5** —
-the twelve green gates and `--replay` are the strongest technical evidence in
-the submission.
+then the friction numbers in §7, then §6's second paragraph, then §8's middle
+paragraph down to its last sentence — *"its risk budget is subtracted from the
+options book's, not added beside it, and a test asserts it"* — which is the one
+clause in it that has to survive. **Never cut §5** — the green gates and
+`--replay` are the strongest technical evidence in the submission.

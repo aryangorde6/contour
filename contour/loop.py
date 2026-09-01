@@ -7,16 +7,18 @@ our claims against the order history they pull from Alpaca independently.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from . import config as C
-from . import gates, positions as P, regime, select, state, structures as S, surface
+from . import (gates, positions as P, regime, select, sleeve as SL, state,
+               structures as S, surface)
 from .clock import Phase, is_preopen, resolve
 from .data import DataSource
-from .execute import CLIBroker, submit_with_ladder
+from .execute import (CLIBroker, close_sleeve, place_sleeve_stop,
+                      submit_sleeve_entry, submit_with_ladder)
 from .journal import Journal
 from .manage import (ManagedPosition, close_position, flatten_due,
                      should_exit)
@@ -68,6 +70,19 @@ def order_base_id(underlying: str, structure: str, now: datetime) -> str:
     return f"contour-{underlying.lower()}-{h}"
 
 
+def sleeve_base_id(now: datetime) -> str:
+    """One id per 15-minute bucket for the whole sleeve, entry and exit alike.
+
+    Suffixed `-e` (entry), `-s` (protective stop) and `-x` (exit) at the point
+    of use, so a double-fired cron inside one bucket cannot buy the sleeve
+    twice -- Alpaca 422s on a reused client_order_id, which here is the
+    desired outcome rather than an error to work around.
+    """
+    h = hashlib.sha256(
+        f"{C.SLEEVE_UNDERLYING}SLEEVE{cycle_bucket(now)}".encode()).hexdigest()[:8]
+    return f"contour-sleeve-{h}"
+
+
 def close_base_id(pos: ManagedPosition, now: datetime) -> str:
     """Exit ids MUST vary per cycle. Alpaca 422s on a reused client_order_id,
     and close_position only special-cases the uncovered-leg rejection -- so a
@@ -97,6 +112,7 @@ class CycleResult:
     measurements: list[dict]
     decisions: list[dict]
     exits: list[dict]
+    sleeve: dict = field(default_factory=dict)
 
 
 def run_cycle(
@@ -111,6 +127,8 @@ def run_cycle(
     cycle: int = 0,
     dry: bool = False,
     mind: Mind | None = None,
+    sleeve_position: SL.SleevePosition | None = None,
+    sleeve_retired: bool = False,
 ) -> CycleResult:
     phase: Phase = resolve(now_et, market_open)
     halted = HALT_FILE.exists()
@@ -188,6 +206,93 @@ def run_cycle(
                 live = [p for p in live if p.order_id != pos.order_id]
                 P.save(live)
 
+    # --- the sleeve, exits first for the same reason the options book does:
+    # --- a position must be manageable when the entry window is shut.
+    sleeve_live = sleeve_position
+    # The sleeve gets ONE entry. Set the moment it closes, for any reason, so
+    # a stop that fires at 11:00 cannot be re-bought at 11:00 -- which would
+    # spend a carve-out that funds exactly one stop loss twice over.
+    retired = sleeve_retired
+    sleeve_panel: dict[str, Any] = {
+        "underlying": C.SLEEVE_UNDERLYING,
+        "notional_ceiling": C.SLEEVE_NOTIONAL,
+        "stop_pct": C.SLEEVE_STOP_PCT,
+        "risk_budget_pct": C.SLEEVE_RISK_BUDGET_PCT,
+    }
+
+    def sleeve_spot() -> float | None:
+        """The cached chain measurement first, a bare quote second.
+
+        Cache first so the sleeve cannot pull a SECOND spot inside one cycle
+        and price its stop off a number the dashboard never published. Bare
+        quote second because the sleeve holds shares: an option chain that
+        cannot be measured is not a reason to stop managing an equity
+        position, and on a MANAGE_ONLY cycle nothing has read the chain at
+        all.
+        """
+        got = chains.get(C.SLEEVE_UNDERLYING)
+        if got is not None:
+            return got[0].spot
+        try:
+            return float(ds.spot(C.SLEEVE_UNDERLYING))
+        except Exception:                                    # noqa: BLE001
+            return None
+
+    if sleeve_live is not None:
+        spx = sleeve_spot()
+        reg_s = trend(C.SLEEVE_UNDERLYING)
+        if spx is None:
+            # Same rule as the options book, and the same reason: acting on a
+            # price we do not have is worse than waiting. Unlike the options
+            # book, the resting stop at the broker is still on duty meanwhile.
+            due = SL.flatten_due(now_et)
+            do_exit = due is not None
+            why = due or (f"HOLD_UNPRICED: no quote for {sleeve_live.underlying}; "
+                          f"clock rule only. The resting stop at "
+                          f"${sleeve_live.stop_price:.2f} still applies.")
+        else:
+            do_exit, why = SL.should_exit(sleeve_live, spx, reg_s, now_et)
+        chk = {"underlying": sleeve_live.underlying,
+               "shares": sleeve_live.shares,
+               "entry_price": round(sleeve_live.entry_price, 2),
+               "stop_price": round(sleeve_live.stop_price, 2),
+               "stop_resting": sleeve_live.stop_order_id is not None,
+               "spot": round(spx, 2) if spx is not None else None,
+               "unrealized": (round(sleeve_live.unrealized(spx), 2)
+                              if spx is not None else None),
+               "exit": do_exit, "reason": why}
+        sleeve_panel["exit_check"] = chk
+        journal.append({"event": "sleeve_exit_check", **chk})
+        if do_exit and not dry:
+            escalate = (now_et.date() == C.FLATTEN_DAY
+                        and now_et.time() >= C.MARKET_ESCALATION_AT)
+            try:
+                out = close_sleeve(
+                    broker, sleeve_live,
+                    spx if spx is not None else sleeve_live.entry_price,
+                    sleeve_base_id(now_et), journal.append, escalate=escalate)
+            except Exception as exc:                         # noqa: BLE001
+                out = {"closed": False, "error": str(exc)}
+                journal.append({"event": "sleeve_error", "stage": "exit",
+                                "error": str(exc),
+                                "reason": "the position is STILL OPEN; the "
+                                          "resting stop is the remaining "
+                                          "protection until the next cycle"})
+            journal.append({"event": "sleeve_exit_done", **out})
+            if out.get("closed"):
+                sleeve_live = None
+                retired = C.SLEEVE_ONE_SHOT
+        elif not do_exit and sleeve_live.stop_order_id is None and not dry:
+            # The protection failed to place when the position was opened, so
+            # try again. A position that stays unprotected because nobody
+            # looked twice is the failure worth engineering against.
+            sid = place_sleeve_stop(broker, sleeve_live.underlying,
+                                    sleeve_live.shares, sleeve_live.stop_price,
+                                    f"{sleeve_base_id(now_et)}-s",
+                                    journal.append)
+            if sid:
+                sleeve_live = replace(sleeve_live, stop_order_id=sid)
+
     if phase.mode != "TRADE":
         # The 13:20 UTC cron fires at 09:20 ET to plan the day's event
         # blackouts before the open. It resolves to CLOSED -- correctly, the
@@ -213,7 +318,9 @@ def run_cycle(
                         "mode": phase.mode, "entries": 0})
         state.heartbeat(cycle, phase.mode, phase.reason,
                         {"brain": mind.brain if mind else "none"})
-        return CycleResult(phase.mode, phase.reason, [], [], exits)
+        P.save_sleeve(sleeve_live, sleeve_panel, retired=retired)
+        return CycleResult(phase.mode, phase.reason, [], [], exits,
+                           sleeve_panel)
 
     # --- the advisory layer. It can only shrink what follows: blackouts add
     # --- veto windows, the multiplier scales sizing DOWN, the cutoff moves
@@ -269,6 +376,10 @@ def run_cycle(
                      p.credit_received) for p in live))
 
     measurements, decisions, opened = [], [], []
+    # Set when an unbalanced fill makes book risk uncomputable. The sleeve
+    # reads it too: "we do not know what we are holding" is not a state to
+    # add a directional position on top of, whatever the trend says.
+    halt_entries = False
 
     # A zero multiplier is the advisory layer standing the agent down, not the
     # chain being unreadable. Without this the fail-closed path reports
@@ -289,8 +400,13 @@ def run_cycle(
                         {"nav": nav, "entries": 0, "stand_down": True,
                          "brain": mind.brain if mind else "none"})
         state.write("decisions", decisions)
+        sleeve_panel["decision"] = "NO_TRADE"
+        sleeve_panel["reason"] = reason
+        journal.append({"event": "sleeve_decision", "decision": "NO_TRADE",
+                        "reason": reason})
+        P.save_sleeve(sleeve_live, sleeve_panel, retired=retired)
         return CycleResult(phase.mode, phase.reason, measurements, decisions,
-                           exits)
+                           exits, sleeve_panel)
 
     for und in C.UNIVERSE:
         got = measure(und)
@@ -406,7 +522,86 @@ def run_cycle(
                                           "longer computable; no further "
                                           "entries this cycle, repair with "
                                           "ops/repair_book.py"})
+                halt_entries = True
                 break
+
+    # --- the sleeve, entered LAST. The options book is the thesis and gets
+    # --- first call on the cycle; the sleeve is additive and cannot starve it
+    # --- because its risk comes out of its own carve-out, not G3's ramp.
+    if sleeve_live is None and retired:
+        sd = {"decision": "NO_TRADE",
+              "reason": ("RETIRED: the sleeve has had its one entry. The 1.2% "
+                         "carve-out funds exactly one stop loss, and a stop "
+                         "that re-buys is not a stop.")}
+        sleeve_panel |= sd
+        journal.append({"event": "sleeve_decision", **sd})
+    elif sleeve_live is None:
+        reg_s = trend(C.SLEEVE_UNDERLYING)
+        journal.append({"event": "sleeve_regime", **reg_s.as_dict()})
+        spx = sleeve_spot()
+        cand_s = (SL.size(C.SLEEVE_UNDERLYING, spx, reg_s, floor=brain_floor)
+                  if spx is not None else None)
+        sd: dict[str, Any] = {"regime_weight": reg_s.lrs_weight,
+                              "regime_source": reg_s.source,
+                              "spot": round(spx, 2) if spx is not None else None}
+        if halt_entries:
+            sd |= {"decision": "NO_TRADE",
+                   "reason": "entries halted: an unbalanced options fill left "
+                             "book risk uncomputable this cycle"}
+        elif cand_s is None:
+            sd |= {"decision": "NO_TRADE",
+                   "reason": (f"no quote for {C.SLEEVE_UNDERLYING}"
+                              if spx is None else
+                              f"LRS weight {reg_s.lrs_weight:.2f} below the "
+                              f"{C.SLEEVE_MIN_LRS_W} ladder rung -- "
+                              f"{reg_s.notes}"
+                              if reg_s.lrs_weight < C.SLEEVE_MIN_LRS_W else
+                              f"${C.SLEEVE_NOTIONAL:,.0f} ceiling at weight "
+                              f"{min(reg_s.lrs_weight, brain_floor):.2f} does "
+                              f"not buy one share at {spx:.2f}")}
+        else:
+            base = sleeve_base_id(now_et)
+            ctx_s = Context(now_et=now_et, halt_file_present=halted,
+                            blackouts=tuple(blackouts),
+                            llm_no_new_entries_after=llm_cutoff,
+                            client_order_id=f"{base}-e")
+            allowed, s_reasons = SL.evaluate(cand_s, book, reg_s, ctx_s)
+            sd |= {"decision": "LONG" if allowed else "VETOED",
+                   "reason": cand_s.notes, "gates": s_reasons,
+                   **cand_s.as_dict()}
+            if allowed and not dry:
+                # The sleeve is ADDITIVE. The options book is the submission's
+                # thesis and has already done its work by the time we get
+                # here, so a broker fault on a share of QQQ must not be able
+                # to throw away a cycle that measured, gated and filled
+                # condors. Loud in the journal, contained in scope.
+                try:
+                    rec_s = submit_sleeve_entry(broker, cand_s, base,
+                                                journal.append)
+                except Exception as exc:                     # noqa: BLE001
+                    rec_s = {"filled_qty": 0}
+                    sd["decision"] = "ERROR"
+                    sd["reason"] = f"sleeve entry failed: {exc}"
+                    journal.append({"event": "sleeve_error", "stage": "entry",
+                                    "error": str(exc)})
+                if rec_s["filled_qty"] > 0:
+                    sleeve_live = SL.SleevePosition(
+                        underlying=cand_s.underlying,
+                        shares=int(rec_s["filled_qty"]),
+                        entry_price=float(rec_s["fill_price"]),
+                        stop_price=float(rec_s["stop_price"]),
+                        opened_at=now_et, order_id=str(rec_s["order_id"]),
+                        stop_order_id=rec_s["stop_order_id"])
+                    journal.append({"event": "sleeve_opened",
+                                    "underlying": sleeve_live.underlying,
+                                    "shares": sleeve_live.shares,
+                                    "entry_price": sleeve_live.entry_price,
+                                    "stop_price": sleeve_live.stop_price,
+                                    "notional": round(sleeve_live.notional, 2),
+                                    "stop_resting":
+                                        sleeve_live.stop_order_id is not None})
+        sleeve_panel |= sd
+        journal.append({"event": "sleeve_decision", **sd})
 
     journal.append({"event": "cycle_end", "cycle": cycle, "mode": phase.mode,
                     "entries": len(opened)})
@@ -422,4 +617,6 @@ def run_cycle(
     if regimes:
         state.write("regime", [regimes[u].as_dict()
                                for u in C.UNIVERSE if u in regimes])
-    return CycleResult(phase.mode, phase.reason, measurements, decisions, exits)
+    P.save_sleeve(sleeve_live, sleeve_panel, retired=retired)
+    return CycleResult(phase.mode, phase.reason, measurements, decisions,
+                       exits, sleeve_panel)

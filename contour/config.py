@@ -46,6 +46,57 @@ NAV_HARD_HALT = 96_000.0   # -4.0% -> flatten + halt for the week
 # --- G2 daily loss halt ---------------------------------------------------
 DAILY_LOSS_HALT_PCT = -0.015
 
+# --- the directional sleeve (contour/sleeve.py) ---------------------------
+# One long QQQ equity position, run ALONGSIDE the options book and gated
+# separately. It exists because the options book is capped at the credit it
+# collects: a defined-risk premium seller's median week is under one percent,
+# and no amount of gate-tightening changes that. The sleeve buys variance
+# instead of edge, deliberately and with its own leash.
+#
+# Sized by the vol-scaling rule of LRS-Fortress -- the best risk-adjusted
+# system in the strategy set it comes from (28.0% CAGR, Sharpe 0.94, max
+# drawdown -49.3% over 55 years, versus 0.75 and -66.6% for LRS-VT2 alone).
+# `regime.lrs_weight` IS that rule, already implemented and already sizing the
+# options book, so the sleeve adds a position, not a second model.
+#
+# NOT transferred: Fortress is 70/30 equity/gold, and the gold sleeve is what
+# earns most of that drawdown improvement. Only the equity leg is run here,
+# because the instrument was specified. The sleeve therefore inherits
+# Fortress's SIZING and none of its diversification -- say so rather than
+# quoting the 0.94 Sharpe as though this were the whole system.
+SLEEVE_UNDERLYING = "QQQ"
+SLEEVE_NOTIONAL = 30_000.0          # ceiling, not order size: scaled by weight
+SLEEVE_STOP_PCT = 0.04              # hard stop below the entry fill
+# The LRS ladder rung required to open. 0.5 is the warning rung -- above the
+# 200d, below the 50d -- so a warning-rung entry deploys HALF the notional and
+# a clean one deploys all of it. Below the 200d, `lrs_weight` is 0 and nothing
+# opens.
+SLEEVE_MIN_LRS_W = 0.5
+SLEEVE_MIN_SHARES = 1
+# ONE entry, for the whole contest. The carve-out below funds exactly one stop
+# loss; a sleeve that re-entered after being stopped out could spend it twice
+# -- 2.4% behind a -4% halt that also has to cover a 2.8% options book. That is
+# the same decoration bug G3 already had, arriving by a different route. It
+# also refuses the whipsaw directly: a stop that immediately re-buys is not a
+# stop, and on a four-day horizon there is no second trend to catch.
+SLEEVE_ONE_SHOT = True
+
+# What the sleeve costs the capital floor, at its ceiling. This is the number
+# G3's ramp is reduced by, so the two together still fit behind the -4% halt.
+# Measured 2026-09-01: QQQ at 717.01 sizes 41 shares / $29,398, a modeled stop
+# loss of $1,176 -- inside this budget, because the budget is the ceiling.
+SLEEVE_RISK_BUDGET_PCT = SLEEVE_NOTIONAL * SLEEVE_STOP_PCT / START_NAV   # 0.012
+
+# Execution. Marketable limits, never market orders -- the same discipline the
+# options book uses, for the same reason: a limit cannot print at a gap price
+# if the book is momentarily empty. On a penny-wide ETF a 0.2% band fills like
+# a market order. The escalated band is for the Thursday flatten, where not
+# getting out is the worse failure.
+SLEEVE_ENTRY_SLIP = 0.002
+SLEEVE_EXIT_SLIP = 0.002
+SLEEVE_EXIT_SLIP_ESCALATED = 0.01
+SLEEVE_FILL_WAIT_S = 60
+
 # --- G3 book risk ramp ----------------------------------------------------
 # The ceiling is DERIVED, not chosen. G1 hard-halts and flattens at -4.0%, so
 # a book carrying more simultaneous max loss than that can breach the capital
@@ -54,22 +105,33 @@ DAILY_LOSS_HALT_PCT = -0.015
 # G4 capped the book at 6% with all three names qualifying and at 2% with
 # one, which is the live case. A rung no configuration can touch is not a
 # risk control, it is decoration.
-BOOK_RISK_CEILING_PCT = (START_NAV - NAV_HARD_HALT) / START_NAV     # 0.040
+#
+# The sleeve is paid for OUT OF THIS SAME ALLOWANCE, not alongside it. A
+# directional position that could lose 1.2% while the options book was
+# separately permitted its full 4% would put 5.2% of reachable loss behind a
+# 4% halt -- the identical decoration bug, reintroduced by addition. The
+# options ceiling is therefore the halt distance MINUS whatever the sleeve has
+# committed, so `SLEEVE_NOTIONAL = 0` restores the pre-sleeve numbers exactly.
+BOOK_RISK_CEILING_PCT = ((START_NAV - NAV_HARD_HALT) / START_NAV
+                         - SLEEVE_RISK_BUDGET_PCT)              # 0.028
 BOOK_RISK_RAMP = {
     date(2026, 8, 31): 0.02,
-    date(2026, 9, 1): 0.04,
+    date(2026, 9, 1): BOOK_RISK_CEILING_PCT,
     date(2026, 9, 2): BOOK_RISK_CEILING_PCT,
     date(2026, 9, 3): BOOK_RISK_CEILING_PCT,
     date(2026, 9, 4): 0.00,
 }
-# 1.25% x 3 positions = 3.75% on a single name, inside the ceiling above. The
-# previous 1.0% x 2 left the whole ramp unreachable and, with only SPY
+# The previous 1.0% x 2 left the whole ramp unreachable and, with only SPY
 # clearing the VRP floor all week, deployed 0.84% of a 4% allowance.
 MAX_POSITION_RISK_PCT = 0.0125
 
 # --- G4 concentration -----------------------------------------------------
 MAX_CONCURRENT_POSITIONS = 6
-MAX_POSITIONS_PER_UNDERLYING = 3
+# DERIVED, so the concentration gate cannot hand G3 a book G3 must refuse on
+# the last position of every full name. 2.80 / 1.25 = 2.24 -> 2. Funding the
+# sleeve costs the options book its third slot per underlying: at 4.00% it was
+# 3.20 -> 3. That is the trade, and it is arithmetic rather than opinion.
+MAX_POSITIONS_PER_UNDERLYING = int(BOOK_RISK_CEILING_PCT / MAX_POSITION_RISK_PCT)
 MAX_NEW_PER_UNDERLYING_PER_CYCLE = 1
 
 # --- G5 liquidity ---------------------------------------------------------

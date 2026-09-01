@@ -110,3 +110,83 @@ def credit_from_fill(rec: dict[str, Any], fallback: float) -> float:
         # fill: 1.25 - 0.92 + 0.78 - 0.31 = 0.80.
         total += px if str(l.get("side", "")).startswith("sell") else -px
     return abs(total) if seen else fallback
+
+
+# --- the directional sleeve ----------------------------------------------
+# Same reasoning as above, same failure mode if it is missing: a fresh
+# container every cycle means a sleeve opened at 10:09 is invisible at 10:24,
+# and an invisible position is an unmanaged one. It gets its own file rather
+# than a row in `positions.json` because it is not a ManagedPosition -- it has
+# shares and a stop price where the others have legs and a credit, and forcing
+# one shape over both is how a share of QQQ ends up being asked for its wing
+# width.
+SLEEVE_NAME = "sleeve"
+
+
+def sleeve_to_dict(p) -> dict[str, Any]:
+    return {
+        "underlying": p.underlying, "shares": p.shares,
+        "entry_price": p.entry_price, "stop_price": p.stop_price,
+        "opened_at": p.opened_at.isoformat(), "order_id": p.order_id,
+        "stop_order_id": p.stop_order_id,
+    }
+
+
+def sleeve_from_dict(d: dict[str, Any]):
+    from .sleeve import SleevePosition
+    return SleevePosition(
+        underlying=d["underlying"], shares=int(d["shares"]),
+        entry_price=float(d["entry_price"]),
+        stop_price=float(d["stop_price"]),
+        opened_at=datetime.fromisoformat(d["opened_at"]),
+        order_id=str(d["order_id"]),
+        stop_order_id=(str(d["stop_order_id"])
+                       if d.get("stop_order_id") else None),
+    )
+
+
+def load_sleeve():
+    """Never raise, and never invent. A corrupt file reads as "no sleeve",
+    which is safe here in a way it is not for the options book: the sleeve's
+    protective stop rests AT THE BROKER, so a forgotten position is still
+    bounded. The cycle logs the discrepancy against the broker's own share
+    count regardless."""
+    p = Path(state.ROOT) / f"{SLEEVE_NAME}.json"
+    try:
+        raw = json.loads(p.read_text())
+        pos = raw.get("position") if isinstance(raw, dict) else None
+        return sleeve_from_dict(pos) if pos else None
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def save_sleeve(pos, panel: dict[str, Any] | None = None,
+                retired: bool = False) -> Path:
+    """The single writer of `state/sleeve.json`.
+
+    Position and dashboard panel go out together in one write, so the two can
+    never disagree about whether a sleeve is open -- which is what would
+    happen if the cycle published a panel and the book saved a position into
+    the same file independently.
+    """
+    return state.write(SLEEVE_NAME, {
+        "position": sleeve_to_dict(pos) if pos is not None else None,
+        "retired": bool(retired),
+        **(panel or {}),
+    })
+
+
+def sleeve_retired() -> bool:
+    """Has the sleeve already had its one entry?
+
+    Defaults to False on a missing file -- a first cycle has not spent the
+    carve-out. It defaults to False on a CORRUPT one too, which is the less
+    obvious call: the alternative is a parse error silently retiring a sleeve
+    that never traded, and the gates still stand between that and an order.
+    """
+    p = Path(state.ROOT) / f"{SLEEVE_NAME}.json"
+    try:
+        raw = json.loads(p.read_text())
+        return bool(raw.get("retired")) if isinstance(raw, dict) else False
+    except Exception:                                        # noqa: BLE001
+        return False

@@ -40,7 +40,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 108 passing
+- [x] `tests/` — 221 passing
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)
@@ -48,6 +48,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/loop.py` — one idempotent cycle
 - [x] `contour/__main__.py` — `--once --dry --as-of --dev --verify`
 - [x] `contour/llm.py` — provider seam; the vendor is a config value
+- [x] `contour/sleeve.py` — the directional sleeve, S1–S7, zero I/O
 - [x] `contour/regime.py` — position sizing from three published trend systems
 - [x] `contour/mind.py` — the brain: blackout windows, structure veto, stand-down
 - [x] `.github/workflows/` — the cron that actually trades
@@ -63,7 +64,7 @@ _Submission write-up: [WRITEUP.md](WRITEUP.md) · engineering detail:
 
 `dashboard/index.html` is one static file with no build step and no backend. It
 reads the agent's own published state from the orphan **`agent-state`** branch
-over `raw.githubusercontent.com` and renders five things:
+over `raw.githubusercontent.com` and renders six things:
 
 - **the structure map** — SPY, QQQ and IWM plotted on 25-delta skew z-score
   against the VRP ratio, over the four decision zones. The chart *is* the
@@ -73,6 +74,9 @@ over `raw.githubusercontent.com` and renders five things:
   trend systems behind it, each with the term that bound it. No language model
   sets that number; every decision below carries the weight it was sized at,
   including the refusals.
+- **the directional sleeve** — one long QQQ position with its own seven gates,
+  the LRS weight that sized it, and the resting stop that bounds it. It buys
+  variance, not edge, and the panel says so.
 - the equity curve against the $100,000 starting NAV
 - **the hash chain, recomputed in your browser.** The page does not take the
   agent's word for it. It fetches the raw journal, walks the chain with
@@ -112,13 +116,16 @@ python -m contour --replay        # no Alpaca account required
 quotes — through the exact measurement, selection and gate code the live agent
 uses, and prints the decisions with every gate reason. The newest fixture was
 captured at 14:30 ET on 2026-08-31: it puts a SPY iron condor through all
-twelve gates and refuses QQQ and IWM on the volatility premium. It forces dry
-mode and a degraded brain, so the same fixture gives the same answer on any
-machine, on any day. Record a new one with `--record fixtures/NAME.json --dev`.
+twelve gates, refuses QQQ and IWM on the volatility premium, and takes the
+sleeve through its own seven. It forces dry mode and a degraded brain, so the
+same fixture gives the same answer on any machine, on any day — and the
+degraded brain is visible in the output, halving the sleeve's notional. Record a new one with `--record fixtures/NAME.json --dev`.
 
 ## Risk gates
 
-The twelve gates are documented in [WRITEUP.md](WRITEUP.md), with the full
+The twelve options gates — and the seven the directional sleeve adds, which
+share the same capital floor and kill switch rather than declaring their own —
+are documented in [WRITEUP.md](WRITEUP.md), with the full
 calibration history in [TECHNICAL.md](TECHNICAL.md). Two of them deviate
 from the original design, both because writing the tests first proved the
 original values would have stopped the agent from ever placing an order. Those

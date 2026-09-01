@@ -169,11 +169,20 @@ design hung its most important gate on data that does not exist.
 **Expiry locked to 2026-09-11.** Nothing can expire, be assigned, or
 auto-exercise inside the judged window. No 0DTE — those never return Greeks.
 
-**Honest P&L:** median +0.3% to +0.9%, ~65% chance positive, designed floor
-−4%, realistic worst case −6% to −7%. **P(>+15%) is under 1%.** Defined-risk
-premium selling *cannot* reach the +15–25% a top-3 P&L rank needs — the gain is
-capped at the credit. Whoever posts the winning P&L number will have won a coin
-flip. Optimize the four criteria that are not luck.
+**Honest P&L, options book:** median +0.3% to +0.9%, ~65% chance positive,
+designed floor −4%. Defined-risk premium selling *cannot* reach the +15–25% a
+top-3 P&L rank needs — the gain is capped at the credit.
+
+**Plus the sleeve, added 2026-09-01 at the operator's explicit direction.** One
+long QQQ position, $30,000 ceiling, 1.2% of NAV at risk behind a 4% stop. QQQ's
+measured 20-day vol is 17.4% → 3-day sigma 1.90% → about ±$559 at one sigma on
+$29,398. It roughly **triples the width of the distribution in both
+directions**. This is a variance decision, not an edge decision, and it was
+taken knowing that: the arithmetic said the best system in the strategy folders
+returns +0.36% over the remaining window, so edge was never the available
+lever. It is capped, stopped, gated S1–S7 and funded *out of* G3's ramp rather
+than beside it. Do not describe the submission as pure defined-risk anywhere —
+`TECHNICAL.md` states the difference explicitly and the deck must match.
 
 ---
 
@@ -227,8 +236,8 @@ write-up's risk content.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 4% Tue–Thu (ceiling = G1 halt); ≤ 1.25% NAV per position |
-| G4 | Max 6 concurrent, 3 per underlying, 1 new per underlying per cycle |
+| G3 | Book risk ≤ 2% Mon / 2.8% Tue–Thu (ceiling = G1 halt − sleeve); ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 2 per underlying (derived), 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, close_price present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |
@@ -245,7 +254,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**180 tests passing.** All core modules complete.
+**221 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -297,11 +306,15 @@ neither is zero. Bounded at 1.0, so "can only trade less" still holds. Every
 gate runs against the result; G3 caps book and per-position risk regardless.
 
 **Blast radius is bounded by gates that already existed.** At weight 1.0 a
-condor sizes to ~$1,230 max loss against G3's $1,250 per-position cap, and G4
-caps 3 per underlying — so a single name tops out at 3.69% of NAV, inside
-G3's $4,000 ceiling, which is itself *derived* from G1's −4% hard halt rather
-than chosen. No reachable book can reach max loss through the capital floor;
-`tests/test_gates.py` asserts it.
+condor sizes to ~$1,230 max loss against G3's $1,250 per-position cap. G4's
+per-name cap is now **derived** — `int(BOOK_RISK_CEILING_PCT /
+MAX_POSITION_RISK_PCT)` — so it cannot hand G3 a book G3 must refuse. Since the
+sleeve took its 1.2% carve-out that is 2.8 / 1.25 → **2 per name**, down from
+3: funding the sleeve costs the options book its third slot, and that is the
+trade. No reachable book, sleeve included, can reach max loss through the
+capital floor; `tests/test_gates.py` and `tests/test_sleeve.py` both assert it,
+and a third test asserts `SLEEVE_NOTIONAL = 0` restores 4.0% and 3 per name
+exactly.
 
 **Why these moved on 2026-09-01.** The old 1.0% × 2-per-name made G3's ramp
 unreachable: 6% with all three names qualifying, 2% with one — and one is the

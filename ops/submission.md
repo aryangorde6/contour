@@ -106,13 +106,25 @@ differentiator first, the safety argument second, the proof third.
 > WebCrypto — same verdict as the CLI, nothing of mine in between. And
 > `python -m contour --replay` runs a fixture of real SPY/QQQ/IWM quotes,
 > recorded mid-session, through the same measurement, selection and gate code
-> the live agent runs, printing all twelve gate reasons. **No Alpaca account
-> required.** Clone the repo and get the same decisions back.
+> the live agent runs, printing every gate reason — all twelve for the options
+> book and all seven for the sleeve below. **No Alpaca account required.**
+> Clone the repo and get the same decisions back.
 >
-> **The honest number.** Defined-risk premium selling is capped at the credit.
-> The median outcome for a week is under one percent. Whoever posts the
-> winning P&L will have won a coin flip; I optimised the four criteria that
-> are not luck.
+> **The honest number, and what I did about it.** Defined-risk premium selling
+> is capped at the credit it collects: the median week is under one percent. So
+> the agent also runs one **long QQQ sleeve, $30,000 ceiling**, sized by the
+> vol-scaling rule of the best risk-adjusted system in my own research set. I
+> will name it precisely: **it buys variance, not edge.**
+>
+> It has seven gates of its own, S1–S7, sharing the same capital floor and kill
+> switch. Its 4% stop rests GTC at the broker — the one thing the options book
+> cannot do, because Alpaca serves no resting stop on a multi-leg position. And
+> its risk budget is **subtracted from** the options book's ramp rather than
+> added beside it: 2.8% + 1.2% lands exactly on the −4% hard halt, a test
+> asserts it, and setting the notional to zero restores the previous numbers
+> exactly. The sleeve costs the options book its third position per name, and
+> that trade-off is stated in the write-up rather than discovered in the
+> order history.
 
 ## Technologies / tags
 

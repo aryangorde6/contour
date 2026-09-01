@@ -179,6 +179,11 @@ svg{display:block;width:100%;height:auto}
   </div>
 
   <div class="panel">
+    <h2>Directional sleeve <span class="note" id="sl-age"></span></h2>
+    <div class="body" id="sleeve"><div class="skeleton">loading…</div></div>
+  </div>
+
+  <div class="panel">
     <h2>Decisions this cycle <span class="note">every gate, pass or fail</span></h2>
     <div class="planrow" id="plan"></div>
     <div class="body" id="decisions"><div class="skeleton">loading…</div></div>
@@ -500,6 +505,51 @@ function drawRegime(r){
      whole, one halves it, neither stands the name down. Bounded at 1.00× — it can
      only shrink the book, and every gate still runs on the result.</div>`;
 }
+function drawSleeve(s){
+  if(!s){ $("sleeve").innerHTML='<div class="skeleton">no sleeve published yet.</div>'; return; }
+  const p=s.position, chk=s.exit_check;
+  const gates=(s.gates||[]).map(g=>{
+    const ok=/^S\d+ ok/.test(g);
+    return `<div class="g ${ok?"":"fail"}"><span class="m">${ok?"✓":"✕"}</span><span>${esc(g)}</span></div>`;}).join("");
+  let held = s.retired
+    ? '<div class="skeleton">retired — the sleeve had its one entry. The carve-out funds exactly one stop loss, so it is not re-entered.</div>'
+    : '<div class="skeleton">flat — no directional position open.</div>';
+  if(p){
+    const up = chk && chk.unrealized!=null ? chk.unrealized : null;
+    held=`<div class="dec"><div class="top">
+        <span class="tick" style="font-family:var(--mono);font-size:14px">${esc(p.underlying)}</span>
+        <span class="badge b-open">LONG ${p.shares} sh</span>
+        <span class="pill">entry <b>$${num(p.entry_price,2)}</b></span>
+        ${chk&&chk.spot!=null?`<span class="pill">now <b>$${num(chk.spot,2)}</b></span>`:""}
+        ${up!=null?`<span class="pill ${up>=0?"pos":"neg"}">unrealized <b>${up>=0?"+":"−"}${money(Math.abs(up))}</b></span>`:""}
+        <span class="pill">stop <b>$${num(p.stop_price,2)}</b>${p.stop_order_id?" resting":" <span class=\"neg\">not resting</span>"}</span>
+      </div>${chk?`<div class="why">${esc(chk.reason)}</div>`:""}</div>`;
+  }
+  const dec = s.decision
+    ? `<div class="dec"><div class="top">
+         <span class="tick" style="font-family:var(--mono);font-size:14px">${esc(s.underlying||"")}</span>
+         <span class="badge ${s.decision==="VETOED"?"b-veto":s.decision==="LONG"?"b-open":"b-none"}">${esc(s.decision)}</span>
+         ${s.notional!=null?`<span class="pill">notional <b>${money(s.notional)}</b></span>`:""}
+         ${s.regime_weight!=null?`<span class="pill">LRS <b>${num(s.regime_weight,2)}</b></span>`:""}
+         ${s.modeled_max_loss!=null?`<span class="pill">stop caps loss at <b>${money(s.modeled_max_loss)}</b></span>`:""}
+       </div>
+       <div class="why">${esc(s.reason||"")}</div>
+       ${gates?`<div class="gates">${gates}</div>`:""}</div>`
+    : "";
+  $("sleeve").innerHTML = held + dec + `
+   <div style="margin-top:12px;font-size:12.5px;color:var(--faint);line-height:1.6">
+     One long ${esc(s.underlying||"QQQ")} position, capped at
+     ${money(s.notional_ceiling||0)} and sized by LRS-Fortress's own vol-scaling
+     rule — the same <code>lrs_weight</code> that sizes the options book, so this
+     adds a position rather than a second model. It buys <b>variance, not edge</b>:
+     defined-risk premium selling is capped at the credit it collects, and this is
+     the deliberate answer to that. Seven gates of its own, S1–S7. Its
+     ${num(100*(s.stop_pct||0),0)}% stop rests GTC at the broker — the options book
+     cannot do that, because Alpaca serves no resting stop on a multi-leg position.
+     Its ${num(100*(s.risk_budget_pct||0),1)}%-of-NAV budget is
+     <b>subtracted from</b> the options book's ramp, not added beside it, so both
+     books together still fit behind the −4% capital floor.</div>`;
+}
 function drawDecisions(d){
   if(!d||!d.length){ $("decisions").innerHTML='<div class="skeleton">no decisions published yet.</div>'; return; }
   $("decisions").innerHTML=d.map(x=>{
@@ -521,12 +571,12 @@ function drawDecisions(d){
 }
 
 async function load(){
-  const [hb,surf,dec,eq,at,plan,reg]=await Promise.all([
+  const [hb,surf,dec,eq,at,plan,reg,slv]=await Promise.all([
     grab("state/heartbeat.json"), grab("state/surface.json"),
     grab("state/decisions.json"), grab("state/equity.json"),
     grab("state/written_at.json"), grab("state/plan.json"),
-    grab("state/regime.json"),
-  ]).catch(()=>[null,null,null,null,null,null,null]);
+    grab("state/regime.json"), grab("state/sleeve.json"),
+  ]).catch(()=>[null,null,null,null,null,null,null,null]);
 
   /* The journal is fetched BEFORE the stats are drawn, because "structures
      opened" is a count of fills and fills live in the journal, not in the
@@ -544,6 +594,7 @@ async function load(){
   drawMap(surf);
   drawPlan(plan);
   drawRegime(reg);
+  drawSleeve(slv);
   drawDecisions(dec);
   drawEquity(eq);
   /* Age the measurement by when the measurement was written, NOT by the
@@ -557,6 +608,10 @@ async function load(){
   $("reg-age").textContent = regAt
     ? "three trend systems, no model — measured "+ago(regAt)
     : "three trend systems, no model";
+  const slAt = at && at.sleeve;
+  $("sl-age").textContent = slAt
+    ? "variance, not edge — its own seven gates, "+ago(slAt)
+    : "variance, not edge — its own seven gates";
   const decAt = at && at.decisions;
   const decHdr = document.querySelector("#decisions").closest(".panel")
                    .querySelector("h2 .note");

@@ -128,6 +128,46 @@ class CLIBroker:
             raise BrokerError(f"submit returned non-object: {data!r}")
         return data
 
+    def submit_equity(self, symbol: str, qty: int, side: str, order_type: str,
+                      client_order_id: str, limit_price: float | None = None,
+                      stop_price: float | None = None,
+                      tif: str = "day", dry_run: bool = False) -> dict:
+        """One single-leg equity order, for the directional sleeve.
+
+        Deliberately NOT a market order by default: the same discipline the
+        options book uses. The entry is a marketable limit at the ask, which
+        fills like a market order on a liquid ETF but cannot print at a gap
+        price if the book is momentarily empty.
+
+        The protective leg IS a stop, and that is the point -- Alpaca supports
+        no resting stop on a multi-leg options position (see `manage.py`), so
+        the options book has to poll. A single equity leg can rest a GTC stop
+        at the broker, which is the only exit that works while the agent is
+        not running. It is the sleeve's answer to overnight gap risk.
+        """
+        self.assert_account()
+        args = [
+            "order", "submit",
+            "--symbol", symbol,
+            "--qty", str(qty),
+            "--side", side,
+            "--type", order_type,
+            "--time-in-force", tif,
+            "--client-order-id", client_order_id,
+        ]
+        if limit_price is not None:
+            args += ["--limit-price", f"{limit_price:.2f}"]
+        if stop_price is not None:
+            args += ["--stop-price", f"{stop_price:.2f}"]
+        if dry_run:
+            args.append("--dry-run")
+        rc, data, err = self._run(args)
+        if rc != 0:
+            raise BrokerError(f"equity submit rc={rc}: {err or data}")
+        if not isinstance(data, dict):
+            raise BrokerError(f"equity submit returned non-object: {data!r}")
+        return data
+
     def cancel(self, order_id: str) -> None:
         rc, data, err = self._run(["order", "cancel", "--order-id", order_id])
         if rc != 0:
@@ -258,3 +298,160 @@ def submit_with_ladder(
     return {"order_id": None, "status": "NO_FILL", "filled_qty": 0,
             "requested_qty": cand.contracts, "partial": False,
             "legs": [], "legs_balanced": True}
+
+
+def submit_sleeve_entry(broker, cand, base_id: str,
+                        journal: Callable[[dict], Any],
+                        wait_s: int = C.SLEEVE_FILL_WAIT_S,
+                        sleep: Callable[[float], None] = time.sleep) -> dict:
+    """Buy the sleeve, then rest a GTC stop on whatever actually filled.
+
+    Two things here are deliberate and load-bearing.
+
+    *The stop is priced off the FILL, not off the pre-trade spot.* A stop
+    placed 4% below a quote we never traded at is not the 4% stop the risk
+    budget was derived from, and S5 approved a specific dollar loss.
+
+    *A partial fill is cancelled before the stop is placed.* Otherwise the
+    remainder keeps working at the broker while a stop sized for the filled
+    portion rests underneath it -- and the position ends up larger than the
+    thing protecting it. Same failure the options ladder cancels residuals
+    for, one asset class over.
+    """
+    limit = round(cand.spot * (1.0 + C.SLEEVE_ENTRY_SLIP), 2)
+    coid = f"{base_id}-e"
+
+    pre = broker.submit_equity(cand.underlying, cand.shares, "buy", "limit",
+                               coid, limit_price=limit, dry_run=True)
+    journal({"event": "sleeve_preflight", "client_order_id": coid,
+             "symbol": cand.underlying, "qty": cand.shares,
+             "limit_price": limit, "body": pre})
+
+    order = broker.submit_equity(cand.underlying, cand.shares, "buy", "limit",
+                                 coid, limit_price=limit)
+    oid = order.get("id")
+    journal({"event": "sleeve_submitted", "order_id": oid,
+             "client_order_id": coid, "symbol": cand.underlying,
+             "qty": cand.shares, "limit_price": limit,
+             "status": order.get("status")})
+
+    waited = 0.0
+    while waited < wait_s:
+        sleep(min(5.0, wait_s - waited))
+        waited += 5.0
+        if broker.get_order(oid).get("status") in TERMINAL:
+            break
+
+    cur = broker.get_order(oid)
+    filled = int(float(cur.get("filled_qty") or 0))
+    if filled <= 0:
+        if cur.get("status") not in TERMINAL:
+            broker.cancel(oid)
+        journal({"event": "sleeve_no_fill", "order_id": oid,
+                 "reason": f"unfilled after {wait_s}s at ${limit:.2f}"})
+        return {"order_id": oid, "filled_qty": 0, "fill_price": None,
+                "stop_price": None, "stop_order_id": None,
+                "status": cur.get("status")}
+
+    if cur.get("status") not in TERMINAL:
+        try:
+            broker.cancel(oid)
+        except BrokerError as exc:                          # already terminal
+            journal({"event": "sleeve_residual_cancel_failed",
+                     "order_id": oid, "error": str(exc)})
+        cur = broker.get_order(oid)
+        filled = int(float(cur.get("filled_qty") or 0))
+        journal({"event": "sleeve_residual_canceled", "order_id": oid,
+                 "filled_qty": filled, "requested_qty": cand.shares})
+
+    fill_px = float(cur.get("filled_avg_price") or limit)
+    stop_px = round(fill_px * (1.0 - C.SLEEVE_STOP_PCT), 2)
+    journal({"event": "sleeve_filled", "order_id": oid, "filled_qty": filled,
+             "requested_qty": cand.shares, "fill_price": fill_px,
+             "partial": filled < cand.shares})
+
+    stop_id = place_sleeve_stop(broker, cand.underlying, filled, stop_px,
+                                f"{base_id}-s", journal)
+    return {"order_id": oid, "filled_qty": filled, "fill_price": fill_px,
+            "stop_price": stop_px, "stop_order_id": stop_id,
+            "status": cur.get("status")}
+
+
+def place_sleeve_stop(broker, symbol: str, qty: int, stop_price: float,
+                      client_order_id: str,
+                      journal: Callable[[dict], Any]) -> str | None:
+    """The resting protective order. Returns its id, or None if it would not
+    place.
+
+    A failure here is NOT fatal and is deliberately not treated as one: the
+    polling exit still bounds the position during market hours. It is loud,
+    because what is lost is overnight protection specifically, and the cycle
+    retries on the next pass -- an unprotected position that stays unprotected
+    because nobody looked again is the failure worth engineering against.
+    """
+    try:
+        so = broker.submit_equity(symbol, qty, "sell", "stop",
+                                  client_order_id, stop_price=stop_price,
+                                  tif="gtc")
+    except BrokerError as exc:
+        journal({"event": "sleeve_stop_failed", "symbol": symbol,
+                 "stop_price": stop_price, "error": str(exc),
+                 "reason": "position is UNPROTECTED overnight; the polling "
+                           "exit still applies during market hours and the "
+                           "next cycle retries"})
+        return None
+    journal({"event": "sleeve_stop_placed", "order_id": so.get("id"),
+             "symbol": symbol, "qty": qty, "stop_price": stop_price,
+             "tif": "gtc", "status": so.get("status")})
+    return so.get("id")
+
+
+def close_sleeve(broker, pos, spot: float, base_id: str,
+                 journal: Callable[[dict], Any],
+                 escalate: bool = False) -> dict:
+    """Sell the sleeve out. THE RESTING STOP IS CANCELLED FIRST, always.
+
+    Both orders want the same shares. Leave the stop working and the exit
+    either gets rejected for insufficient quantity or -- if the stop triggers
+    in the same instant -- both fill and the account is SHORT QQQ, which is
+    the one position this entire repo is built to make impossible. Cancel,
+    then sell.
+    """
+    if pos.stop_order_id:
+        try:
+            broker.cancel(pos.stop_order_id)
+            journal({"event": "sleeve_stop_canceled",
+                     "order_id": pos.stop_order_id})
+        except BrokerError as exc:
+            # Already filled or already gone. Re-reading tells us which, and
+            # a stop that FILLED means the position is already flat.
+            journal({"event": "sleeve_stop_cancel_failed",
+                     "order_id": pos.stop_order_id, "error": str(exc)})
+            try:
+                st = broker.get_order(pos.stop_order_id)
+            except BrokerError:
+                st = {}
+            if int(float(st.get("filled_qty") or 0)) > 0:
+                journal({"event": "sleeve_already_stopped_out",
+                         "order_id": pos.stop_order_id,
+                         "fill_price": st.get("filled_avg_price"),
+                         "reason": "the resting stop had already filled; "
+                                   "nothing left to sell"})
+                return {"closed": True, "order_id": pos.stop_order_id,
+                        "via": "resting_stop"}
+
+    slip = (C.SLEEVE_EXIT_SLIP_ESCALATED if escalate else C.SLEEVE_EXIT_SLIP)
+    limit = round(spot * (1.0 - slip), 2)
+    coid = f"{base_id}-x"
+    try:
+        order = broker.submit_equity(pos.underlying, pos.shares, "sell",
+                                     "limit", coid, limit_price=limit)
+    except BrokerError as exc:
+        journal({"event": "sleeve_close_failed", "error": str(exc),
+                 "limit_price": limit})
+        return {"closed": False, "order_id": None, "via": None}
+    journal({"event": "sleeve_close_submitted", "order_id": order.get("id"),
+             "client_order_id": coid, "qty": pos.shares,
+             "limit_price": limit, "escalated": escalate,
+             "status": order.get("status")})
+    return {"closed": True, "order_id": order.get("id"), "via": "limit"}

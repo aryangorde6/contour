@@ -56,7 +56,8 @@ agent down on the week's one clear session.
 
 ## Risk gates
 
-Twelve pure functions. Zero I/O, fixed order, evaluated before every order.
+Twelve pure functions for the options book, seven more for the sleeve below.
+Zero I/O, fixed order, evaluated before every order.
 **The reason is journaled whether a gate passes or fails**, so a no-trade cycle
 is exactly as auditable as a trade.
 
@@ -64,8 +65,8 @@ is exactly as auditable as a trade.
 |---|---|---|---|
 | G1 | NAV floor: no entries under $97k, halt under $96k | G7 | Short delta 0.10–0.16, wings 0.04–0.10, condor net ≤ 0.08 |
 | G2 | Session P&L worse than −1.5% NAV stops entries | G8 | Expiry must equal 2026-09-11 exactly |
-| G3 | Book risk ramp 2/4/4% by weekday, ceiling = G1's halt distance; ≤ 1.25% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
-| G4 | ≤ 6 concurrent, 2 per name, 1 new per name per cycle | G10 | No entries inside an event blackout |
+| G3 | Book risk ramp 2/2.8% by weekday, ceiling = G1's halt distance **minus the sleeve**; ≤ 1.25% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
+| G4 | ≤ 6 concurrent, 2 per name (derived from G3's ceiling), 1 new per name per cycle | G10 | No entries inside an event blackout |
 | G5 | OI ≥ 500, spread pct **or** $0.10, quote < 20 min, friction ≤ 30% | G11 | 10:05–15:15 ET; last entry Thu 11:00; flatten Thu 15:45 |
 | G6 | Null delta or IV on any leg is a hard veto, never zero | G12 | Committed `HALT` stops trading; unique `client_order_id` |
 
@@ -76,6 +77,33 @@ would have sold call spreads on everything all week for a units reason.
 **Exits run before entries, unconditionally**, because Alpaca holds no resting
 stop on a multi-leg position; legout buys back every short before selling any
 long, so the account is never momentarily naked.
+
+## The directional sleeve, and what it costs
+
+Defined-risk premium selling is capped at the credit it collects: the median
+week is under one percent, and no amount of gate-tightening changes the shape
+of that payoff. So the agent also runs **one long QQQ position, $30,000
+ceiling** — stated plainly, it buys **variance, not edge**.
+
+It is sized by the vol-scaling rule of **LRS-Fortress**, the best risk-adjusted
+system in our own research set (28.0% CAGR, Sharpe 0.94, max drawdown −49.3%
+over 55 years): notional is the ceiling times `lrs_weight`, the *same* function
+that already sizes the options book — a position, not a second model. It
+inherits Fortress's sizing and none of its 30% gold diversification, which is
+where most of that drawdown improvement actually comes from.
+
+It has **seven gates of its own, S1–S7**, sharing G1's capital floor, G2's daily
+halt, G11's window and G12's kill switch by reading the same constants. S3 is
+stricter than the options book: a directional bet needs **both** trend systems
+standing, never one. Its 4% stop **rests GTC at the broker** — the one thing the
+options book cannot do, because Alpaca serves no resting stop on a multi-leg
+position.
+
+**It is paid for out of the same capital floor, not added beside it.** Its 1.2%
+budget is *subtracted* from G3's ramp, which falls 4.0% → 2.8% and costs the
+options book its third position per name. Both books at simultaneous max loss
+still sit exactly on G1's −4% halt, and a test asserts it. Set
+`SLEEVE_NOTIONAL = 0` and the previous numbers return exactly.
 
 ## Alpaca infrastructure
 

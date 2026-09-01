@@ -6,6 +6,7 @@ import argparse
 import os
 import re
 import sys
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
@@ -130,10 +131,18 @@ def main(argv=None) -> int:
     # container, so a position opened at 10:09 is invisible at 10:24 unless it
     # was written down. Without this, every exit rule is dead code.
     open_positions = P.load()
+    sleeve_pos = _reconcile_sleeve(broker, P.load_sleeve(), journal)
     held = _held_symbols(broker)
     tracked = {l.symbol for p in open_positions for l in p.candidate.legs}
     print(f"[book] {len(open_positions)} tracked position(s), "
           f"{len(held)} option leg(s) at the broker")
+    if sleeve_pos is not None:
+        print(f"[sleeve] {sleeve_pos.shares} {sleeve_pos.underlying} @ "
+              f"${sleeve_pos.entry_price:.2f}, stop ${sleeve_pos.stop_price:.2f}"
+              + ("" if sleeve_pos.stop_order_id else "  -- STOP NOT RESTING"))
+    else:
+        print(f"[sleeve] flat ({C.SLEEVE_UNDERLYING}, "
+              f"${C.SLEEVE_NOTIONAL:,.0f} ceiling)")
     orphans = held - tracked
     if orphans:
         # Loud, not fatal: an unmanaged leg is exactly the failure this book
@@ -152,6 +161,8 @@ def main(argv=None) -> int:
     res = run_cycle(ds=rec or ds, broker=broker, now_et=now_et,
                     market_open=market_open, journal=journal, dry=args.dry,
                     mind=mind, open_positions=open_positions,
+                    sleeve_position=sleeve_pos,
+                    sleeve_retired=P.sleeve_retired(),
                     cycle=state.next_cycle())
     if rec is not None:
         print(f"\n[record] wrote {rec.save(now_et)}")
@@ -166,7 +177,76 @@ def main(argv=None) -> int:
         for g in d.get("gates", []):
             if not _passed(g):
                 print(f"      VETO: {g}")
+    _print_sleeve(res.sleeve)
     return 0
+
+
+def _print_sleeve(sl: dict) -> None:
+    if not sl:
+        return
+    chk = sl.get("exit_check")
+    if chk:
+        print(f"  sleeve {chk['underlying']}: {chk['shares']} sh @ "
+              f"${chk['entry_price']:.2f}"
+              + (f", now ${chk['spot']:.2f} "
+                 f"({chk['unrealized']:+,.0f})" if chk.get("spot") else "")
+              + f" -- {chk['reason']}")
+    if "decision" in sl:
+        print(f"  sleeve {sl.get('underlying')}: {sl['decision']} -- "
+              f"{sl.get('reason')}")
+        for g in sl.get("gates", []):
+            if not _passed_sleeve(g):
+                print(f"      VETO: {g}")
+
+
+def _passed_sleeve(reason: str) -> bool:
+    r"""The sleeve's gates answer "S<n> ok", not "G<n> ok". Testing them with
+    the options predicate silently reports every S-gate as a veto."""
+    return re.match(r"^S\d+ ok\b", reason) is not None
+
+
+def _reconcile_sleeve(broker, pos, journal):
+    """Did the resting stop fire while the agent was not running?
+
+    The whole point of a GTC stop at the broker is that it works overnight,
+    which means the position can be gone before any cycle looks. Trusting the
+    saved file would then have the agent managing -- and on Thursday, trying
+    to SELL -- shares it no longer owns. The broker is the authority.
+    """
+    if pos is None:
+        return None
+    try:
+        held = {str(p.get("symbol")): int(float(p.get("qty") or 0))
+                for p in broker.positions()
+                if str(p.get("asset_class", "us_equity")) == "us_equity"}
+    except Exception as exc:                                 # noqa: BLE001
+        # Unknown is not "gone". Keep managing what we wrote down.
+        print(f"[sleeve] could not read broker positions: {exc}",
+              file=sys.stderr)
+        return pos
+    qty = held.get(pos.underlying, 0)
+    if qty <= 0:
+        print(f"[sleeve] {pos.underlying} is no longer at the broker -- the "
+              f"resting stop fired while the agent was down", file=sys.stderr)
+        journal.append({"event": "sleeve_stopped_out",
+                        "underlying": pos.underlying,
+                        "shares": pos.shares,
+                        "stop_price": pos.stop_price,
+                        "stop_order_id": pos.stop_order_id,
+                        "reason": "broker holds none; the GTC stop filled "
+                                  "outside a cycle"})
+        P.save_sleeve(None, {"underlying": pos.underlying,
+                             "decision": "STOPPED_OUT",
+                             "reason": "the resting stop filled outside a cycle"},
+                      retired=C.SLEEVE_ONE_SHOT)
+        return None
+    if qty != pos.shares:
+        journal.append({"event": "sleeve_share_discrepancy",
+                        "underlying": pos.underlying, "tracked": pos.shares,
+                        "at_broker": qty,
+                        "reason": "managing the broker's count, not ours"})
+        return replace(pos, shares=qty)
+    return pos
 
 
 def _run_replay(fx: Replay) -> int:
@@ -236,6 +316,15 @@ def _run_replay(fx: Replay) -> int:
         # WRITEUP both promise the whole evaluation.
         for g in d.get("gates", []):
             print(f"      [{'ok  ' if _passed(g) else 'VETO'}] {g}")
+    # The sleeve is a SECOND book on the same account with its own seven
+    # gates. A rehearsal that printed twelve green G-gates and said nothing
+    # about S1-S7 would be showing a judge half the risk surface.
+    sl = res.sleeve
+    if sl:
+        print(f"\n  sleeve {sl.get('underlying')}: "
+              f"{sl.get('decision', 'no decision')} -- {sl.get('reason')}")
+        for g in sl.get("gates", []):
+            print(f"      [{'ok  ' if _passed_sleeve(g) else 'VETO'}] {g}")
 
     ok, msg = Journal(out).verify()
     print(f"\n[replay] {out}: {msg}")
