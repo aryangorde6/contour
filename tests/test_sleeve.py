@@ -572,6 +572,9 @@ def test_a_fill_that_outlived_its_cycle_is_adopted_not_re_bought(
                     {"symbol": "SPY260911P00749000", "qty": "2",
                      "asset_class": "us_option"}]
 
+        def open_orders(self):
+            return []                   # died BEFORE the stop was placed
+
     j = Journal(tmp_path / "j.jsonl")
     got = _reconcile_sleeve(Orphan(), None, j)          # saved file says flat
     assert got is not None, "41 shares of QQQ are not nothing"
@@ -579,11 +582,93 @@ def test_a_fill_that_outlived_its_cycle_is_adopted_not_re_bought(
     assert got.entry_price == 717.01, "priced off the broker's own average"
     assert got.stop_price == round(717.01 * (1 - C.SLEEVE_STOP_PCT), 2)
     assert got.stop_order_id is None, \
-        "None is the flag the cycle's retry looks for; adopting must also " \
-        "schedule the protection that was never placed"
+        "nothing rests at the broker, so None is the flag the cycle's retry " \
+        "looks for: adopting must also schedule the protection never placed"
     rec = next(r.payload for r in j.read()
                if r.payload["event"] == "sleeve_orphan_adopted")
     assert rec["shares"] == 41
+
+
+def test_an_orphan_whose_stop_already_rests_adopts_it_instead_of_asking_again(
+        isolated_state, tmp_path):
+    """The other half of the orphan case, and the more likely half.
+
+    `submit_sleeve_entry` rests the stop immediately after the fill and the
+    state file is written at the END of the cycle, so the window where shares
+    exist with no saved position is mostly a window where the stop is ALREADY
+    working. Adopting with `stop_order_id=None` there sends the retry at
+    loop.py:285 to ask for a second stop on shares the broker has reserved
+    against the first -- refused 403 `insufficient qty available`, and
+    journalled as "position is UNPROTECTED overnight" about a position that is
+    protected. Verified against the live broker on the dev account 2026-09-01:
+    the refusal is real, which is why this was a false alarm every cycle and
+    not a naked short.
+    """
+    from contour.__main__ import _reconcile_sleeve
+
+    class Protected:
+        def positions(self):
+            return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity",
+                     "avg_entry_price": "717.01"}]
+
+        def open_orders(self):
+            return [{"id": "stop-abc", "symbol": "QQQ", "side": "sell",
+                     "type": "stop", "qty": "41", "stop_price": "688.33",
+                     "time_in_force": "gtc"}]
+
+    j = Journal(tmp_path / "j.jsonl")
+    got = _reconcile_sleeve(Protected(), None, j)
+    assert got is not None and got.shares == 41
+    assert got.stop_order_id == "stop-abc", \
+        "the protection that already exists must be adopted with the shares"
+    rec = next(r.payload for r in j.read()
+               if r.payload["event"] == "sleeve_orphan_adopted")
+    assert rec["stop_resting"] is True
+
+
+def test_an_adopted_stop_is_managed_at_the_price_the_broker_will_fill(
+        isolated_state, tmp_path):
+    """When the derived stop and the resting order disagree, the resting one
+    wins: it is the order that can actually fill. Ours is arithmetic."""
+    from contour.__main__ import _reconcile_sleeve
+
+    class Drifted:
+        def positions(self):
+            return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity",
+                     "avg_entry_price": "717.01"}]
+
+        def open_orders(self):
+            return [{"id": "stop-xyz", "symbol": "QQQ", "side": "sell",
+                     "type": "stop", "qty": "41", "stop_price": "700.00"}]
+
+    j = Journal(tmp_path / "j.jsonl")
+    got = _reconcile_sleeve(Drifted(), None, j)
+    assert got.stop_price == 700.00, \
+        "managing a 688.33 stop that does not exist misstates the risk"
+    assert any(r.payload["event"] == "sleeve_orphan_stop_differs"
+               for r in j.read())
+
+
+def test_an_unreadable_order_book_does_not_claim_the_stop_is_missing(
+        isolated_state, tmp_path):
+    """Unknown is not "absent". If the orders cannot be read, fall back to
+    what the code did before it looked: ask for the stop, and let the broker
+    refuse if the shares are already spoken for."""
+    from contour.__main__ import _reconcile_sleeve
+
+    class Blind:
+        def positions(self):
+            return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity",
+                     "avg_entry_price": "717.01"}]
+
+        def open_orders(self):
+            raise RuntimeError("504 gateway timeout")
+
+    j = Journal(tmp_path / "j.jsonl")
+    got = _reconcile_sleeve(Blind(), None, j)
+    assert got is not None, "a failed order read is not a reason to abandon"
+    assert got.stop_order_id is None
+    assert got.shares == 41
 
 
 def test_an_orphan_with_no_usable_entry_price_is_flagged_not_guessed(
@@ -594,6 +679,9 @@ def test_an_orphan_with_no_usable_entry_price_is_flagged_not_guessed(
     class NoPrice:
         def positions(self):
             return [{"symbol": "QQQ", "qty": "41", "asset_class": "us_equity"}]
+
+        def open_orders(self):
+            return []
 
     j = Journal(tmp_path / "j.jsonl")
     assert _reconcile_sleeve(NoPrice(), None, j) is None
@@ -611,6 +699,9 @@ def test_a_flat_account_stays_flat_and_says_nothing(isolated_state, tmp_path):
                      "asset_class": "us_option"},
                     {"symbol": "AAPL", "qty": "10", "asset_class": "us_equity",
                      "avg_entry_price": "200.00"}]
+
+        def open_orders(self):
+            return []
 
     j = Journal(tmp_path / "j.jsonl")
     assert _reconcile_sleeve(OptionsOnly(), None, j) is None, \

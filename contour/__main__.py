@@ -235,7 +235,7 @@ def _reconcile_sleeve(broker, pos, journal, now_et=None):
               file=sys.stderr)
         return pos
     if pos is None:
-        return _adopt_orphan_sleeve(held, journal, now_et)
+        return _adopt_orphan_sleeve(broker, held, journal, now_et)
     qty = int(float((held.get(pos.underlying) or {}).get("qty") or 0))
     if qty <= 0:
         print(f"[sleeve] {pos.underlying} is no longer at the broker -- the "
@@ -261,13 +261,21 @@ def _reconcile_sleeve(broker, pos, journal, now_et=None):
     return pos
 
 
-def _adopt_orphan_sleeve(held, journal, now_et):
+def _adopt_orphan_sleeve(broker, held, journal, now_et):
     """Shares in the sleeve's underlying that no saved state accounts for.
 
     Priced off the broker's own average entry, so the 4% stop is the stop the
-    risk budget was actually derived from. `stop_order_id` is deliberately
-    None: that is the flag the cycle's retry looks for, so adopting a position
-    also schedules its protection.
+    risk budget was actually derived from.
+
+    A stop already resting on those shares is adopted WITH them. The orphan
+    case splits in two -- the cycle died before its stop was placed, and the
+    cycle died after -- and only the first needs protection. Telling them
+    apart costs one `order list` call. Skip it and the retry at loop.py:285
+    asks for a stop on shares the broker has already reserved against the
+    live one, is refused 403 `insufficient qty available`, and journals
+    "position is UNPROTECTED overnight" about a position that is protected --
+    every cycle, in the record judges read. Observed on the dev account
+    2026-09-01; the refusal is why this is a false alarm and not a short.
     """
     row = held.get(C.SLEEVE_UNDERLYING)
     qty = int(float((row or {}).get("qty") or 0))
@@ -285,19 +293,69 @@ def _adopt_orphan_sleeve(held, journal, now_et):
                                   "human"})
         return None
     stop = round(entry * (1.0 - C.SLEEVE_STOP_PCT), 2)
+    resting = _resting_sleeve_stop(broker)
+    stop_id = str(resting.get("id")) if resting else None
+    if resting:
+        px = _f(resting.get("stop_price"))
+        if px and abs(px - stop) >= 0.01:
+            # The resting order is the protection that EXISTS; ours is a
+            # number we derived a moment ago. Manage the one that can fill.
+            journal.append({"event": "sleeve_orphan_stop_differs",
+                            "derived": stop, "resting": px,
+                            "reason": "adopting the broker's stop price: it "
+                                      "is the order that will actually fill"})
+            stop = px
+        held_qty = int(_f(resting.get("qty")) or 0)
+        if held_qty and held_qty != qty:
+            journal.append({"event": "sleeve_orphan_stop_partial",
+                            "shares": qty, "protected": held_qty,
+                            "reason": "the resting stop covers fewer shares "
+                                      "than the broker holds; the remainder "
+                                      "is bounded only while the agent runs"})
     print(f"[sleeve] ADOPTED {qty} orphaned {C.SLEEVE_UNDERLYING} @ "
-          f"${entry:.2f} -- stop ${stop:.2f} to be placed this cycle",
-          file=sys.stderr)
+          f"${entry:.2f} -- stop ${stop:.2f} "
+          + (f"already resting ({stop_id})" if stop_id
+             else "to be placed this cycle"), file=sys.stderr)
     journal.append({"event": "sleeve_orphan_adopted",
                     "underlying": C.SLEEVE_UNDERLYING, "shares": qty,
                     "entry_price": entry, "stop_price": stop,
+                    "stop_order_id": stop_id,
+                    "stop_resting": stop_id is not None,
                     "reason": "shares at the broker with no saved position: a "
                               "fill that outlived the cycle that made it. "
                               "Adopted so it is managed and not re-bought"})
     return SleevePosition(
         underlying=C.SLEEVE_UNDERLYING, shares=qty, entry_price=entry,
         stop_price=stop, opened_at=now_et or datetime.now(C.ET),
-        order_id="", stop_order_id=None)
+        order_id="", stop_order_id=stop_id)
+
+
+def _f(v) -> float | None:
+    """Broker numerics arrive as strings. Absent stays absent."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resting_sleeve_stop(broker) -> dict | None:
+    """The protective order already working on the sleeve's shares, if any.
+
+    Unknown is not "absent". A broker read that fails returns None and the
+    cycle's retry then does exactly what it did before this function existed:
+    ask for a stop, and get told no if the shares are already spoken for.
+    """
+    try:
+        orders = broker.open_orders()
+    except Exception as exc:                                 # noqa: BLE001
+        print(f"[sleeve] could not read open orders: {exc}", file=sys.stderr)
+        return None
+    for o in orders:
+        if (str(o.get("symbol")) == C.SLEEVE_UNDERLYING
+                and str(o.get("side")) == "sell"
+                and str(o.get("type") or o.get("order_type")) == "stop"):
+            return o
+    return None
 
 
 def _run_replay(fx: Replay) -> int:

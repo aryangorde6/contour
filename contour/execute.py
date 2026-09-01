@@ -6,6 +6,17 @@ array -- it arrives at the tool as a JSON string and fails pydantic validation
 `--order-class mleg --legs` path handles it correctly. Verified end to end on
 2026-08-30: a 4-leg SPY Sep-11 condor returned status accepted.
 
+The sleeve's equity path was verified the same way on 2026-09-01, dev account,
+market open: buy 1 QQQ filled at 709.62 against a 711.07 marketable limit; the
+GTC stop rested at 681.24 -- 4% below the FILL, not below the 709.65 pre-trade
+spot that would have priced it 681.26 -- and the close cancelled that stop
+before selling, leaving the account flat. A second stop on the same share was
+refused 403 `insufficient qty available (requested: 1, available: 0)`: the
+broker reserves shares against a resting order, so double-protecting cannot
+short the account. That refusal is a safety net, not a licence -- see
+`__main__._adopt_orphan_sleeve`, which adopts the resting stop rather than
+asking for one it would be refused.
+
 Why credentials are passed per invocation and profiles are never used: the CLI
 warns that an ALPACA_API_KEY in the environment SILENTLY OVERRIDES an explicit
 `-p <profile>` flag. Observed live -- `alpaca account get -p dev` returned the
