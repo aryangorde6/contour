@@ -1,0 +1,8 @@
+{
+ "position": null,
+ "retired": false,
+ "underlying": "QQQ",
+ "notional_ceiling": 30000.0,
+ "stop_pct": 0.04,
+ "risk_budget_pct": 0.012
+}
