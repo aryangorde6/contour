@@ -1,9 +1,9 @@
 {
- "last_cycle_utc": "2026-09-01T17:00:03.629439+00:00",
- "cycle_count": 20,
+ "last_cycle_utc": "2026-09-01T17:18:03.352510+00:00",
+ "cycle_count": 21,
  "mode": "TRADE",
  "reason": "entry window open",
- "nav": 99103.09,
+ "nav": 98766.53,
  "entries": 0,
  "brain": "bedrock:zai.glm-5"
 }
