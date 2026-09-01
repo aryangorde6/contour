@@ -15,6 +15,24 @@ which means half the time you are selling the underpriced side. Contour measures
 shows put spreads, some call spreads, some condors, and the dashboard shows the
 measurement that chose.
 
+## What we claim, and what we don't
+
+We do **not** claim this strategy makes money. We backtested it on 387 cycles
+of real historical option prices and got **+0.93% over two and a half years,
+t = +0.37** — indistinguishable from zero, and unstable year to year
+(`research/strategy_backtest.txt`). We also measured a volume-profile strike
+filter that looked strong on touch probability (z = +6.20), shipped it, found
+it *cut* P&L in the same backtest, and **switched it off**. Both the code and
+the negative result are still in the repo.
+
+What we do claim is that every statement here is checkable without our
+credentials: `pytest` runs 255 tests, `python -m contour --replay` reproduces
+the agent's decisions from a committed quote fixture, and
+`python -m contour --verify` walks the hash chain that records them. The live
+P&L, including the two discretionary tail trades that account for the whole
+drawdown, is broken down line by line in
+**[WRITEUP.md](WRITEUP.md)**.
+
 ## Writes through the CLI, and why
 
 Deliberately, and worth stating plainly: Alpaca's MCP server **cannot currently

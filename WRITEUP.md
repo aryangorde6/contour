@@ -4,6 +4,45 @@
 Paper account `PA35XVXLIO0E` · [github.com/aryangorde6/contour](https://github.com/aryangorde6/contour)
 Live dashboard: **[aryangorde6.github.io/contour](https://aryangorde6.github.io/contour/)**
 
+## What we can prove, and what went against us
+
+A trading agent is easy to describe and hard to believe, so the first claim
+here is not about returns — it is about checkability. **Nothing below needs our
+credentials to verify.** `pytest` runs **255 tests**. `python -m contour
+--replay` puts a committed fixture of real SPY/QQQ/IWM quotes through the same
+measurement, selection and gate code the live agent runs, printing every gate
+reason. `python -m contour --verify` walks an append-only SHA-256 hash chain of
+every decision the agent has ever made — and the dashboard re-runs that same
+verification **in your browser** with WebCrypto, so the audit trail does not
+rest on our word. CI runs all of it on every push, with no secrets.
+
+The second claim is the number, stated before the pitch rather than after it.
+At 2026-09-01 19:51 UTC the account is **−1.59%**, and it decomposes cleanly:
+
+| | |
+|---|---:|
+| QQQ Sep-11 720C tail — *realised, discretionary* | −$1,320.00 |
+| TQQQ Sep-11 70C tail — *open, discretionary* | −$264.00 |
+| The systematic book — condor + sleeve, marked to market | −$5.56 |
+| Fees and rounding | −$1.10 |
+| **Total** | **−$1,590.66** |
+
+Both losses are **discretionary tail positions taken at the operator's
+direction, not signals the agent generated.** Each is documented below together
+with the evidence that was on the record *before* it was placed. The strategy
+the agent actually runs is flat on the week.
+
+That is not a defence of the number, and there is a harder admission behind it.
+We backtested this book on **387 cycles of real historical option prices** and
+found **+0.93% over two and a half years, t = +0.37** — no edge distinguishable
+from zero, and unstable across years (2024 −$2,546, 2025 +$3,475, 2026 flat).
+We are not going to claim a strategy works because it survived a week.
+
+Most submissions in this field will claim an edge. We built the instrument that
+would detect ours if it existed, pointed it at ourselves, and are reporting
+what it found. The rest of this document is how that instrument works and what
+else it caught.
+
 ## The idea
 
 Everyone sells iron condors. A condor sells **both** wings unconditionally, so
@@ -119,7 +158,7 @@ position.
 
 **It is paid for out of the same capital floor, not added beside it.** Its 1.2%
 budget is *subtracted* from G3's ramp rather than added to it — and so is
-the tail position below. Three claimants share the halt distance: options book
+the tail carve-out below. Three claimants share the halt distance: options book
 **1.678%**, sleeve **1.200%**, tail **1.122%**, summing to exactly the 4.0% G1
 halts at. A test asserts that as an **equality**, not an inequality, because
 `≤` would still pass if a later edit quietly shrank the book and left a
@@ -127,55 +166,54 @@ percent of the floor unclaimed. Funding both cost the options book two of its
 three positions per name. Set either budget to zero and its room comes straight
 back — asserted too, so a feature nobody runs cannot leave the book shrunk.
 
-## The tail position: taken deliberately, closed on evidence
+## The two tail positions, and what they cost
 
-**It is closed.** Sold 2026-09-01 at $2.83 for $3,113 against $4,433 paid — a
-realised loss of **$1,320**, which was the entire account drawdown. It came off
-for a measured reason rather than a nervous one: `research/strategy_backtest.py`
-found no edge anywhere in this book (+0.93% over 2.5 years, t = +0.37), and
-holding a position at 15.1% implied against 13.1% realised means paying ~15%
-over fair value for variance that nothing else in the book justifies. The
-history below is left standing because the trade was real and so was the
-reasoning that put it on.
+Two long-premium positions were taken this week on the operator's explicit
+instruction, each against evidence put on the record first. Together they are
+the entire drawdown, and they are the clearest thing in this repo to criticise.
 
-On 2026-09-01 the agent bought **11 QQQ Sep-11 720 calls for $4,433**.
-Three things about it needed saying plainly, and still do.
+**The QQQ tail — opened and closed the same day.** 11 QQQ Sep-11 720 calls for
+$4,433 on 2026-09-01, sold at $2.83 for $3,113: a realised **−$1,320**. It came
+off for a measured reason rather than a nervous one — `research/strategy_backtest.py`
+had just returned no edge anywhere in this book, and holding 15.1% implied
+against 13.1% realised means paying ~15% over fair value for variance that
+nothing else in the book justifies.
 
-**And a second tail went on the same evening.** 6 x TQQQ Sep-11 70C at $1.87
-($1,122), placed on an explicit instruction after the evidence against it was
-put on the record: a TQQQ gap-down bounce tests as noise over five years
-(t = +0.42 at the matching gap size, and the mean turns negative at gaps below
--4%), and the calls cost about 1.4x realised vol. It is sized inside the
-per-position cap and carved out of the book ceiling, so it breaks no gate --
-but it consumed the last of the room in front of the capital floor, and the
-entry ramp is therefore closed to zero for the remaining sessions. The floor
-was held by stopping new risk, not by rewriting the cap that measures it.
+**The TQQQ tail — still open.** 6 × TQQQ Sep-11 70C at $1.87 ($1,122), placed
+on a gap-down-bounce thesis *after* the test of that thesis came back negative:
+over five years the bounce is noise (t = +0.42 at the matching gap size, and
+the mean turns **negative** at gaps below −4%), and the calls cost about 1.4×
+realised vol.
 
-**It is long premium.** It *pays* the variance risk premium the rest of this
-document argues is worth harvesting — 15.2% implied against 12.07% realized, a
-1.23× premium, about **−0.32% of NAV in expectation**. It is the only
-negative-expectancy trade in the book, and it is not dressed up as anything
-else.
+Three things are true of both, and none of them are flattering.
 
-**It repairs a real flaw.** The condor is short the SPY 781 call, so across the
-joint book a +3σ rally paid *less* than +1σ (+0.11% against +0.22%) — the book
-was short its own upside. Long calls convert that into positive convexity, and
-that is a genuine structural improvement independent of how the bet lands.
+**They are long premium.** They *pay* the variance risk premium the rest of
+this document argues is worth harvesting. They are the only negative-expectancy
+trades in the book, and they are not dressed up as anything else.
 
-**It does not fit behind the capital floor, and that is the honest cost.** The
-two books at simultaneous max loss sit exactly on the −4% halt; this adds a
-further **4.43%** of bounded loss on top, so total reachable loss is about
-**8.4% behind a 4% halt**. That is precisely the arithmetic `config.py` names
-as *decoration* — reintroduced knowingly, at the operator's direction, as a
-variance decision under a contest whose payoff is convex in rank.
+**One of them repairs a real flaw.** The condor is short the SPY 781 call, so
+across the joint book a +3σ rally paid *less* than +1σ (+0.11% against +0.22%)
+— the book was short its own upside. Long calls convert that into positive
+convexity, and that is a genuine structural improvement independent of how the
+bet lands.
 
-The mitigations are real but partial, and worth stating exactly. The loss is
-**bounded by the premium paid** and cannot gap through a stop the way the
-sleeve can — a long option is the one instrument here whose worst case is
-known in advance and unconditional. G1 still blocks new entries below −3% and
-−4%. What G1 does **not** do is flatten: it is an entry gate, and no exit rule
-in `manage.py` reads NAV at all. Anyone auditing this account should know that
-before inferring a protection that is not there.
+**They are funded out of the capital floor rather than beside it — now.** This
+is where the project caught itself. The QQQ tail sat *outside* G3's ceiling:
+4.0% of book-and-sleeve risk plus 4.43% of bounded tail loss put roughly
+**8.4% of reachable loss behind a 4% halt**, which is precisely the arithmetic
+`config.py` names as *decoration*. Closing it removed that. The TQQQ tail that
+replaced it is carved **out of** the ceiling through `TAIL_RISK_BUDGET_PCT`, so
+book 1.678% + sleeve 1.200% + tail 1.122% sums to exactly the 4.0% halt
+distance — and a test asserts that as an **equality**, so neither reachable
+loss past the halt nor idle room behind it survives a future edit. What paid
+for it was the options book's entry ramp, closed to zero from 2026-09-02:
+**the floor was held by stopping new risk, not by loosening the cap that
+measures it.**
+
+One protection people assume is present and is not: **G1 does not flatten.** It
+is an entry gate, and no exit rule in `manage.py` reads NAV at all. Anyone
+auditing this account should know that before inferring a safety net that is
+not there.
 
 ## Alpaca infrastructure
 
