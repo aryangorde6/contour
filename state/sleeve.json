@@ -13,24 +13,15 @@
  "notional_ceiling": 30000.0,
  "stop_pct": 0.04,
  "risk_budget_pct": 0.012,
- "regime_weight": 0.5,
- "regime_source": "measured",
- "spot": 707.75,
- "decision": "LONG",
- "reason": "LRS 0.50 -> 0.50 x $30,000 ceiling; stop 4% below 707.75",
- "gates": [
-  "S1 ok: NAV $100,014",
-  "S2 ok: session P&L $0",
-  "S3 ok: Stage-2 and ribbon both confirm, LRS 0.50",
-  "S4 ok: 21 shares, $14,863 of $30,000 ceiling",
-  "S5 ok: stop caps loss at $595 / $1,200 carve-out",
-  "S6 ok: 10:13 ET on 2026-09-01",
-  "S7 ok: contour-sleeve-990f9dbc-e"
- ],
- "shares": 21,
- "stop_price": 679.44,
- "weight": 0.5,
- "notes": "LRS 0.50 -> 0.50 x $30,000 ceiling; stop 4% below 707.75",
- "notional": 14862.85,
- "modeled_max_loss": 594.61
+ "exit_check": {
+  "underlying": "QQQ",
+  "shares": 21,
+  "entry_price": 707.82,
+  "stop_price": 679.51,
+  "stop_resting": true,
+  "spot": 708.95,
+  "unrealized": 23.73,
+  "exit": false,
+  "reason": "HOLD: 708.95 vs entry 707.82 (+0.16%), stop 679.51, LRS 0.50"
+ }
 }
