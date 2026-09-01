@@ -70,7 +70,7 @@ differentiator first, the safety argument second, the proof third.
 > can only make the agent trade *less*, and that is structural rather than a
 > promise: `execute.py` never imports the model layer, so no model output can
 > physically reach an order. The model may name event windows to stand down
-> in, return a size multiplier clamped at 1.0, and veto a structure. It may
+> in, veto a structure, and stand the whole book down. It may
 > never choose a strike, size a position, or price one — that is arithmetic,
 > and language models should not do arithmetic that money depends on. The
 > model was chosen by bake-off, not reputation: all six candidates returned
@@ -137,7 +137,7 @@ brain runs on Bedrock.)*
 ## Pre-flight, the morning of
 
 ```bash
-git pull && .venv/bin/python -m pytest -q      # expect 165 passed
+git pull && .venv/bin/python -m pytest -q      # expect 171 passed
 .venv/bin/python -m contour --verify           # hash chain intact
 curl -s -o /dev/null -w '%{http_code}\n' https://aryangorde6.github.io/contour/
 ```

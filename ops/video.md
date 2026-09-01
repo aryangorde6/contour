@@ -12,7 +12,7 @@ have changed by the time you record — re-read it off the dashboard first.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 165 passed
+git pull && .venv/bin/python -m pytest -q          # expect 171 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -202,7 +202,7 @@ structures from measured skew.* Third row: *runnable without our credentials —
 - **Not** signal subscriptions — that is investment advice and needs
   registration. Saying this out loud is a credibility win, not a weakness.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 165 tests. Next:
+**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, 171 tests. Next:
 expiry laddering and rolls; skew priors learned per underlying instead of
 hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
 the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of

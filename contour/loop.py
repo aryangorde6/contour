@@ -225,6 +225,7 @@ def run_cycle(
     # keeps the jobs it demonstrably does: naming event windows, vetoing a
     # structure, and standing the whole book down. Size comes from `regime.py`.
     llm_mult = 1.0
+    brain_floor = 1.0
     if mind is not None:
         adv_b = mind.blackouts(now_et.date())
         # The regime call sizes the entire book, so it has to see the surface
@@ -239,12 +240,19 @@ def run_cycle(
         adv_r = mind.regime(now_et.date(), vrp)
         blackouts = tuple(blackouts) + adv_b.blackouts
         llm_mult = min(adv_b.multiplier, adv_r.multiplier, 1.0)
+        # ... but the ABSENT-brain tier survives, because it is not the model's
+        # judgement. `source == "degraded"` means no provider is configured at
+        # all; a provider that answers never sets it, so the anchored 0.5 that
+        # caused this refactor cannot come back in through here.
+        if adv_b.source == "degraded":
+            brain_floor = C.DEGRADED_BRAIN_SIZE
         if adv_r.no_new_entries_after is not None:
             llm_cutoff = (min(llm_cutoff, adv_r.no_new_entries_after)
                           if llm_cutoff else adv_r.no_new_entries_after)
         journal.append({"event": "mind", "brain": mind.brain,
                         "blackouts": adv_b.source,
                         "regime": adv_r.source, "multiplier": llm_mult,
+                        "brain_floor": brain_floor,
                         "multiplier_role": "stand-down only -- sizing is regime.py",
                         "vrp": vrp,
                         "cutoff": llm_cutoff.isoformat() if llm_cutoff else None,
@@ -304,6 +312,17 @@ def run_cycle(
             journal.append({"event": "decision", **decisions[-1]})
             continue
 
+        # A measured stand-down is a decision, not an unreadable chain. Without
+        # this the weight-0 path falls into the generic "could not assemble"
+        # branch below -- the exact misattribution this file already fixes 45
+        # lines up for the LLM stand-down, reintroduced for the sizer.
+        if reg.weight == 0.0:
+            decisions.append({"underlying": und, "decision": "NO_TRADE",
+                              "reason": f"STAND_DOWN: {reg.notes}",
+                              **m.as_dict()})
+            journal.append({"event": "decision", **decisions[-1]})
+            continue
+
         sided = S.assemble(structure, legs, und)
         # The weight is applied to the NAV used for SIZING only, never to a
         # risk threshold, and it is bounded at 1.0 -- it can only shrink the
@@ -311,7 +330,12 @@ def run_cycle(
         # which is the intended "stand down" behaviour. Every gate still runs
         # against the result: G3 caps per-position and book risk regardless of
         # what any regime says.
-        cand = (S.build(und, structure, sided, nav * reg.weight)
+        # MIN, not product. Both terms are floors meaning "information is
+        # missing, take less risk" -- the measured trend, and the absent brain.
+        # Multiplying two independent 0.5s gives 0.25, which sizes zero
+        # contracts and silently converts a sizing policy into a stand-down
+        # neither tier intended. The binding floor governs.
+        cand = (S.build(und, structure, sided, nav * min(reg.weight, brain_floor))
                 if sided else None)
         if cand is None:
             decisions.append({"underlying": und, "decision": "NO_TRADE",

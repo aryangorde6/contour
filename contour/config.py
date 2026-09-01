@@ -210,3 +210,11 @@ LRS_LONGRUN_D     = 1260   # ~5y long-run vol, the scaler's denominator
 LRS_VETO_K        = 1.25   # vol veto fires only above this multiple of long-run
 LRS_WARN_W        = 0.5    # weight in the warning rung (above slow, below fast)
 LRS_EXT_CAP       = 0.25   # trim above this much extension over the slow SMA
+
+
+# An ABSENT brain still halves the book. This is a policy response to missing
+# information -- the same class as REGIME_DEGRADED_W -- and NOT the model
+# exercising judgement, so moving sizing out of the model must not delete it.
+# Only `Advice.source == "degraded"` (no provider configured) sets it; a
+# provider that ANSWERS never does, which is what keeps the anchored 0.5 out.
+DEGRADED_BRAIN_SIZE = 0.5

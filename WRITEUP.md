@@ -34,8 +34,8 @@ only make the agent trade less** — enforced structurally, not by convention:
 | The model may | The model may never |
 |---|---|
 | Name event windows to stand down in | Choose a strike |
-| Return a size multiplier, clamped at 1.0 | Size or price a position |
-| Veto a proposed structure | Reverse or widen anything |
+| Veto a proposed structure | **Size** or price a position |
+| Stand the whole book down | Reverse or widen anything |
 
 Strikes, sizing and pricing are arithmetic, and language models should not do
 arithmetic that money depends on. Only what is genuinely language-shaped —

@@ -203,6 +203,17 @@ def _run_replay(fx: Replay) -> int:
         return 2
 
     print(f"\nmode={res.mode}  ({res.reason})")
+    # The sizer owns 100% of position size, so a rehearsal that never shows it
+    # can print twelve green gates while every name sits silently at half
+    # weight because the fixture predates the lookback. Read it back from the
+    # journal just written -- what is shown is what was actually recorded.
+    for rec in Journal(out).read():
+        if rec.payload.get("event") == "regime":
+            p = rec.payload
+            print(f"  {p['underlying']}: regime weight {p['weight']} "
+                  f"[{p['source']}] stage2={p['stage2']} "
+                  f"ribbon={p['ribbon_bull']} lrs={p['lrs_weight']}"
+                  + (f"  -- {p['notes']}" if p["source"] != "measured" else ""))
     for m in res.measurements:
         print(f"  {m['underlying']}: spot {m['spot']}  atm_iv {m['atm_iv']:.1f}  "
               f"rv10 {m['rv10']:.1f}  vrp {m['vrp_ratio']:.2f}  "

@@ -391,3 +391,87 @@ def test_the_journal_says_the_multiplier_no_longer_sizes(isolated_state,
     _, _, recs = cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src("up"))
     mind_rec = [r for r in recs if r["event"] == "mind"][0]
     assert "stand-down only" in mind_rec["multiplier_role"]
+
+
+# --- what the freeze audit found, pinned so it cannot come back -----------
+def test_a_non_unit_regime_weight_actually_reaches_the_sizing_nav(
+        isolated_state, monkeypatch):
+    """The audit mutated `nav * reg.weight` -> `nav` and got 165 green.
+
+    Today's live weight is 1.0, so multiplying by it is a no-op and every
+    assertion written against live values passes with the sizer deleted. This
+    forces a weight that is neither 0 nor 1, so the multiplication is load
+    bearing and a mutation cannot hide.
+    """
+    from contour.regime import Regime
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    monkeypatch.setattr(L.regime, "assess", lambda u, c: Regime(
+        u, True, True, 0.25, 0.25, "measured", "forced"))
+    sizes: list[float] = []
+    real = L.S.build
+    monkeypatch.setattr(L.S, "build",
+                        lambda u, st, sd, nav: sizes.append(nav) or real(u, st, sd, nav))
+    cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src("up"))
+    assert sizes == [25_000.0], "the regime weight never reached S.build"
+
+
+def test_an_absent_brain_still_halves_the_book(isolated_state, monkeypatch):
+    """The tier three judged documents promise: no brain -> half size.
+
+    Sizing moved out of the model, and this tier moved out with it by
+    accident -- a missing LLM key doubled live size instead of halving it.
+    It is a policy response to missing information, not the model's judgement,
+    so it must survive the model losing its sizing job.
+    """
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+
+    class NoProvider(StubMind):
+        brain = "degraded"
+        def blackouts(self, day, headlines=()):
+            return Advice((), 0.5, None, "degraded", "no LLM provider configured")
+        def regime(self, day, vrp):
+            return Advice((), 0.5, None, "degraded", "no LLM provider configured")
+
+    sizes: list[float] = []
+    real = L.S.build
+    monkeypatch.setattr(L.S, "build",
+                        lambda u, st, sd, nav: sizes.append(nav) or real(u, st, sd, nav))
+    _, _, recs = cycle(tmp_path=isolated_state, mind=NoProvider(), ds=Src("up"))
+
+    assert sizes == [50_000.0], "the degraded-brain half-size tier is inert"
+    assert [r for r in recs if r["event"] == "mind"][0]["brain_floor"] == 0.5
+
+
+def test_an_answering_model_can_no_longer_shrink_the_book_by_anchoring(
+        isolated_state, monkeypatch):
+    """The floor must not become a back door for the 0.5 that started this.
+
+    A CONFIGURED brain returning 0.5 is the anchoring bug. Only `source ==
+    "degraded"` -- no provider at all -- may halve.
+    """
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+
+    class Anchored(StubMind):
+        def regime(self, day, vrp):
+            return Advice((), 0.5, None, "llm", "vol premium is thin")
+
+    sizes: list[float] = []
+    real = L.S.build
+    monkeypatch.setattr(L.S, "build",
+                        lambda u, st, sd, nav: sizes.append(nav) or real(u, st, sd, nav))
+    cycle(tmp_path=isolated_state, mind=Anchored(), ds=Src("up"))
+    assert sizes == [100_000.0], "an answering model got its sizing job back"
+
+
+def test_a_measured_stand_down_is_not_blamed_on_the_option_chain(
+        isolated_state, monkeypatch):
+    """Weight 0 used to fall through to "could not assemble a valid structure
+    from the chain" -- the same misattribution loop.py already fixes for the
+    LLM stand-down 45 lines earlier, reintroduced for the sizer."""
+    patch_chains(monkeypatch, {"SPY": (measurement(), chain())})
+    _, _, recs = cycle(tmp_path=isolated_state, mind=StubMind(), ds=Src("down"))
+
+    d = [r for r in recs if r["event"] == "decision"][0]
+    assert d["reason"].startswith("STAND_DOWN:")
+    assert "no trend support" in d["reason"]
+    assert "could not assemble" not in d["reason"]

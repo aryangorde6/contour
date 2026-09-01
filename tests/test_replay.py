@@ -220,3 +220,33 @@ def test_an_unreadable_fixture_never_wins_the_selection(tmp_path):
     (tmp_path / "zzz-broken.json").write_text("{not json")
 
     assert Replay.newest(tmp_path).path.name == "good.json"
+
+
+def test_replay_shows_the_regime_it_sized_on(tmp_path, monkeypatch, capsys):
+    """The sizer owns 100% of position size. A rehearsal that never prints it
+    can show twelve green gates while every name sits at half weight because
+    the fixture predates the lookback -- green gates, green CI, exit 0."""
+    from contour import state
+    from contour.__main__ import _run_replay
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "ROOT", tmp_path / "state")
+    assert _run_replay(Replay.newest(
+        Path(__file__).resolve().parents[1] / "fixtures")) == 0
+
+    out = capsys.readouterr().out
+    lines = [l for l in out.splitlines() if "regime weight" in l]
+    assert lines, "the replay never showed the weight it sized on"
+    assert any("[measured]" in l for l in lines)
+
+
+def test_a_degraded_regime_says_so_on_screen(tmp_path, monkeypatch, capsys):
+    """An old fixture must announce that it degraded, not just look fine."""
+    from contour import state
+    from contour.__main__ import _run_replay
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "ROOT", tmp_path / "state")
+    _run_replay(Replay.load(FIXTURE))          # pre-regime fixture
+    out = capsys.readouterr().out
+    assert "[degraded]" in out, "silent degradation is invisible to a judge"
