@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from . import config as C
-from . import (gates, positions as P, regime, select, sleeve as SL, state,
-               structures as S, surface)
+from . import (gates, positions as P, profile as VP, regime, select,
+               sleeve as SL, state, structures as S, surface)
 from .clock import Phase, is_preopen, resolve
 from .data import DataSource
 from .execute import (CLIBroker, close_sleeve, place_sleeve_stop,
@@ -168,6 +168,27 @@ def run_cycle(
             else:
                 regimes[und] = regime.assess(und, closes)
         return regimes[und]
+
+    # Volume profile, cached like the regime and degraded the same way. The
+    # `bars` seam is OPTIONAL: every fixture recorded before this module
+    # existed lacks it, and those replays must still reproduce the decisions
+    # they recorded. A missing method, an empty window or a failed read all
+    # land on the same degraded profile, which vetoes nothing.
+    profiles: dict[str, VP.Profile] = {}
+
+    def traded(und: str) -> VP.Profile:
+        if und not in profiles:
+            fn = getattr(ds, "bars", None)
+            if fn is None:
+                profiles[und] = VP.degraded(und, "data source serves no bars")
+            else:
+                try:
+                    bars = fn(und, C.PROFILE_LOOKBACK_D)
+                except Exception as exc:                         # noqa: BLE001
+                    profiles[und] = VP.degraded(und, f"bars unavailable: {exc}")
+                else:
+                    profiles[und] = VP.value_area(und, bars)
+        return profiles[und]
 
     exits: list[dict] = []
     live = list(open_positions)
@@ -444,7 +465,18 @@ def run_cycle(
             journal.append({"event": "decision", **decisions[-1]})
             continue
 
-        sided = S.assemble(structure, legs, und)
+        prof = traded(und) if C.PROFILE_ENABLED else VP.degraded(und, "disabled")
+        journal.append({"event": "profile", **prof.as_dict()})
+        # The profile can WEAKEN the structure the skew map chose: if every
+        # in-band call strike sits inside the traded value area, the call side
+        # is dropped and a CONDOR becomes a put spread. Everything downstream
+        # -- sizing, gates, the journal -- must use what came back, not what
+        # was asked for, or the book records a condor it does not hold.
+        sided, structure, snote = S.assemble(structure, legs, und, prof)
+        if snote and snote != "assembled as requested":
+            rd["profile_note"] = snote
+            journal.append({"event": "profile_filter", "underlying": und,
+                            "effective_structure": structure, "note": snote})
         # The weight is applied to the NAV used for SIZING only, never to a
         # risk threshold, and it is bounded at 1.0 -- it can only shrink the
         # book. A weight of 0.0 yields zero contracts and the name is skipped,

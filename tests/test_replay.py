@@ -276,3 +276,47 @@ def test_the_replay_names_the_absent_brain_floor_that_also_sized_it(
     assert "absent-brain floor" in out, (
         "the replay sized on a floor it never showed")
     assert str(C.DEGRADED_BRAIN_SIZE) in out
+
+
+# --- bars, which every fixture recorded before the profile existed lacks ---
+
+def test_a_fixture_recorded_before_the_profile_serves_no_bars_rather_than_raising():
+    """The four committed fixtures predate `profile.py`. Replaying them has to
+    keep working and keep producing the decisions they recorded -- so a
+    missing bars bucket degrades the filter instead of failing the cycle."""
+    from contour.replay import Replay
+    fx = Replay({"format": 1, "as_of_et": AS_OF.isoformat(),
+                 "spot": {}, "closes": {}, "legs": {}})
+    assert fx.bars("SPY", 20) == []
+
+
+def test_a_fixture_that_has_bars_but_not_this_name_still_raises():
+    """Forgiving an ABSENT bucket is back-compat. Forgiving a missing entry
+    inside a bucket that exists would hide a real recording gap."""
+    from contour.replay import Replay, ReplayError
+    fx = Replay({"format": 1, "as_of_et": AS_OF.isoformat(),
+                 "spot": {}, "closes": {}, "legs": {},
+                 "bars": {"SPY|20": []}})
+    with pytest.raises(ReplayError):
+        fx.bars("QQQ", 20)
+
+
+def test_the_recorder_tees_bars_so_a_replay_can_rebuild_the_profile(tmp_path):
+    from contour.models import Bar
+    from contour.replay import Recorder, Replay
+
+    class WithBars(FakeSource):
+        def bars(self, underlying, n):
+            self.calls += 1
+            return [Bar(high=101.0, low=99.0, close=100.0, volume=5e6)] * n
+
+    src = WithBars()
+    rec = Recorder(src, tmp_path / "fx.json")
+    rec.spot("SPY")
+    rec.bars("SPY", 20)
+    rec.save(AS_OF)
+
+    fx = Replay.load(tmp_path / "fx.json")
+    got = fx.bars("SPY", 20)
+    assert len(got) == 20
+    assert got[0].volume == 5e6

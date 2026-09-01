@@ -16,7 +16,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .models import Leg
+from .models import Bar, Leg
 
 FORMAT = 1
 
@@ -61,7 +61,7 @@ class Recorder:
         self.data: dict[str, Any] = {
             "format": FORMAT,
             "captured_utc": datetime.now(timezone.utc).isoformat(),
-            "spot": {}, "closes": {}, "legs": {},
+            "spot": {}, "closes": {}, "legs": {}, "bars": {},
         }
 
     def spot(self, underlying: str) -> float:
@@ -78,6 +78,13 @@ class Recorder:
         v = self.inner.legs(underlying, expiry, spot)
         self.data["legs"][f"{underlying}|{expiry.isoformat()}"] = [
             _leg_to_dict(l) for l in v]
+        return v
+
+    def bars(self, underlying: str, n: int) -> list[Bar]:
+        v = self.inner.bars(underlying, n)
+        self.data["bars"][f"{underlying}|{n}"] = [
+            {"high": b.high, "low": b.low, "close": b.close, "volume": b.volume}
+            for b in v]
         return v
 
     def save(self, now_et: datetime) -> Path:
@@ -154,6 +161,19 @@ class Replay:
     def legs(self, underlying: str, expiry: date, spot: float) -> list[Leg]:
         return [_leg_from_dict(d)
                 for d in self._get("legs", f"{underlying}|{expiry.isoformat()}")]
+
+    def bars(self, underlying: str, n: int) -> list[Bar]:
+        """Absent in every fixture recorded before the profile existed, and
+        that is not an error: those replays simply run without the filter and
+        reproduce exactly the decisions they were recorded making. Only a
+        MISSING BUCKET is forgiven -- a fixture that has bars but not for this
+        name is a real gap and raises like any other."""
+        bucket = self.data.get("bars")
+        if not bucket:
+            return []
+        return [Bar(high=float(d["high"]), low=float(d["low"]),
+                    close=float(d["close"]), volume=float(d["volume"]))
+                for d in self._get("bars", f"{underlying}|{n}")]
 
 
 class ReplayBroker:

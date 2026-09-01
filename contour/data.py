@@ -12,13 +12,18 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Protocol, Sequence
 
-from .models import Leg
+from . import config as C
+from .models import Bar, Leg
 
 
 class DataSource(Protocol):
     def spot(self, underlying: str) -> float: ...
     def closes(self, underlying: str, n: int) -> list[float]: ...
     def legs(self, underlying: str, expiry: date, spot: float) -> list[Leg]: ...
+    # OPTIONAL. Fixtures recorded before the volume profile existed cannot
+    # answer it, so every caller reaches it through getattr and treats a
+    # missing method exactly like an empty window: no profile, no veto.
+    def bars(self, underlying: str, n: int) -> list[Bar]: ...
 
 
 BAND_PCT = 0.12          # +/-12% strike band; unfiltered chain calls will 429
@@ -52,6 +57,19 @@ class AlpacaData:
         )
         bars = self._stk.get_stock_bars(req).data[underlying]
         return [b.close for b in bars][-n:]
+
+    def bars(self, underlying: str, n: int = C.PROFILE_LOOKBACK_D) -> list[Bar]:
+        """Daily OHLCV. `closes` drops volume, and volume is the whole point."""
+        from alpaca.data.requests import StockBarsRequest
+        from alpaca.data.timeframe import TimeFrame
+        from datetime import timedelta
+        req = StockBarsRequest(
+            symbol_or_symbols=underlying, timeframe=TimeFrame.Day,
+            start=datetime.now(timezone.utc) - timedelta(days=n * 3),
+        )
+        bs = self._stk.get_stock_bars(req).data[underlying]
+        return [Bar(high=float(b.high), low=float(b.low), close=float(b.close),
+                    volume=float(b.volume)) for b in bs][-n:]
 
     def _contracts(self, underlying: str, expiry: date,
                    lo: float, hi: float) -> dict[str, dict]:

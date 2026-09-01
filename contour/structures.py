@@ -12,6 +12,7 @@ from math import gcd
 from typing import Literal, Sequence
 
 from . import config as C
+from . import profile as P
 from .models import Candidate, Leg, Structure
 
 Direction = Literal["credit", "debit"]
@@ -144,37 +145,73 @@ def _wing(legs: Sequence[Leg], short: Leg, wing_width: float,
     return min(same_type, key=lambda l: abs(l.strike - target))
 
 
-def assemble(structure: Structure, legs: Sequence[Leg],
-             underlying: str) -> list[Leg] | None:
+def assemble(structure: Structure, legs: Sequence[Leg], underlying: str,
+             profile: "P.Profile | None" = None,
+             ) -> tuple[list[Leg] | None, Structure, str]:
     """Turn a chosen structure plus a chain into concrete, sided legs.
+
+    Returns (legs, EFFECTIVE structure, note). The effective structure can be
+    weaker than the one asked for: if the volume profile vetoes every in-band
+    call strike, a CONDOR is downgraded to the put side alone rather than
+    being built through the traded band. The caller must size and journal
+    against what came back, not what it asked for.
 
     Long wings are picked by STRIKE DISTANCE, not by delta: a fixed wing width
     is what makes max loss knowable in advance, which is what G3 sizes against.
-    G7 still range-checks the resulting wing delta afterwards.
+    G7 still range-checks the resulting wing delta afterwards. The profile
+    filter applies to the SHORT strike only -- the wing is measured from
+    whichever short survives it.
     """
     if structure == "NO_TRADE":
-        return None
+        return None, "NO_TRADE", "no structure requested"
     wing_width = C.WING_WIDTH[underlying]
     puts = [l for l in legs if l.option_type == "put"]
     calls = [l for l in legs if l.option_type == "call"]
-    out: list[Leg] = []
+
+    put_legs: list[Leg] | None = None
+    call_legs: list[Leg] | None = None
+    notes: list[str] = []
 
     if structure in ("PUT_CS", "CONDOR"):
         sp = pick_by_delta(puts, 0.13, C.SHORT_DELTA_BAND)
-        if sp is None:
-            return None
-        lp = _wing(puts, sp, wing_width, above=False)
-        if lp is None:
-            return None
-        out += [_with_side(sp, "sell"), _with_side(lp, "buy")]
+        lp = _wing(puts, sp, wing_width, above=False) if sp else None
+        if sp is not None and lp is not None:
+            put_legs = [_with_side(sp, "sell"), _with_side(lp, "buy")]
+        else:
+            notes.append("put side: no strike in the delta band")
 
     if structure in ("CALL_CS", "CONDOR"):
-        sc = pick_by_delta(calls, 0.13, C.SHORT_DELTA_BAND)
-        if sc is None:
-            return None
-        lc = _wing(calls, sc, wing_width, above=True)
-        if lc is None:
-            return None
-        out += [_with_side(sc, "sell"), _with_side(lc, "buy")]
+        pool = calls
+        use_profile = (C.PROFILE_ENABLED and profile is not None
+                       and profile.source == "measured")
+        if use_profile:
+            in_band = [l for l in calls if l.delta is not None
+                       and C.SHORT_DELTA_BAND[0] <= abs(l.delta)
+                       <= C.SHORT_DELTA_BAND[1]]
+            pool = [l for l in calls if P.call_strike_ok(l.strike, profile)]
+            removed = sum(1 for l in in_band
+                          if not P.call_strike_ok(l.strike, profile))
+            if removed:
+                notes.append(f"profile vetoed {removed} of {len(in_band)} "
+                             f"in-band call strikes at or below VAH "
+                             f"{profile.vah:.2f}")
+        sc = pick_by_delta(pool, 0.13, C.SHORT_DELTA_BAND)
+        # The wing comes from the FULL chain: the filter judges where we are
+        # short, not where we are protected.
+        lc = _wing(calls, sc, wing_width, above=True) if sc else None
+        if sc is not None and lc is not None:
+            call_legs = [_with_side(sc, "sell"), _with_side(lc, "buy")]
+        elif use_profile and sc is None:
+            notes.append(f"call side dropped: every in-band strike sits "
+                         f"inside the {profile.bars}d value area")
+        else:
+            notes.append("call side: no strike in the delta band")
 
-    return out or None
+    note = "; ".join(notes) if notes else "assembled as requested"
+    if put_legs and call_legs:
+        return put_legs + call_legs, "CONDOR" if structure == "CONDOR" else structure, note
+    if put_legs:
+        return put_legs, "PUT_CS", note
+    if call_legs:
+        return call_legs, "CALL_CS", note
+    return None, "NO_TRADE", note

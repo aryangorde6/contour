@@ -92,6 +92,65 @@ these names have none. Adding one would mean guessing the mean and standard
 deviation of a distribution we have not observed — which is exactly the
 hard-coding the roadmap wants replaced by learned priors, not extended.
 
+### The strike comes from the traded distribution, not only the modelled one
+
+The structure map above chooses *which side* to sell. `SHORT_DELTA_BAND` then
+chooses *where*: the short strike is the one nearest 0.13 delta. Delta is the
+risk-neutral probability of finishing in the money under a lognormal centred on
+spot — smooth, symmetric, memoryless. The tape is none of those things.
+
+`contour/profile.py` adds the measured distribution beside the modelled one. A
+volume profile over the last 20 sessions gives a POC (the modal traded price)
+and a value area holding 70% of the volume. When a strike the delta band called
+safe sits *inside* that band, the model and the tape disagree, and the tape is
+describing where price has actually been spending its time.
+
+**The measurement.** Five years of daily bars on SPY, QQQ and IWM (2021-09-03
+to 2026-09-01, 1253 bars each), horizon 8 trading days to match the expiry the
+agent trades. Distance is held **fixed in sigma units**, so the strike is
+identical in both arms and the only thing that moves is where the value area
+sits. At 1.13 sigma — the 0.13-delta strike this feeds — an eight-day touch
+happens:
+
+```
+call strike INSIDE the value area    32.8%   (247 / 753)
+call strike OUTSIDE the value area   21.9%   (627 / 2859)     z = +6.20
+```
+
+Ten points of touch probability, on strikes the delta band had already
+accepted. It survives slicing: every vol regime (+6.8, +14.3, +20.4 points for
+high/mid/low), all three names (SPY +15.9, QQQ +12.9, IWM +4.8), and five of
+six calendar years. The exception is 2022, at +1.1 points and insignificant —
+in a sustained downtrend call strikes are barely tested at all, so there is
+nothing there to find. It is not decaying: 2026 is the strongest year in the
+sample at +29.2.
+
+**Only calls are filtered, and the reason is the null result.** The identical
+test on the put side returns the *wrong sign* with no significance: −1.6 points
+at 1.13 sigma, z = −1.08. The asymmetry is mechanical rather than mysterious.
+Upside is a grind that walks up through the profile, so a call strike inside
+the traded band is standing in the path. Downside gaps over the whole profile
+in a session or two, so where the value area sits says nothing about it.
+Applying the filter to puts would be decoration, and the roadmap's own standard
+for decoration is that it gets deleted.
+
+**What it can do, and what it cannot.** It can only *remove* a call strike from
+consideration. It never adds one, widens a band, sizes anything, or reaches an
+order. If it removes every in-band call strike, the call side is dropped and a
+CONDOR is journaled and sized as a PUT_CS — the book must record what it holds,
+not what the skew map first asked for. An unreadable window, an absent
+`bars` seam, or fewer than 10 bars all produce a `degraded` profile that vetoes
+nothing, because a profile we could not read is not evidence of a busy strike.
+
+Live on 2026-09-01 it bound on exactly one name. SPY (spot 762, VAH 775, strike
+778) and QQQ (spot 709, VAH 723, strike 730) were clear. IWM was trading at 291
+against a value area of 298–303 — price sitting *below* its own recent range —
+and the 0.13-delta call was 300, inside it. The condor became a put spread, and
+the journal says so in the same record that carries the fill.
+
+The claim is reproducible rather than asserted: `research/profile_edge.py` and
+`research/profile_edge_robustness.py` print the tables above from live bars.
+
 ---
 
 ## AI logic

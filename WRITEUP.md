@@ -25,6 +25,38 @@ not just the README: across a week the account shows put spreads, call spreads,
 condors and flat sessions because the surface moved, not because a model changed
 its mind. SPY, QQQ and IWM, one locked expiry (2026-09-11).
 
+## The strike comes from the traded distribution too
+
+The rule above picks *which side* to sell. A 0.13-delta band then picks *where*
+— and delta is a modelled number: the probability of finishing in the money
+under a lognormal centred on spot. A volume profile measures the other thing,
+where price has actually traded, and the two disagree often enough to matter.
+
+Five years of SPY/QQQ/IWM daily bars, distance held fixed in sigma units so the
+strike is identical in both arms and only the value area moves. At the distance
+the agent actually sells, an eight-day touch happens **32.8%** of the time when
+the call strike sits inside the traded value area and **21.9%** when it sits
+outside (z = +6.20). It holds in every volatility regime, all three names and
+five of six years, and 2026 is the strongest year in the sample.
+
+So Contour declines to sell upside into the band where price has been living.
+
+Calls only — and that is a result, not a shortcut. The same test on puts comes
+back with the *wrong sign* and no significance (−1.6 points, z = −1.08),
+because downside gaps over the profile instead of grinding through it. Filtering
+puts would be decoration.
+
+It can only ever *remove* a strike. If every in-band call strike is inside the
+value area, the call side is dropped and the condor is sized, gated and
+journaled as a put spread — what the book holds, not what it first asked for.
+An unreadable profile vetoes nothing.
+
+On 2026-09-01 it bound on one of three names: SPY and QQQ were clear, while IWM
+traded at 291 against a 298–303 value area, making its 0.13-delta 300 call a
+strike sitting inside the zone. That condor became a put spread.
+
+Both tables regenerate from live bars via `research/profile_edge.py`.
+
 ## AI logic
 
 GLM-5 on **Amazon Bedrock**, through the Converse API. **Every wired output can

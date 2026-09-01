@@ -9,6 +9,15 @@ Structure = Literal["NO_TRADE", "PUT_CS", "CALL_CS", "CONDOR"]
 
 
 @dataclass(frozen=True)
+class Bar:
+    """One OHLCV bar. Volume is what `profile.py` needs and `closes()` drops."""
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+@dataclass(frozen=True)
 class Leg:
     symbol: str                     # OCC symbol
     side: Literal["buy", "sell"]

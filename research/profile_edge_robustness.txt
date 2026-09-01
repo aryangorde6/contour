@@ -1,0 +1,18 @@
+
+--- by symbol ---
+  IWM      inside  27.0% (n=  278)  outside  22.1% (n=  926)  edge  +4.8%  z +1.68
+  QQQ      inside  35.4% (n=  243)  outside  22.5% (n=  961)  edge +12.9%  z +4.15
+  SPY      inside  37.1% (n=  232)  outside  21.2% (n=  972)  edge +15.9%  z +5.07
+
+--- by year ---
+  2021     inside  36.4% (n=   22)  outside  15.4% (n=  104)  edge +21.0%  z +2.28
+  2022     inside  18.1% (n=  282)  outside  17.0% (n=  471)  edge  +1.1%  z +0.39
+  2023     inside  45.3% (n=  150)  outside  28.3% (n=  600)  edge +17.0%  z +4.00
+  2024     inside  38.1% (n=  134)  outside  23.6% (n=  622)  edge +14.4%  z +3.45
+  2025     inside  35.9% (n=  103)  outside  18.7% (n=  647)  edge +17.2%  z +3.98
+  2026     inside  51.6% (n=   62)  outside  22.4% (n=  415)  edge +29.2%  z +4.88
+
+--- by vol regime ---
+  high     inside  22.5% (n=  329)  outside  15.7% (n=  862)  edge  +6.8%  z +2.77
+  low      inside  44.5% (n=  146)  outside  30.2% (n= 1045)  edge +14.3%  z +3.47
+  mid      inside  38.8% (n=  278)  outside  18.5% (n=  952)  edge +20.4%  z +7.09
