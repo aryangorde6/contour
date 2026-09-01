@@ -62,7 +62,7 @@ jobs:
 
       - name: Install the Alpaca CLI
         if: steps.cli-cache.outputs.cache-hit != 'true'
-        run: go install github.com/alpacahq/cli/cmd/alpaca@latest
+        run: go install github.com/alpacahq/cli/cmd/alpaca@v0.0.14
 
       - name: Install dependencies
         run: |

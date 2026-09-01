@@ -278,7 +278,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 | `contour/llm.py` | Provider seam: Bedrock / Featherless / Gemini behind one `parse()` |
 | `contour/state.py` | The dashboard snapshot + the equity series + `written_at.json` per-file timestamps + `next_cycle()` |
 | `contour/clock.py` | Session phase; cron never trusts its firing time; `is_preopen()` names the 09:20 ET planning window |
-| `contour/mind.py` | The brain: blackout windows, regime multiplier, structure veto |
+| `contour/mind.py` | The brain: blackout windows, stand-down multiplier (not sizing), structure veto |
 | `contour/loop.py` | One idempotent cycle; exits before entries, always |
 | `contour/__main__.py` | `--once --dry --as-of --dev --verify --brain-check --record --replay` |
 

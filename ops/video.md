@@ -108,7 +108,7 @@ four zones.*
 > Llama-4 both invented a Monday ISM window that would have stood the agent
 > down on the week's one clear session.
 
-### 5 · Twelve gates, and proof — 2:10–2:55 · *terminal: run `--replay` live*
+### 5 · Twelve gates plus seven, and proof — 2:10–2:55 · *terminal: run `--replay` live*
 
 > Twelve risk gates. Pure functions, no I/O, fixed order, evaluated before
 > every order — and the reason is journaled whether the gate passes or fails,

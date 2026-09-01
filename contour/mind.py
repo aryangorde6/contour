@@ -3,8 +3,8 @@ may do -- it can never widen anything.
 
 This is enforced structurally, not by convention: execute.py never imports this
 module, so no LLM output can reach an order. What the model returns is a set of
-time windows to stand down in, a size multiplier bounded at 1.0, and a boolean
-veto. It cannot select a strike, size a position, price an order, or reverse a
+time windows to stand down in, a multiplier bounded at 1.0 that stands the book
+down but does not size it (regime.py does the sizing), and a boolean veto. It cannot select a strike, size a position, price an order, or reverse a
 structure. Those are arithmetic, and language models should not do arithmetic
 that money depends on.
 
