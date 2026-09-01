@@ -327,27 +327,15 @@ LRS_EXT_CAP       = 0.25   # trim above this much extension over the slow SMA
 # Only `Advice.source == "degraded"` (no provider configured) sets it; a
 # provider that ANSWERS never does, which is what keeps the anchored 0.5 out.
 DEGRADED_BRAIN_SIZE = 0.5
-
-
-# --- deliberately held outside the options book ---------------------------
-# Symbols the book does not manage and must NOT report as orphans. The
-# discrepancy check in `__main__` exists to catch legs that leaked out of a
-# tracked structure -- a position opened on purpose, with its rationale
-# written down, is not that. Listing it here keeps the check meaningful
-# rather than silencing it; an empty tuple restores the old behaviour exactly.
+# --- positions the book holds but does not manage --------------------------
+# EMPTY as of 2026-09-01 17:59 UTC. The long QQQ 720C tail was closed at $2.83
+# for $3,113 against $4,433 paid -- a realised loss of $1,320, which was the
+# entire account drawdown. It went on as a deliberate variance bet and came
+# off for a measured reason: at 15.1% implied against 13.1% realised it was
+# costing ~15% over fair value to hold, and research/strategy_backtest.py had
+# just found no edge anywhere in the book to justify paying that.
 #
-# 2026-09-01, at the operator's explicit direction: 11 x QQQ Sep-11 720 calls,
-# a long-premium tail position. The reason it is not merely a punt: the credit
-# book is SHORT the upside. The condor sells the SPY 781 call, so a hard rally
-# gives back what the sleeve earns -- measured across the joint book, +3 sigma
-# paid LESS than +1 sigma (+0.11% vs +0.22%). These calls convert that into
-# positive convexity.
-#
-# It is negative expected value and that is stated, not hidden: the strike
-# implies 14.85% vol against rv10 of 12.07%, a 1.23x premium, about -0.32% of
-# NAV in expectation. It was taken as a variance decision under a contest
-# whose payoff is convex in rank, exactly as the sleeve was. Loss is bounded
-# by the premium ($3,839, 3.8% of NAV) -- a long option cannot lose more than
-# it cost, which is why it carries no stop. It is not managed: it is marked at
-# the deadline and expires 2026-09-11, after the contest closes.
-ACKNOWLEDGED_SYMBOLS = ("QQQ260911C00720000",)
+# The mechanism stays because it is the honest way to hold an unmanaged leg:
+# an acknowledged symbol is excluded from the orphan check but still counted
+# and reported, so the book never silently disowns something it holds.
+ACKNOWLEDGED_SYMBOLS: tuple[str, ...] = ()

@@ -539,9 +539,13 @@ rather than evidence.
 designed to be *right often and wrong small*: most weeks it collects a modest
 credit, and its bad outcome is bounded by the wing width on every position.
 
-**The tail position is a third thing, and it is the one trade here with
-negative expected value.** On 2026-09-01 the book bought 11 QQQ Sep-11 720
-calls for $4,433. It is *long* premium: it pays the variance risk premium this
+**The tail position was a third thing, and it was the one trade here with
+negative expected value. It is now CLOSED** -- sold 2026-09-01 at $2.83 for
+$3,113 against $4,433 paid, realising -$1,320, which was the whole account
+drawdown. It was closed once `research/strategy_backtest.py` showed no edge
+anywhere in the book to justify paying ~15% over fair value to hold variance.
+What follows is what it was and why it went on, kept rather than rewritten.
+On 2026-09-01 the book bought 11 QQQ Sep-11 720 calls for $4,433. It is *long* premium: it pays the variance risk premium this
 document argues is worth harvesting, at 15.2% implied against 12.07% realized
 -- a 1.23x premium, about **-0.32% of NAV in expectation**. Calling it anything
 else would be the one dishonest line in a submission whose whole claim is that

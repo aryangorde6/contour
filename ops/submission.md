@@ -126,8 +126,11 @@ differentiator first, the safety argument second, the proof third.
 > that trade-off is stated in the write-up rather than discovered in the
 > order history.
 >
-> **And one trade that breaks my own rule, named rather than buried.** On
-> 2026-09-01 I bought 11 QQQ Sep-11 720 calls for $4,433. It is *long* premium
+> **And one trade that broke my own rule, named rather than buried — then
+> closed.** On 2026-09-01 I bought 11 QQQ Sep-11 720 calls for $4,433 and sold
+> them the same day at $2.83 for $3,113, realising **−$1,320**: the entire
+> drawdown. It came off because a backtest over 387 cycles found no edge in the
+> book worth paying ~15% over fair value to lever. It is *long* premium
 > — it pays the variance risk premium the rest of this agent harvests, 15.2%
 > implied against 12.07% realised, about **−0.32% of NAV in expectation**. It
 > fixes something real: the condor is short the SPY 781 call, so across the

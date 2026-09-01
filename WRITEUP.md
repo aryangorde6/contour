@@ -124,10 +124,19 @@ still sit exactly on G1's −4% halt, and a test asserts it. Set
 `SLEEVE_NOTIONAL = 0` and the previous numbers return exactly. *The tail
 position below sits outside this arithmetic, and says so.*
 
-## The tail position, and the floor it does not fit behind
+## The tail position: taken deliberately, closed on evidence
 
-On 2026-09-01 the agent also bought **11 QQQ Sep-11 720 calls for $4,433**.
-Three things about it need saying plainly.
+**It is closed.** Sold 2026-09-01 at $2.83 for $3,113 against $4,433 paid — a
+realised loss of **$1,320**, which was the entire account drawdown. It came off
+for a measured reason rather than a nervous one: `research/strategy_backtest.py`
+found no edge anywhere in this book (+0.93% over 2.5 years, t = +0.37), and
+holding a position at 15.1% implied against 13.1% realised means paying ~15%
+over fair value for variance that nothing else in the book justifies. The
+history below is left standing because the trade was real and so was the
+reasoning that put it on.
+
+On 2026-09-01 the agent bought **11 QQQ Sep-11 720 calls for $4,433**.
+Three things about it needed saying plainly, and still do.
 
 **It is long premium.** It *pays* the variance risk premium the rest of this
 document argues is worth harvesting — 15.2% implied against 12.07% realized, a

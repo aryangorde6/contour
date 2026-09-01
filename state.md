@@ -735,3 +735,30 @@ curl -s https://raw.githubusercontent.com/aryangorde6/contour/agent-state/state/
 
 The Alpaca CLI is at `~/go/bin/alpaca` (v0.0.14). Python venv is pinned to
 **3.12** — the system 3.14 breaks `alpaca-py`.
+
+## 2026-09-01 ~18:00 UTC — the tail is closed, and why
+
+Sold 11 QQQ260911C00720000 at **$2.83** for **$3,113** against $4,433 paid.
+Realised **−$1,320**, which was the entire account drawdown: everything else in
+the book was +$11 combined at the time.
+
+The reason is measured rather than nervous. `research/strategy_backtest.py`
+drives the agent's own `choose_structure` / `assemble` / `build` / `should_exit`
+over 387 cycles of real option prices (Jan 2024 – Aug 2026) and finds **+0.93%
+in total, t = +0.37** — no edge, and unstable besides: 2024 −$2,546 (PF 0.53),
+2025 +$3,475 (PF 2.38), 2026 flat to the dollar. Holding the tail meant paying
+15.1% implied against 13.1% realised — ~15% over fair value — to buy variance
+that nothing else in the book justified.
+
+The same backtest turned OFF the volume-profile filter shipped hours earlier
+(`PROFILE_ENABLED = False`): it cut P&L +$926 → +$230 while avoiding **no**
+losses. The touch-rate finding behind it (z = +6.20) is real and reproduces;
+touch probability was simply the wrong objective. That is the day's actual
+lesson and it is written into `config.py` beside the flag.
+
+Book now: 21 QQQ shares (stop resting) + the SPY Sep-11 condor. NAV $98,692
+(−1.31%). `ACKNOWLEDGED_SYMBOLS` is back to empty.
+
+**Open, and now the largest thing by far: the lablab submission and the video.**
+Neither is filed. P&L is the first thing judged, but an unfiled entry scores
+zero regardless of it.

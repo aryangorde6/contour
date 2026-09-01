@@ -766,7 +766,7 @@ def test_a_corrupt_sleeve_file_does_not_silently_retire_an_untraded_sleeve(
 
 
 # --- 6. acknowledged non-book holdings ------------------------------------
-def test_an_acknowledged_leg_is_not_reported_as_an_orphan():
+def test_an_acknowledged_leg_is_not_reported_as_an_orphan(monkeypatch):
     """A position held on purpose is not the failure the check hunts for.
 
     `_held_symbols` matches any SPY2/QQQ2/IWM2 symbol, so ANY option position
@@ -777,7 +777,11 @@ def test_an_acknowledged_leg_is_not_reported_as_an_orphan():
     """
     from contour.__main__ import _acknowledged_legs, _orphan_legs
 
-    ack = C.ACKNOWLEDGED_SYMBOLS[0]
+    # Patched in rather than read from config: the mechanism must hold whether
+    # or not the book currently acknowledges anything, and as of 2026-09-01 it
+    # acknowledges nothing.
+    ack = "QQQ260911C00720000"
+    monkeypatch.setattr(C, "ACKNOWLEDGED_SYMBOLS", (ack,))
     held = {ack, "SPY260911C00781000"}
     tracked = {"SPY260911C00781000"}
     assert _orphan_legs(held, tracked) == set(), \
@@ -785,12 +789,13 @@ def test_an_acknowledged_leg_is_not_reported_as_an_orphan():
     assert _acknowledged_legs(held) == {ack}
 
 
-def test_a_genuine_orphan_still_surfaces_alongside_an_acknowledged_one():
+def test_a_genuine_orphan_still_surfaces_alongside_an_acknowledged_one(monkeypatch):
     """Subtracting the acknowledged set must not blind the check. This is the
     property that keeps it a control rather than decoration."""
     from contour.__main__ import _orphan_legs
 
-    ack = C.ACKNOWLEDGED_SYMBOLS[0]
+    ack = "QQQ260911C00720000"
+    monkeypatch.setattr(C, "ACKNOWLEDGED_SYMBOLS", (ack,))
     leaked = "SPY260911P00745000"
     assert _orphan_legs({ack, leaked}, set()) == {leaked}
 
