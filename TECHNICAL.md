@@ -36,6 +36,38 @@ flat sessions — because the surface changed, not because a model changed its
 mind. Universe is SPY, QQQ and IWM on a single locked expiry (2026-09-11):
 three liquid names, one expiry, so every comparison is like-for-like.
 
+### The universe is three names because we measured the alternative
+
+By Tuesday only SPY cleared the 1.30 floor, which pins the book. The cheap
+question to ask before loosening the floor is whether the premium is simply
+somewhere else, so we swept sixteen optionable ETFs through the same
+measurement (`ops/vrp_survey.py`, read-only, places nothing):
+
+| clears 1.30 | VRP | 25d short premium | legs with IV |
+|---|---|---|---|
+| SPY | 1.49 | $2.54 | 269 |
+| EFA | 1.38 | $0.35 | 56 |
+| XLE | 1.38 | $0.43 | 45 |
+
+and QQQ 1.17, IWM 1.27, DIA 1.19, XLF 1.14, USO 1.15, XLU 1.07, XLK 1.00,
+TLT 0.95, SLV 0.95, EEM 0.89, SMH 0.83, GLD 0.71 below it. FXI carried no
+25-delta pair inside the band at all.
+
+The two names that clear the floor besides SPY are **untradeable at this
+account size, not merely unattractive**. A 25-delta EFA put is worth $0.35
+and an XLE put $0.43, so a defined-risk structure on either collects cents;
+G5 caps round-trip friction at 30% of credit and a penny-wide spread on a
+$0.35 leg is already 6% *per leg*, four legs each way. Sizing up to
+compensate multiplies the friction with the credit — it does not dilute it.
+So the floor stays where it is: the premium that exists elsewhere this week
+is on instruments too thin to harvest, which is the same friction argument
+that excluded single names, now measured across ETFs rather than asserted.
+
+A second, quieter blocker: `skew_z` needs a per-underlying `SKEW_PRIOR`, and
+these names have none. Adding one would mean guessing the mean and standard
+deviation of a distribution we have not observed — which is exactly the
+hard-coding the roadmap wants replaced by learned priors, not extended.
+
 ---
 
 ## AI logic
