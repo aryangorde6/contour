@@ -120,11 +120,13 @@ differentiator first, the safety argument second, the proof third.
 > switch. Its 4% stop rests GTC at the broker — the one thing the options book
 > cannot do, because Alpaca serves no resting stop on a multi-leg position. And
 > its risk budget is **subtracted from** the options book's ramp rather than
-> added beside it: 2.8% + 1.2% lands exactly on the −4% hard halt, a test
-> asserts it, and setting the notional to zero restores the previous numbers
-> exactly. The sleeve costs the options book its third position per name, and
-> that trade-off is stated in the write-up rather than discovered in the
-> order history.
+> added beside it. Three claimants share the −4% halt distance — options book
+> 1.678%, sleeve 1.200%, tail 1.122% — and they sum to exactly 4.0%. A test
+> asserts the *equality*, not an inequality, so neither reachable loss past the
+> halt nor idle room behind it survives an edit. Zero any one budget and its
+> room comes straight back. The carve-outs cost the options book two of its
+> three positions per name, and that trade-off is stated in the write-up
+> rather than discovered in the order history.
 >
 > **And one trade that broke my own rule, named rather than buried — then
 > closed.** On 2026-09-01 I bought 11 QQQ Sep-11 720 calls for $4,433 and sold

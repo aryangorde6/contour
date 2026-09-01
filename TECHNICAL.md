@@ -323,8 +323,8 @@ fails**, so a no-trade cycle is exactly as auditable as a trade.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 2.8% Tue–Thu; ≤ 1.25% NAV per position |
-| G4 | Max 6 concurrent, 2 per underlying, 1 new per underlying per cycle |
+| G3 | Book risk ramps by date to a 1.678% ceiling (halt distance − sleeve − tail), closed to 0 from 2026-09-02; ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 1 per underlying (derived from G3's ceiling), 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, `close_price` present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never coerced to zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |
@@ -424,18 +424,25 @@ So the ceiling is **derived**:
 
 ```python
 SLEEVE_RISK_BUDGET_PCT = SLEEVE_NOTIONAL * SLEEVE_STOP_PCT / START_NAV   # 0.012
+TAIL_RISK_BUDGET_PCT   = 1_122.0 / START_NAV                             # 0.01122
 BOOK_RISK_CEILING_PCT  = (START_NAV - NAV_HARD_HALT) / START_NAV \
-                         - SLEEVE_RISK_BUDGET_PCT                        # 0.028
+                         - SLEEVE_RISK_BUDGET_PCT \
+                         - TAIL_RISK_BUDGET_PCT                          # 0.01678
 MAX_POSITIONS_PER_UNDERLYING = int(BOOK_RISK_CEILING_PCT
-                                   / MAX_POSITION_RISK_PCT)              # 2
+                                   / MAX_POSITION_RISK_PCT)              # 1
 ```
 
-2.8% + 1.2% = 4.0%, exactly G1's halt distance, and
-`test_the_two_books_together_still_fit_behind_the_hard_halt` asserts it.
-**What the sleeve costs is real and stated**: the options book drops from three
-positions per name to two. Setting `SLEEVE_NOTIONAL = 0` restores 4.0% and 3
-per name exactly — a test asserts that too, so the sleeve cannot leave the
-options book permanently shrunk by a feature nobody is running.
+1.678% + 1.200% + 1.122% = 4.0%, exactly G1's halt distance.
+`test_every_carve_out_together_lands_exactly_on_the_halt_distance` asserts the
+**equality**, not an inequality: `≤` would still pass if a later edit shrank
+the book and left a percent of the floor unclaimed, and the property worth
+protecting is that all three claimants sit flush against the halt — no
+reachable loss beyond it, no idle room behind it.
+**What the carve-outs cost is real and stated**: the options book drops from
+three positions per name to one. Setting either `SLEEVE_NOTIONAL = 0` or
+`TAIL_RISK_BUDGET_PCT = 0` hands back exactly that budget and no more — two
+further tests assert it — so a feature nobody is running cannot leave the
+options book permanently shrunk.
 
 ### One entry, and only one
 
@@ -444,7 +451,7 @@ stopped out at 11:00 would be re-bought at 11:00, because a 4% drop does not
 necessarily break the 50-day line that S3 gates on. That is not a subtle
 inefficiency — the carve-out funds **exactly one** stop loss. Spend it twice
 and the account carries 2.4% of sleeve risk behind a −4% halt that also has to
-cover a 2.8% options book, which is the same decoration bug arriving by a
+cover a 1.678% options book, which is the same decoration bug arriving by a
 different route.
 
 So `SLEEVE_ONE_SHOT` retires the sleeve the moment it closes, for any reason,

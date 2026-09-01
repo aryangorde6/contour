@@ -91,6 +91,36 @@ def test_the_two_books_together_still_fit_behind_the_hard_halt():
         f"= {both:.3%} reachable behind a {halt:.3%} halt")
 
 
+def test_every_carve_out_together_lands_exactly_on_the_halt_distance():
+    """The two-book test above predates the tail carve-out and only proves
+    `<=`. Three claimants now share the halt distance -- the options book, the
+    sleeve, and the acknowledged tail -- and the interesting property is not
+    that they fit but that they are FLUSH: no reachable loss past the halt,
+    and no room left sitting idle behind it either. `<=` would still pass if
+    a future edit silently shrank the book by a percent; `==` will not."""
+    halt = (C.START_NAV - C.NAV_HARD_HALT) / C.START_NAV
+    claimed = (C.BOOK_RISK_CEILING_PCT
+               + C.SLEEVE_RISK_BUDGET_PCT
+               + C.TAIL_RISK_BUDGET_PCT)
+    assert claimed == pytest.approx(halt), (
+        f"book {C.BOOK_RISK_CEILING_PCT:.3%} + sleeve "
+        f"{C.SLEEVE_RISK_BUDGET_PCT:.3%} + tail {C.TAIL_RISK_BUDGET_PCT:.3%} "
+        f"= {claimed:.3%}, halt distance {halt:.3%}")
+
+
+def test_the_tail_is_carved_out_of_the_book_not_added_beside_it():
+    """The distinction the whole config comment is about. A tail funded
+    BESIDE the ceiling puts 4% + 1.122% behind a 4% halt -- the decoration
+    bug. Funded OUT OF it, the ceiling must fall by exactly the tail's cost,
+    and switching the tail off must hand every basis point back."""
+    src = open(C.__file__).read().replace(
+        "TAIL_RISK_BUDGET_PCT = 1_122.0 / START_NAV", "TAIL_RISK_BUDGET_PCT = 0.0")
+    ns: dict = {"__file__": C.__file__, "__name__": "contour._cfgprobe"}
+    exec(compile(src, C.__file__, "exec"), ns)
+    assert ns["BOOK_RISK_CEILING_PCT"] - C.BOOK_RISK_CEILING_PCT == pytest.approx(
+        C.TAIL_RISK_BUDGET_PCT)
+
+
 def test_the_sleeve_budget_is_what_the_sleeve_can_actually_spend():
     """A carve-out nobody can reach is decoration, and a carve-out the sleeve
     can overspend is worse than none. It must be exactly the ceiling."""

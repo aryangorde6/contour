@@ -201,10 +201,15 @@ document now states them and they must not drift:
 2. **It fixes a real flaw.** The condor is short the SPY 781 call, so the joint
    book paid *less* at +3σ (+0.11%) than at +1σ (+0.22%) — short its own
    upside. This half is genuine and independent of the outcome.
-3. **It sits OUTSIDE the capital floor.** 2.8% + 1.2% + 4.43% ≈ 8.4% of
-   reachable loss behind a 4% halt. That is the decoration bug `config.py`
-   warns about, reintroduced knowingly. Mitigations: loss bounded by premium
-   (cannot gap through a stop), and G1 still blocks entries below −3%/−4%.
+3. **It sat OUTSIDE the capital floor — that is now repaired.** The QQQ tail
+   was closed 2026-09-01 for −$1,320, and the TQQQ tail that followed is
+   carved OUT of G3's ceiling via `TAIL_RISK_BUDGET_PCT` rather than added
+   beside it. Book 1.678% + sleeve 1.200% + tail 1.122% = exactly the 4.0%
+   halt distance, asserted as an equality. The decoration bug is gone from
+   the live config, not merely acknowledged. The floor was held by closing
+   the entry ramp to 0 from 2026-09-02, not by loosening the cap that
+   measures it. Loss stays bounded by premium and cannot gap through a stop;
+   G1 still blocks entries below −3%/−4% but does NOT flatten.
 
 **Correction to an earlier belief in this file's lineage: G1 does NOT flatten.**
 `g1_capital_floor` is an *entry gate*; `should_exit` has four rules (clock,
@@ -264,8 +269,8 @@ write-up's risk content.
 |---|---|
 | G1 | No entries below $97,000 NAV; full halt below $96,000 |
 | G2 | No entries once session P&L is worse than −1.5% NAV |
-| G3 | Book risk ≤ 2% Mon / 2.8% Tue–Thu (ceiling = G1 halt − sleeve); ≤ 1.25% NAV per position |
-| G4 | Max 6 concurrent, 2 per underlying (derived), 1 new per underlying per cycle |
+| G3 | Book risk ramps by date to 1.678% (ceiling = G1 halt − sleeve − tail), 0 from 2026-09-02; ≤ 1.25% NAV per position |
+| G4 | Max 6 concurrent, 1 per underlying (derived), 1 new per underlying per cycle |
 | G5 | OI ≥ 500, tradable, close_price present, spread within pct **or** $0.10, quote < 20 min stale, round-trip friction ≤ 30% of credit |
 | G6 | delta and IV non-null on **all** legs — a missing Greek is a hard veto, never zero |
 | G7 | Short \|delta\| ∈ [0.10, 0.16]; wings ∈ [0.04, 0.10]; condor net \|delta\| ≤ 0.08 |
@@ -282,7 +287,7 @@ next cycle *and recorded in the journal*, so a judge can see it was respected.
 
 ## 6. Build status
 
-**253 tests passing.** All core modules complete.
+**255 tests passing.** All core modules complete.
 
 | File | Purpose |
 |---|---|
@@ -337,12 +342,13 @@ gate runs against the result; G3 caps book and per-position risk regardless.
 condor sizes to ~$1,230 max loss against G3's $1,250 per-position cap. G4's
 per-name cap is now **derived** — `int(BOOK_RISK_CEILING_PCT /
 MAX_POSITION_RISK_PCT)` — so it cannot hand G3 a book G3 must refuse. Since the
-sleeve took its 1.2% carve-out that is 2.8 / 1.25 → **2 per name**, down from
-3: funding the sleeve costs the options book its third slot, and that is the
-trade. No reachable book, sleeve included, can reach max loss through the
-capital floor; `tests/test_gates.py` and `tests/test_sleeve.py` both assert it,
-and a third test asserts `SLEEVE_NOTIONAL = 0` restores 4.0% and 3 per name
-exactly.
+sleeve took its 1.2% carve-out and the tail its 1.122%, that is 1.678 / 1.25
+→ **1 per name**, down from 3: funding both costs the options book two slots,
+and that is the trade. No reachable book, sleeve and tail included, can reach
+max loss through the capital floor; `tests/test_gates.py` and
+`tests/test_sleeve.py` both assert it, a further test asserts the three
+budgets sum to the halt distance *exactly* rather than merely fitting, and
+another asserts that zeroing either carve-out hands its room straight back.
 
 **Why these moved on 2026-09-01.** The old 1.0% × 2-per-name made G3's ramp
 unreachable: 6% with all three names qualifying, 2% with one — and one is the

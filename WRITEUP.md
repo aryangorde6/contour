@@ -83,8 +83,8 @@ is exactly as auditable as a trade.
 |---|---|---|---|
 | G1 | NAV floor: no entries under $97k, halt under $96k | G7 | Short delta 0.10–0.16, wings 0.04–0.10, condor net ≤ 0.08 |
 | G2 | Session P&L worse than −1.5% NAV stops entries | G8 | Expiry must equal 2026-09-11 exactly |
-| G3 | Book risk ramp 2/2.8% by weekday, ceiling = G1's halt distance **minus the sleeve**; ≤ 1.25% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
-| G4 | ≤ 6 concurrent, 2 per name (derived from G3's ceiling), 1 new per name per cycle | G10 | No entries inside an event blackout |
+| G3 | Book risk ramps by date to a 1.678% ceiling = G1's halt distance **minus the sleeve and the tail**, then closed to 0; ≤ 1.25% NAV per position | G9 | Credit ≥ 8% vertical / 13% condor of wing, worst rung |
+| G4 | ≤ 6 concurrent, 1 per name (derived from G3's ceiling), 1 new per name per cycle | G10 | No entries inside an event blackout |
 | G5 | OI ≥ 500, spread pct **or** $0.10, quote < 20 min, friction ≤ 30% | G11 | 10:05–15:15 ET; last entry Thu 11:00; flatten Thu 15:45 |
 | G6 | Null delta or IV on any leg is a hard veto, never zero | G12 | Committed `HALT` stops trading; unique `client_order_id` |
 
@@ -118,11 +118,14 @@ options book cannot do, because Alpaca serves no resting stop on a multi-leg
 position.
 
 **It is paid for out of the same capital floor, not added beside it.** Its 1.2%
-budget is *subtracted* from G3's ramp, which falls 4.0% → 2.8% and costs the
-options book its third position per name. Both books at simultaneous max loss
-still sit exactly on G1's −4% halt, and a test asserts it. Set
-`SLEEVE_NOTIONAL = 0` and the previous numbers return exactly. *The tail
-position below sits outside this arithmetic, and says so.*
+budget is *subtracted* from G3's ramp rather than added to it — and so is
+the tail position below. Three claimants share the halt distance: options book
+**1.678%**, sleeve **1.200%**, tail **1.122%**, summing to exactly the 4.0% G1
+halts at. A test asserts that as an **equality**, not an inequality, because
+`≤` would still pass if a later edit quietly shrank the book and left a
+percent of the floor unclaimed. Funding both cost the options book two of its
+three positions per name. Set either budget to zero and its room comes straight
+back — asserted too, so a feature nobody runs cannot leave the book shrunk.
 
 ## The tail position: taken deliberately, closed on evidence
 
