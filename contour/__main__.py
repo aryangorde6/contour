@@ -144,7 +144,17 @@ def main(argv=None) -> int:
     else:
         print(f"[sleeve] flat ({C.SLEEVE_UNDERLYING}, "
               f"${C.SLEEVE_NOTIONAL:,.0f} ceiling)")
-    orphans = held - tracked
+    acknowledged = _acknowledged_legs(held)
+    if acknowledged:
+        # Held on purpose and outside the book's management, so it is reported
+        # rather than warned about. See C.ACKNOWLEDGED_SYMBOLS for the why.
+        print(f"[book] {len(acknowledged)} acknowledged non-book leg(s): "
+              f"{sorted(acknowledged)}")
+        journal.append({"event": "acknowledged_holding",
+                        "symbols": sorted(acknowledged),
+                        "reason": "deliberately held outside the options "
+                                  "book; not an orphan and not managed by it"})
+    orphans = _orphan_legs(held, tracked)
     if orphans:
         # Loud, not fatal: an unmanaged leg is exactly the failure this book
         # exists to prevent, and silence is how it stayed hidden.
@@ -438,6 +448,21 @@ def _run_replay(fx: Replay) -> int:
     ok, msg = Journal(out).verify()
     print(f"\n[replay] {out}: {msg}")
     return 0 if ok else 1
+
+
+def _acknowledged_legs(held: set[str]) -> set[str]:
+    """Broker legs we hold on purpose and outside the book's management."""
+    return held & set(C.ACKNOWLEDGED_SYMBOLS)
+
+
+def _orphan_legs(held: set[str], tracked: set[str]) -> set[str]:
+    """Legs at the broker that no tracked structure accounts for.
+
+    An acknowledged holding is subtracted rather than silenced: the check
+    still fires for anything genuinely unexplained, which is the whole point
+    of it. Emptying `ACKNOWLEDGED_SYMBOLS` restores the original behaviour.
+    """
+    return held - tracked - set(C.ACKNOWLEDGED_SYMBOLS)
 
 
 def _held_symbols(broker) -> set[str]:

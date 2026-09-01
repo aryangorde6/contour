@@ -291,3 +291,27 @@ LRS_EXT_CAP       = 0.25   # trim above this much extension over the slow SMA
 # Only `Advice.source == "degraded"` (no provider configured) sets it; a
 # provider that ANSWERS never does, which is what keeps the anchored 0.5 out.
 DEGRADED_BRAIN_SIZE = 0.5
+
+
+# --- deliberately held outside the options book ---------------------------
+# Symbols the book does not manage and must NOT report as orphans. The
+# discrepancy check in `__main__` exists to catch legs that leaked out of a
+# tracked structure -- a position opened on purpose, with its rationale
+# written down, is not that. Listing it here keeps the check meaningful
+# rather than silencing it; an empty tuple restores the old behaviour exactly.
+#
+# 2026-09-01, at the operator's explicit direction: 11 x QQQ Sep-11 720 calls,
+# a long-premium tail position. The reason it is not merely a punt: the credit
+# book is SHORT the upside. The condor sells the SPY 781 call, so a hard rally
+# gives back what the sleeve earns -- measured across the joint book, +3 sigma
+# paid LESS than +1 sigma (+0.11% vs +0.22%). These calls convert that into
+# positive convexity.
+#
+# It is negative expected value and that is stated, not hidden: the strike
+# implies 14.85% vol against rv10 of 12.07%, a 1.23x premium, about -0.32% of
+# NAV in expectation. It was taken as a variance decision under a contest
+# whose payoff is convex in rank, exactly as the sleeve was. Loss is bounded
+# by the premium ($3,839, 3.8% of NAV) -- a long option cannot lose more than
+# it cost, which is why it carries no stop. It is not managed: it is marked at
+# the deadline and expires 2026-09-11, after the contest closes.
+ACKNOWLEDGED_SYMBOLS = ("QQQ260911C00720000",)
