@@ -147,3 +147,25 @@ def test_the_one_page_writeup_names_the_judged_account():
     """"Alpaca account ID -- required for judging." It appears on the one
     document a judge is guaranteed to open."""
     assert "PA35XVXLIO0E" in (ROOT / "WRITEUP-ONEPAGE.md").read_text(encoding="utf-8")
+
+
+# --- 6. the cover image is a submission field, so it has to exist ---------
+def test_the_cover_image_exists_at_the_size_a_cover_needs():
+    """"Cover image" is its own field on the submission form and had nothing
+    behind it until 2026-09-02. Regenerate with `python ops/make_cover.py`."""
+    from PIL import Image
+    p = ROOT / "dashboard/cover.png"
+    assert p.exists(), "no cover image; run ops/make_cover.py"
+    assert Image.open(p).size == (1280, 720), "cover must be 1280x720"
+
+
+def test_the_cover_names_the_same_account_as_the_writeup():
+    """The cover carries the judged account ID as an image, where no reader
+    can diff it against the write-up. So the generator's source is diffed
+    instead."""
+    gen = (ROOT / "ops/make_cover.py").read_text(encoding="utf-8")
+    one = (ROOT / "WRITEUP-ONEPAGE.md").read_text(encoding="utf-8")
+    ids = set(re.findall(r"PA[0-9A-Z]{10}", gen))
+    assert ids, "the cover generator names no account"
+    assert ids <= set(re.findall(r"PA[0-9A-Z]{10}", one)), (
+        f"cover says {ids}, the one-pager does not")

@@ -79,7 +79,7 @@ re-verifies it in your browser with WebCrypto.
 
 ---
 
-**Checkable without our credentials.** `pytest` runs 272 tests;
+**Checkable without our credentials.** `pytest` runs 274 tests;
 `python -m contour --replay` reproduces the agent's decisions from a committed
 quote fixture. We claim no edge: a 387-cycle backtest on real historical option
 prices returned **+0.93% over 2.5 years, t = +0.37**, and we publish that.

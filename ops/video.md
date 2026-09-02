@@ -44,7 +44,7 @@ negative result *is* the competitive analysis now.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 272 passed
+git pull && .venv/bin/python -m pytest -q          # expect 274 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -233,7 +233,7 @@ investment advice and needs registration. Saying that out loud is a credibility
 win.
 
 **7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-272 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+274 tests. Next: expiry laddering and rolls; skew priors learned per underlying
 instead of hard-coded; **more backtest history** — the harness is built and has
 run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
 limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;
