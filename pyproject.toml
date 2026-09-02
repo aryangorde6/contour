@@ -23,7 +23,11 @@ build-backend = "setuptools.build_meta"
 packages = ["contour"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+# pillow is a TEST dependency, not a runtime one: the agent never draws
+# anything. ops/make_cover.py generates the submission cover image, and
+# test_published_claims.py opens it to check the size the form wants.
+# Undeclared, it passed locally and failed on every clean checkout.
+dev = ["pytest", "pillow"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
