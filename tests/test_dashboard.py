@@ -219,6 +219,7 @@ def test_a_cycle_with_no_journal_yet_counts_nothing(tmp_path):
 
 # --- the deck is a published page too ------------------------------------
 DECK = PAGE.parent / "deck.html"
+VIDEO = PAGE.parent.parent / "ops" / "video.md"
 
 
 def test_the_deck_and_the_dashboard_read_the_same_branch():
@@ -231,9 +232,31 @@ def test_the_deck_and_the_dashboard_read_the_same_branch():
     assert consts(DECK) == consts(PAGE)
 
 
-def test_the_deck_has_seven_slides_and_the_script_expects_them():
-    """The narration in ops/video.md is written against seven, by number."""
-    assert DECK.read_text().count('class="slide') == 7
+def test_the_deck_slide_count_matches_what_the_script_narrates():
+    """ops/video.md cues slides BY NUMBER, so inserting one silently points
+    the narration at the wrong slide. Counting both and comparing is the only
+    version of this test that survives the deck growing."""
+    slides = DECK.read_text().count('class="slide')
+    listed = {int(n) for n in re.findall(r"^\*\*(\d+) — ",
+                                        VIDEO.read_text(), re.M)}
+    assert slides == 8, f"deck has {slides} slides"
+    assert listed == set(range(1, slides + 1)), (
+        f"ops/video.md describes slides {sorted(listed)}, the deck has "
+        f"{slides}")
+
+
+def test_the_video_script_timings_are_derived_not_stale():
+    """ops/video.md states that its word counts and timings are computed from
+    the narration. Hand-estimates were 40% light once already -- a "4:10"
+    script that ran 5:03 -- so the claim is enforced rather than repeated."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "video_timing", VIDEO.parent / "video_timing.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    before = VIDEO.read_text(encoding="utf-8")
+    after, _total, _secs = mod.rewrite(before)
+    assert before == after, "run `python ops/video_timing.py`; timings drifted"
 
 
 def test_no_published_page_uses_a_root_relative_url():

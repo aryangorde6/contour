@@ -1,0 +1,113 @@
+{
+ "account": "PA35XVXLIO0E",
+ "account_created_at": "2026-08-30 18:12:28.908124+00:00",
+ "captured_at": "2026-09-02 09:26:27.003810+00:00",
+ "equity": 98444.87,
+ "marks": {
+  "QQQ": 14782.74,
+  "SPY260911C00781000": -72.0,
+  "SPY260911C00786000": 22.0,
+  "SPY260911P00740000": 264.0,
+  "SPY260911P00745000": -372.0,
+  "TQQQ260911C00070000": 966.0
+ },
+ "orders": [
+  {
+   "client_order_id": "contour-spy-dd42f76f-r2",
+   "price": 1.3,
+   "qty": 1.0,
+   "side": "sell",
+   "submitted_at": "2026-08-31 14:09:46.617443+00:00",
+   "symbol": "SPY260911P00745000"
+  },
+  {
+   "client_order_id": "contour-spy-dd42f76f-r2",
+   "price": 0.96,
+   "qty": 1.0,
+   "side": "buy",
+   "submitted_at": "2026-08-31 14:09:46.618871+00:00",
+   "symbol": "SPY260911P00740000"
+  },
+  {
+   "client_order_id": "contour-spy-dd42f76f-r2",
+   "price": 0.8,
+   "qty": 1.0,
+   "side": "sell",
+   "submitted_at": "2026-08-31 14:09:46.619939+00:00",
+   "symbol": "SPY260911C00781000"
+  },
+  {
+   "client_order_id": "contour-spy-dd42f76f-r2",
+   "price": 0.32,
+   "qty": 1.0,
+   "side": "buy",
+   "submitted_at": "2026-08-31 14:09:46.620918+00:00",
+   "symbol": "SPY260911C00786000"
+  },
+  {
+   "client_order_id": "contour-spy-c3eeb40a-r2",
+   "price": 1.25,
+   "qty": 1.0,
+   "side": "sell",
+   "submitted_at": "2026-08-31 14:39:21.464190+00:00",
+   "symbol": "SPY260911P00745000"
+  },
+  {
+   "client_order_id": "contour-spy-c3eeb40a-r2",
+   "price": 0.92,
+   "qty": 1.0,
+   "side": "buy",
+   "submitted_at": "2026-08-31 14:39:21.465694+00:00",
+   "symbol": "SPY260911P00740000"
+  },
+  {
+   "client_order_id": "contour-spy-c3eeb40a-r2",
+   "price": 0.78,
+   "qty": 1.0,
+   "side": "sell",
+   "submitted_at": "2026-08-31 14:39:21.466818+00:00",
+   "symbol": "SPY260911C00781000"
+  },
+  {
+   "client_order_id": "contour-spy-c3eeb40a-r2",
+   "price": 0.31,
+   "qty": 1.0,
+   "side": "buy",
+   "submitted_at": "2026-08-31 14:39:21.467931+00:00",
+   "symbol": "SPY260911C00786000"
+  },
+  {
+   "client_order_id": "contour-sleeve-990f9dbc-e",
+   "price": 707.82,
+   "qty": 21.0,
+   "side": "buy",
+   "submitted_at": "2026-09-01 14:14:04.343617+00:00",
+   "symbol": "QQQ"
+  },
+  {
+   "client_order_id": "tail-1788278259",
+   "price": 4.03,
+   "qty": 11.0,
+   "side": "buy",
+   "submitted_at": "2026-09-01 15:57:39.945272+00:00",
+   "symbol": "QQQ260911C00720000"
+  },
+  {
+   "client_order_id": "d723684e-8b6f-4e72-81ba-2433534699a0",
+   "price": 2.83,
+   "qty": 11.0,
+   "side": "sell",
+   "submitted_at": "2026-09-01 18:01:18.868742+00:00",
+   "symbol": "QQQ260911C00720000"
+  },
+  {
+   "client_order_id": "0182026f-9e4b-467d-a201-10d71947b345",
+   "price": 1.87,
+   "qty": 6.0,
+   "side": "buy",
+   "submitted_at": "2026-09-01 18:14:01.369486+00:00",
+   "symbol": "TQQQ260911C00070000"
+  }
+ ],
+ "start_equity": 100000.0
+}

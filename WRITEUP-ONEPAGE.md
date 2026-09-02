@@ -33,11 +33,10 @@ stand the book down. It **may never** choose a strike, size a position, or
 price one. That is arithmetic, and language models should not do arithmetic
 that money depends on.
 
-Failure policy is asymmetric on purpose. No brain configured → run *degraded*:
-half size, hard-coded event table, no veto, because an agent that stops when a
-model is absent is not autonomous. Answering off-schema → **fail closed**:
-veto, size zero. `llm.py` is a provider seam, and the model was picked by
-bake-off on blackout accuracy, not reputation.
+Failure policy is asymmetric. No brain configured → run *degraded*: half size,
+hard-coded event table, no veto, because an agent that stops when a model is
+absent is not autonomous. Off-schema → **fail closed**: veto, size zero. The
+model was chosen by bake-off, not reputation.
 
 ## Risk gates
 
@@ -48,8 +47,8 @@ no-trade cycle is exactly as auditable as a trade.
 
 G1 blocks entries below $97,000 NAV and halts below $96,000. G3 caps book risk
 at a derived ceiling and 1.25% of NAV per position. G6 treats a null delta or
-IV as a hard veto, never coerced to zero. G11 confines entries to 10:05–15:15
-ET with a scheduled Thursday flatten.
+IV as a hard veto, never coerced to zero. G11 confines entries to
+10:05–15:15 ET.
 
 The capital floor is arithmetic, not decoration: **book 1.678% + sleeve 1.200%
 + tail 1.122% = exactly the 4% halt distance** — asserted as an *equality*, so
@@ -65,21 +64,34 @@ and fails pydantic validation
 open since 2026-07-01). The CLI places the identical order correctly — a live
 4-leg SPY condor returned `status: accepted, order_class: mleg`.
 
-Reads go through **`alpaca-py`**, merging chain snapshots with Trading API
-contract objects, because snapshots carry Greeks but no `open_interest` and G5
-screens on the latter. Entries go out as a three-rung limit ladder from mid
-toward the bid, never a market order, and `reconcile()` reads actual per-leg
-`filled_qty` — paper issues random partial fills, and trusting the request puts
-condor legs out of ratio.
+Reads go through **`alpaca-py`**, merging chain snapshots with contract
+objects — snapshots carry Greeks but no `open_interest`, which G5 screens on.
+Entries go out as a three-rung limit ladder from mid toward the bid, never a
+market order, and `reconcile()` reads per-leg `filled_qty`, because paper fills
+partially and trusting the request puts legs out of ratio.
 
 Autonomy is **GitHub Actions**: a pre-open cycle, a cycle every 15 minutes from
 10:00–15:45 ET, and a scheduled Thursday flatten. The journal is an
 **append-only SHA-256 hash chain** verified in CI, and the dashboard
 re-verifies it in your browser with WebCrypto.
 
+## Performance, attributed
+
+The criterion asks for the performance of *the submitted agent*; this account
+holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-02 09:26** UTC:
+
+| Placed by | of start NAV |
+|---|---:|
+| **The agent** — every `contour-*` order id | **−0.08%** |
+| The operator — three discretionary tail trades | **−1.48%** |
+
+Every order this repository submits is prefixed `contour-` in `loop.py`;
+nothing else in the account carries it, so the split is a field *the broker*
+records. `python ops/attribution.py --offline` recomputes it from committed
+order history with no credentials, reconciling to broker equity within $1.65.
+
 ---
 
-**Checkable without our credentials.** `pytest` runs 274 tests;
-`python -m contour --replay` reproduces the agent's decisions from a committed
-quote fixture. We claim no edge: a 387-cycle backtest on real historical option
-prices returned **+0.93% over 2.5 years, t = +0.37**, and we publish that.
+**Checkable without our credentials.** `pytest` runs 294 tests; `--replay`
+reproduces every decision from a committed quote fixture. We claim no edge: a
+387-cycle backtest returned **+0.93% over 2.5 years, t = +0.37**.

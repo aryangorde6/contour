@@ -13,38 +13,44 @@ score below 3:00, and a 4:30 ceiling. **None of that is sourced.** It has been
 removed rather than left to be trusted. If the upload form imposes a cap when
 you open it, use the cut table at the bottom.
 
-So the length below is a **judgement, not a rule**: ~4:20, because that is what
-the content needs, and because the rubric line that governs it is *"how clearly
+So the length below is a **judgement, not a rule**: about four and three
+quarter minutes, because that is what the content needs, and because the rubric line that governs it is *"how clearly
 and effectively the project communicates its idea, **demonstrates the agent in
 action**, and presents the reasoning behind it"* — which rewards the `--replay`
 run in §5, not minutes.
 
-Narration is **629 words**, so pace decides the runtime:
+Narration is **690 words**, so pace decides the runtime:
 
 | Pace | Runtime |
 |---|---|
-| 155 wpm (brisk) | 4:01 |
-| **145 wpm (planned)** | **4:22** |
-| 135 wpm (unhurried) | 4:41 |
-| 125 wpm (slow) | 5:03 |
+| 155 wpm (brisk) | 4:27 |
+| **145 wpm (planned)** | **4:46** |
+| 135 wpm (unhurried) | 5:07 |
+| 125 wpm (slow) | 5:31 |
 
 Read it deliberately and **time a full take.** Every number marked ⚠️ is live
 and will have changed — re-read it off the dashboard first.
 
-**What changed in this revision, and why.** §7 is new: the volume-profile
-filter we measured, shipped, and switched off on P&L evidence. §8 is rewritten
-around the honest number instead of the roadmap. Those two sections are the
-reason to watch this video rather than anyone else's — every other submission
-will claim an edge, and this is the only one that can show it tested its own
-and reported the answer. The old §7 (competitive analysis) is gone; the
-negative result *is* the competitive analysis now.
+**What changed in this revision, and why.** §7 is the volume-profile filter we
+measured, shipped, and switched off on P&L evidence. §8 is now the
+**attribution**: lablab's page marks P&L Performance as the primary judging
+criterion, and the criterion's own wording asks for the P&L of *the submitted
+agent*. This account holds two traders, the broker stamps which is which, and
+§8 shows the split and the command that reproduces it. Those two sections are
+the reason to watch this video rather than anyone else's — every other
+submission will claim an edge, and this is the only one that tested its own,
+reported the answer, and can prove which trades were even its idea.
+
+Every timing and word count in this file is derived, not estimated —
+`python ops/video_timing.py` recomputes them from the narration blockquotes,
+and `--check` fails if they have drifted. Hand-estimates were 40% light.
 
 ---
 
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 274 passed
+git pull && .venv/bin/python -m pytest -q          # expect 294 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -74,7 +80,7 @@ Timings are cumulative and were measured, not estimated — the word counts belo
 are what `ops/` counts in the blockquotes, at 145 wpm. If a section runs long on
 the stopwatch, cut inside that section rather than borrowing from §5 or §7.
 
-### 1 · Hook — 0:00–0:20 · *slide 1, then the dashboard structure map* · 50w
+### 1 · Hook — 0:00–0:21 · *slide 1, then the dashboard structure map* · 50w
 
 > Everyone in this hackathon is selling iron condors. A condor sells both
 > wings unconditionally — which means half the time you're selling the
@@ -83,7 +89,7 @@ the stopwatch, cut inside that section rather than borrowing from §5 or §7.
 > Contour measures the volatility surface first, and lets the measurement pick
 > the structure. That's the whole idea, and it's four lines.
 
-### 2 · The rule — 0:20–0:48 · *dashboard, zoom the map* · 66w
+### 2 · The rule — 0:21–0:48 · *dashboard, zoom the map* · 66w
 
 > Two numbers. `vrp_ratio` is ATM implied over ten-day realized — am I being
 > paid at all? Below 1.30, nothing trades. `skew_z` is the twenty-five-delta
@@ -116,7 +122,7 @@ the stopwatch, cut inside that section rather than borrowing from §5 or §7.
 > Sizing sat in that left column until I measured it — sixteen identical
 > answers in a row. It went to trend systems instead.
 
-### 5 · Nineteen gates, and proof — 1:48–2:32 · *terminal: run `--replay` live* · 101w
+### 5 · Nineteen gates, and proof — 1:48–2:30 · *terminal: run `--replay` live* · 101w
 
 > Nineteen risk gates — twelve for the options book, seven for the sleeve.
 > Pure functions, no I/O, evaluated before every order. The reason is journaled
@@ -133,7 +139,7 @@ strongest image in the video.*
 
 > All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough.
 
-### 6 · Alpaca, and one real finding — 2:32–2:53 · *slide 3* · 52w
+### 6 · Alpaca, and one real finding — 2:30–2:52 · *slide 3* · 52w
 
 > Every order goes through the Alpaca CLI, and that's a finding, not a
 > preference: the MCP server can't place multi-leg orders. The legs array
@@ -142,7 +148,7 @@ strongest image in the video.*
 > And the journal is a SHA-256 hash chain the dashboard re-verifies in your
 > browser.
 
-### 7 · An edge I measured, shipped, and switched off — 2:53–3:37 · *terminal: `research/`* · 106w
+### 7 · An edge I measured, shipped, and switched off — 2:52–3:36 · *terminal: `research/`* · 106w
 
 **This is the section that differentiates the submission. Do not cut it.**
 
@@ -158,18 +164,29 @@ strongest image in the video.*
 > So it's off. The code stays in the repo, because a robust signal pointed at
 > the wrong objective is still a losing feature.
 
-### 8 · The honest number — 3:37–4:06 · *dashboard P&L panel* · 69w
+### 8 · The honest number — 3:36–4:29 · *slide 6: Performance, attributed* · 130w
+
+**Do not cut this either.** P&L is the criterion the organisers highlight on
+the page; this is the section that answers it.
 
 > And the number itself. I backtested the whole book the same way: plus
 > zero-point-nine percent over two and a half years, t of
-> zero-point-three-seven. No edge — and I won't claim a strategy works because
-> it survived one week.
+> zero-point-three-seven. No edge — I won't claim a strategy works because it
+> survived one week.
 >
-> The account is down about one and a half percent ⚠️. Two discretionary tail
-> trades I took against my own evidence are the entire loss; the systematic
-> book is flat.
+> The account is down about one and a half percent ⚠️. But the criterion asks
+> for the *submitted agent*, and there are two traders in this account.
+>
+> Every order the agent places carries a client order ID starting `contour`.
+> Three don't — the tail trades I took against my own recorded evidence. Split
+> on that one field: the operator is minus one-point-four-eight ⚠️; the agent
+> is minus zero-point-zero-eight ⚠️.
+>
+> That's a field the broker stamps, not my bookkeeping. `attribution.py
+> --offline` — no credentials — reconciles it to broker equity within two
+> dollars.
 
-### 9 · Close — 4:06–4:22 · *slide 6, then the final card* · 39w
+### 9 · Close — 4:29–4:46 · *slide 7, then the final card* · 39w
 
 > So the sellable asset isn't the alpha — it's the audit trail. A broker or an
 > RIAs need a defensible record of why an automated system did what it did.
@@ -227,13 +244,21 @@ Third: *runnable without our credentials — `--replay`, and chain verification
 in the judge's browser.* You are not narrating this slide any more; it is there
 for the judge who pauses.
 
-**6 — Revenue model.** Three tiers, most honest first: the audit layer is the
+**6 — Performance, attributed.** The P&L split by `client_order_id`, with the
+capture timestamp on the slide. `tests/test_attribution.py` pins the
+`contour-` prefix the split rests on, and asserts this slide quotes the same
+capture as `ops/order_history.json` — so a stale figure fails the suite rather
+than ageing quietly. **Regenerate before you record:**
+`python ops/attribution.py`, then update this slide, `WRITEUP.md` and
+`WRITEUP-ONEPAGE.md` with the new stamp and figures.
+
+**7 — Revenue model.** Three tiers, most honest first: the audit layer is the
 product; managed own-capital / prop; and **not** signal subscriptions, which is
 investment advice and needs registration. Saying that out loud is a credibility
 win.
 
-**7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-274 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+**8 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
+294 tests. Next: expiry laddering and rolls; skew priors learned per underlying
 instead of hard-coded; **more backtest history** — the harness is built and has
 run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
 limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;
@@ -250,10 +275,10 @@ judge remembers.
 
 | Cut | Saves | Script | @145 | @135 |
 |---|---:|---:|---:|---:|
-| §4's sizing anecdote | −21w | **608w** | 4:13 | 4:32 |
-| §2's last sentence | −13w | **595w** | 4:08 | 4:26 |
-| §3's schedule detail | −15w | **580w** | 4:02 | 4:19 |
-| §6's issue-97 detail | −14w | **566w** | 3:56 | 4:13 |
+| §4's sizing anecdote | −21w | **669w** | 4:37 | 4:57 |
+| §2's last sentence | −13w | **656w** | 4:31 | 4:52 |
+| §3's schedule detail | −15w | **641w** | 4:25 | 4:45 |
+| §6's issue-97 detail | −14w | **627w** | 4:19 | 4:39 |
 
 1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
 2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.
