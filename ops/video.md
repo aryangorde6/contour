@@ -1,22 +1,35 @@
 # The submission video — script, slides, and how to shoot it
 
-**Target 4:05–4:15.** The rubric scores anything under 3:00 as "2 — Limited",
-and the ceiling is 4:30. Do not run short to be safe; run long and cut.
+**lablab specifies no video length.** Verified 2026-09-02 against both
+`alpaca-overview.md` and the live hackathon page: "Video presentation" is a
+submission field under *Cover image and presentation*, but no minimum, maximum
+or target duration is stated anywhere on it. Searching the page for
+*video / demo / minute / presentation / recording / pitch* turns up no
+requirement — the only "minute" on the whole page is inside another team's
+project blurb.
 
-Narration is **629 words**. Pace decides whether that clears the ceiling, so
-here is the arithmetic rather than a vibe:
+An earlier revision of this file asserted a 4:05–4:15 target, a "2 — Limited"
+score below 3:00, and a 4:30 ceiling. **None of that is sourced.** It has been
+removed rather than left to be trusted. If the upload form imposes a cap when
+you open it, use the cut table at the bottom.
 
-| Pace | Runtime | Verdict |
-|---|---|---|
-| 155 wpm (brisk) | 4:01 | under target — slow down |
-| **145 wpm (planned)** | **4:22** | **the target** |
-| 135 wpm (unhurried) | 4:41 | still legal, no margin |
-| 125 wpm (slow) | 5:03 | **over the 4:30 ceiling** |
+So the length below is a **judgement, not a rule**: ~4:20, because that is what
+the content needs, and because the rubric line that governs it is *"how clearly
+and effectively the project communicates its idea, **demonstrates the agent in
+action**, and presents the reasoning behind it"* — which rewards the `--replay`
+run in §5, not minutes.
 
-So: read it deliberately, but **time a full take before you commit to one.** If
-your natural pace is under 135 wpm, take the first two cuts from the list at the
-bottom before recording rather than rushing the ending. Every number marked ⚠️
-is live and will have changed — re-read it off the dashboard first.
+Narration is **629 words**, so pace decides the runtime:
+
+| Pace | Runtime |
+|---|---|
+| 155 wpm (brisk) | 4:01 |
+| **145 wpm (planned)** | **4:22** |
+| 135 wpm (unhurried) | 4:41 |
+| 125 wpm (slow) | 5:03 |
+
+Read it deliberately and **time a full take.** Every number marked ⚠️ is live
+and will have changed — re-read it off the dashboard first.
 
 **What changed in this revision, and why.** §7 is new: the volume-profile
 filter we measured, shipped, and switched off on P&L evidence. §8 is rewritten
@@ -228,7 +241,7 @@ portfolio-level vega and gamma caps; the `HALT` file as a paging kill switch.
 
 ---
 
-## Cutting, if you run over 4:30
+## Cutting, if you need it shorter
 
 Take these **in order** — each row shows what the script drops to, and what that
 runs at both paces. Cut before recording rather than rushing the ending; §8 and
