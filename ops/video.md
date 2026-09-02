@@ -3,18 +3,35 @@
 **Target 4:05–4:15.** The rubric scores anything under 3:00 as "2 — Limited",
 and the ceiling is 4:30. Do not run short to be safe; run long and cut.
 
-Narration below is ~700 words, which is 4:20–4:30 at an unhurried 145 wpm —
-right at the ceiling, because §8 now has to explain the directional sleeve. If
-you run over, cut from the list at the bottom of this file **before** you speed
-up. **Read the rest slower than feels natural.** Every number marked ⚠️ is live and will
-have changed by the time you record — re-read it off the dashboard first.
+Narration is **629 words**. Pace decides whether that clears the ceiling, so
+here is the arithmetic rather than a vibe:
+
+| Pace | Runtime | Verdict |
+|---|---|---|
+| 155 wpm (brisk) | 4:01 | under target — slow down |
+| **145 wpm (planned)** | **4:22** | **the target** |
+| 135 wpm (unhurried) | 4:41 | still legal, no margin |
+| 125 wpm (slow) | 5:03 | **over the 4:30 ceiling** |
+
+So: read it deliberately, but **time a full take before you commit to one.** If
+your natural pace is under 135 wpm, take the first two cuts from the list at the
+bottom before recording rather than rushing the ending. Every number marked ⚠️
+is live and will have changed — re-read it off the dashboard first.
+
+**What changed in this revision, and why.** §7 is new: the volume-profile
+filter we measured, shipped, and switched off on P&L evidence. §8 is rewritten
+around the honest number instead of the roadmap. Those two sections are the
+reason to watch this video rather than anyone else's — every other submission
+will claim an edge, and this is the only one that can show it tested its own
+and reported the answer. The old §7 (competitive analysis) is gone; the
+negative result *is* the competitive analysis now.
 
 ---
 
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 221 passed
+git pull && .venv/bin/python -m pytest -q          # expect 269 passed
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -25,11 +42,11 @@ Open in tabs, in this order, so you never fumble mid-take:
 3. https://app.alpaca.markets — order history for `PA35XVXLIO0E`
 4. **https://aryangorde6.github.io/contour/deck.html** — the deck, fullscreen
 
-The deck is built. It is a 1280×720 stage scaled to the window, so it looks
-identical at 1080p and on a laptop; `←` `→` or click to move, and the slide
-number is bottom-right. Its market-analysis slide reads the agent's own
-published VRP measurement rather than a number typed in last week, so it is
-current on the day you record without you touching it.
+The deck is a 1280×720 stage scaled to the window, so it looks identical at
+1080p and on a laptop; `←` `→` or click to move, slide number bottom-right. Its
+market-analysis slide reads the agent's own published VRP measurement rather
+than a number typed in last week, so it is current on the day you record
+without you touching it.
 
 Record at 1920×1080. Screen capture with a voiceover beats a webcam talking
 head for a technical judge — but put a 3-second title card with your name and
@@ -40,143 +57,124 @@ grade.
 
 ## The script
 
-### 1 · Hook — 0:00–0:28 · *slide 1, then the dashboard structure map*
+Timings are cumulative and were measured, not estimated — the word counts below
+are what `ops/` counts in the blockquotes, at 145 wpm. If a section runs long on
+the stopwatch, cut inside that section rather than borrowing from §5 or §7.
+
+### 1 · Hook — 0:00–0:20 · *slide 1, then the dashboard structure map* · 50w
 
 > Everyone in this hackathon is selling iron condors. A condor sells both
 > wings unconditionally — which means half the time you're selling the
 > underpriced side and calling it diversification.
 >
 > Contour measures the volatility surface first, and lets the measurement pick
-> the structure. This is the whole idea, and it's four lines.
+> the structure. That's the whole idea, and it's four lines.
 
-*On screen: the structure map on the dashboard, three tickers plotted over the
-four zones.*
-
-### 2 · The rule — 0:28–1:00 · *dashboard, zoom the map*
+### 2 · The rule — 0:20–0:48 · *dashboard, zoom the map* · 66w
 
 > Two numbers. `vrp_ratio` is ATM implied over ten-day realized — am I being
-> paid at all? Below 1.30, nothing trades. `skew_z` is the twenty-five delta
-> put-call IV gap, scored against a per-underlying prior — which side holds
-> the premium?
+> paid at all? Below 1.30, nothing trades. `skew_z` is the twenty-five-delta
+> put-call IV gap against a per-underlying prior — which side holds the
+> premium?
 >
 > Puts rich, sell puts. Calls rich, sell calls. Both fair, sell both. Not rich
-> enough, sell nothing. Right now SPY sits at 1.42 and QQQ at 1.17 ⚠️ — same
-> week, same market, opposite decisions. That's the thesis: the choice shows
-> up in the order history, not just the README.
+> enough, nothing. On screen, SPY and QQQ disagree today ⚠️ — same market,
+> opposite decisions.
 
-### 3 · It is actually running — 1:00–1:30 · *dashboard top, then Alpaca tab*
+### 3 · It is actually running — 0:48–1:09 · *dashboard top, then Alpaca tab* · 51w
 
-> This is the live judged account, `PA35XVXLIO0E`, running unattended on
-> GitHub Actions — a pre-open cycle that parses the day's event windows, then
-> every fifteen minutes from ten to close, and a scheduled flatten on Thursday
-> so nothing is open into Friday's payroll print.
+> This is the live judged account, running unattended on GitHub Actions — a
+> pre-open cycle that parses the day's event windows, then every fifteen
+> minutes to the close.
 >
-> Two SPY condors on the book ⚠️, and here they are in Alpaca's own order
-> history. Nothing on this page is a mock.
+> A SPY condor on the book right now ⚠️, and here it is in Alpaca's own order
+> history. Nothing here is a mock.
 
-### 4 · The AI, and its leash — 1:30–2:10 · *slide 2: the may / may-never table*
+### 4 · The AI, and its leash — 1:09–1:48 · *slide 2: the may / may-never table* · 95w
 
 > GLM-5 on Amazon Bedrock. Every wired output can only make the agent trade
-> **less**, and that's structural, not a promise: `execute.py` never imports
-> the model layer, so no model output can physically reach an order.
+> **less** — structural, not a promise: `execute.py` never imports the model
+> layer, so no model output can reach an order.
 >
-> It may name event windows to stand down in. It may veto a structure. It may
-> stand the whole book down. It may never choose a strike, size a position, or
-> price one — that's arithmetic, and language models shouldn't do arithmetic
-> that money depends on.
+> It may name event windows to stand down in, veto a structure, or stand the
+> book down. It may never choose a strike, size, or price one — that's
+> arithmetic, and language models shouldn't do arithmetic money depends on.
 >
-> Sizing was on the left of that table until I measured it. The model returned
-> a size multiplier of exactly zero point five on sixteen consecutive cycles,
-> with reasoning that contradicted itself between calls — "implied is roughly
-> double realized" in one, "the vol premium is not being paid" in the next,
-> same market, same session. It was anchoring on a number and writing the
-> justification afterwards. Half my book was sized by an artifact.
+> Sizing sat in that left column until I measured it — sixteen identical
+> answers in a row. It went to trend systems instead.
+
+### 5 · Nineteen gates, and proof — 1:48–2:32 · *terminal: run `--replay` live* · 101w
+
+> Nineteen risk gates — twelve for the options book, seven for the sleeve.
+> Pure functions, no I/O, evaluated before every order. The reason is journaled
+> whether the gate passes **or** fails, so a no-trade cycle is exactly as
+> auditable as a trade.
 >
-> So I took sizing away from it and gave it to three published trend systems —
-> Weinstein Stage-2, an EMA ribbon, and Leverage for the Long Run with
-> Moreira-Muir volatility scaling. Deterministic, testable, and I can show you
-> the profit factor behind each one.
+> You don't have to take my word for it. This is `--replay`: a fixture of real
+> SPY, QQQ and IWM quotes run through the same measurement, selection and gate
+> code the live agent runs. No Alpaca account needed — clone the repo, get this
+> output.
 
-*Cut to the dashboard's **Position sizing** panel.*
+*Let the terminal fill. Say nothing for two seconds — the green gates are the
+strongest image in the video.*
 
-> And it publishes its own reasoning. IWM sits at half size — above its
-> 200-day but below its 50-day, the breakdown rung. That sentence is written
-> by the sizer, not by me. ⚠️
->
-> I picked the model by bake-off, not reputation. All six candidates returned
-> valid output, so the tiebreak was blackout accuracy — and Nova Pro and
-> Llama-4 both invented a Monday ISM window that would have stood the agent
-> down on the week's one clear session.
+> All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough.
 
-### 5 · Twelve gates plus seven, and proof — 2:10–2:55 · *terminal: run `--replay` live*
-
-> Twelve risk gates. Pure functions, no I/O, fixed order, evaluated before
-> every order — and the reason is journaled whether the gate passes or fails,
-> so a no-trade cycle is exactly as auditable as a trade. The directional
-> sleeve adds seven more, sharing the same capital floor and the same kill
-> switch rather than declaring its own.
->
-> You don't have to take my word for any of it. This is `--replay`: a fixture
-> of real SPY, QQQ and IWM quotes recorded mid-session, run through the same
-> measurement, selection and gate code the live agent runs. No Alpaca account
-> needed. Clone the repo and you get this same output.
-
-*Let the terminal fill. Say nothing for two seconds — the twelve green gates
-are the strongest image in the video.*
-
-> All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough. And
-> S1 through S7 green underneath, at half notional — because a replay runs with
-> no brain configured, and the absent-brain floor sizes the sleeve too.
-
-### 6 · Alpaca, and one real finding — 2:55–3:20 · *slide 3*
+### 6 · Alpaca, and one real finding — 2:32–2:53 · *slide 3* · 52w
 
 > Every order goes through the Alpaca CLI, and that's a finding, not a
-> preference. The MCP server can't place multi-leg orders — the legs array
-> arrives as a JSON string and fails validation. That's issue 97, open since
-> July. The CLI places the identical order correctly.
+> preference: the MCP server can't place multi-leg orders. The legs array
+> arrives as a JSON string and fails validation — issue 97, open since July.
 >
-> And the journal is an append-only SHA-256 hash chain. The dashboard
-> re-verifies it in your browser, with WebCrypto, and prints the same verdict
-> the CLI does — so the audit trail doesn't rest on my word either.
+> And the journal is a SHA-256 hash chain the dashboard re-verifies in your
+> browser.
 
-### 7 · Market, and who else is here — 3:20–3:45 · *slides 4 and 5*
+### 7 · An edge I measured, shipped, and switched off — 2:53–3:37 · *terminal: `research/`* · 106w
 
-> The premium is real but it isn't uniform — 1.42 on SPY against 1.17 on QQQ
-> today ⚠️ — and that dispersion is the entire opportunity. I trade three ETFs
-> and not single names because I measured the friction: single-name weeklies
-> cost forty to eighty dollars round trip against a thirty to forty-two dollar
-> modeled edge. The trade loses to costs before it starts.
->
-> Four other teams here describe an LLM proposing and deterministic gates
-> disposing. That's table stakes now. None of them chooses *which* structure
-> to sell from a measurement. That's the part that's mine.
+**This is the section that differentiates the submission. Do not cut it.**
 
-### 8 · Money, roadmap, and an honest number — 3:45–4:12 · *slides 6 and 7*
+> Here's the part I'd want to see if I were judging. Delta picks strikes from a
+> model; a volume profile measures where price has actually traded. Five years
+> of bars said a call strike inside the value area gets touched thirty-three
+> percent of the time against twenty-two outside — z of six-point-two.
+>
+> So I built it, and backtested it on three hundred eighty-seven cycles of real
+> option prices. It cut P&L from plus nine-twenty-six to plus two-thirty, while
+> avoiding not one single loss.
+>
+> So it's off. The code stays in the repo, because a robust signal pointed at
+> the wrong objective is still a losing feature.
 
-> The sellable asset here isn't the alpha, it's the audit trail: a broker or
-> an RIA needs a defensible record of why an automated system did what it did,
-> and that's the layer I'd license. Signal-selling is a registration problem,
-> not a business.
+### 8 · The honest number — 3:37–4:06 · *dashboard P&L panel* · 69w
+
+> And the number itself. I backtested the whole book the same way: plus
+> zero-point-nine percent over two and a half years, t of
+> zero-point-three-seven. No edge — and I won't claim a strategy works because
+> it survived one week.
 >
-> Next is expiry laddering, learned skew priors instead of hard-coded ones,
-> and a backtest harness — which is a data problem now, not a rewrite, because
-> the recorder already exists.
+> The account is down about one and a half percent ⚠️. Two discretionary tail
+> trades I took against my own evidence are the entire loss; the systematic
+> book is flat.
+
+### 9 · Close — 4:06–4:22 · *slide 6, then the final card* · 39w
+
+> So the sellable asset isn't the alpha — it's the audit trail. A broker or an
+> RIAs need a defensible record of why an automated system did what it did.
 >
-> And the honest number. Defined-risk premium selling is capped at the credit
-> it collects — median under one percent for the week. So there is also a
-> thirty-thousand-dollar long QQQ sleeve, sized by the same trend systems, and
-> I will say exactly what it is: it buys **variance, not edge**.
->
-> Seven gates of its own. A four percent stop that rests at the broker, which
-> the options book cannot do, because Alpaca serves no resting stop on a
-> multi-leg position. And the part I actually care about — its risk budget is
-> *subtracted* from the options book's, not added beside it. Both books at
-> maximum loss land exactly on the minus-four percent floor. A test asserts it,
-> and turning the sleeve off restores the old numbers exactly.
->
-> I would rather show you a leash than a forecast.
+> I'd rather show you a leash than a forecast.
 
 *Final card: repo URL, dashboard URL, `PA35XVXLIO0E`.*
+
+---
+
+## Why this order
+
+The first six sections earn the right to be believed; §7 and §8 spend it. A
+judge who has just watched nineteen gates go green in a terminal they could run
+themselves is primed to accept a negative result as rigour rather than as
+weakness — and §8's "down one and a half percent" lands very differently after
+§7 than it would cold at 0:30. Never move §8 earlier to "get it out of the
+way": without §7 in front of it, it reads as an apology.
 
 ---
 
@@ -184,62 +182,72 @@ are the strongest image in the video.*
 
 **Built: `dashboard/deck.html`, live at
 [aryangorde6.github.io/contour/deck.html](https://aryangorde6.github.io/contour/deck.html).**
-What follows is what each slide says, so you can check the narration lands on
-the right one. Slide numbers below match the counter in the corner.
+Slide numbers match the counter in the corner.
 
 **1 — Title.** *Contour — the measurement picks the structure.* Name, team
 FluffyMargins, the four-line rule, account `PA35XVXLIO0E`.
 
-**2 — The leash.** Two columns, "the model may" / "the model may never", from
-`WRITEUP.md`. Footer: *`execute.py` never imports `mind.py`.*
+**2 — The leash.** Two columns, "the model may" / "the model may never".
+Footer: *`execute.py` never imports `mind.py`.*
 
 **3 — Alpaca infrastructure.** CLI vs MCP (link issue 97), the three-rung
-ladder, `reconcile()` reading actual fills, the hash chain, and the resting-stop
-asymmetry: none on a multi-leg position, so the options book polls; a single
-equity leg can rest one, so the sleeve does, GTC. One line each.
+ladder, `reconcile()` reading actual fills, the hash chain, and the
+resting-stop asymmetry: none on a multi-leg position, so the options book
+polls; a single equity leg can rest one, so the sleeve does, GTC.
 
-**4 — Market analysis.** The three VRP figures on this slide are **live** —
-fetched from `state/surface.json` on the `agent-state` branch, with the last
-known values baked in as a fallback so it never renders an em-dash on stage.
-The footer says which of the two you are looking at. Alongside: the crowd
-sells one structure regardless of the surface; friction is the real gate on
-universe size ($40–80 round trip on single names against a $30–42 modelled
-edge, versus $8–20 on the ETFs); and Alpaca serves no earnings-date endpoint
-on any plan, so a single-name design hangs its most important gate on data
-that does not exist.
+**4 — Market analysis.** The three VRP figures are **live** — fetched from
+`state/surface.json` on the `agent-state` branch, with the last known values
+baked in as a fallback so it never renders an em-dash on stage. Alongside:
+friction is the real gate on universe size ($40–80 round trip on single names
+against a $30–42 modelled edge, versus $8–20 on the ETFs), and Alpaca serves no
+earnings-date endpoint on any plan, so a single-name design hangs its most
+important gate on data that does not exist.
 
 > If you want a citable market-size number on this slide, source it yourself
-> and put the citation on the slide. I am not giving you one to read out —
-> an unsourced statistic is the easiest thing for a judge to catch.
+> and put the citation on the slide. I am not giving you one to read out — an
+> unsourced statistic is the easiest thing for a judge to catch.
 
-**5 — Competitive analysis.** Four named submissions in one column (Horizon
-Blackline, VRP Engine, AEGIS-Q, EdgeStack) with their own words: LLM proposes,
-gates dispose, journaled. Second column, one row: *chooses among four
-structures from measured skew.* Third row: *runnable without our credentials —
-`--replay`, and chain verification in the judge's browser.*
+**5 — Competitive analysis.** Four named submissions (Horizon Blackline, VRP
+Engine, AEGIS-Q, EdgeStack) in their own words: LLM proposes, gates dispose,
+journaled. Second column: *chooses among four structures from measured skew.*
+Third: *runnable without our credentials — `--replay`, and chain verification
+in the judge's browser.* You are not narrating this slide any more; it is there
+for the judge who pauses.
 
-**6 — Revenue model.** Three tiers, most honest first:
-- **The audit layer is the product.** Gate engine + hash-chained decision
-  record, licensed to brokers and RIAs who must defend automated decisions.
-- **Managed own-capital / prop**, where P&L is the revenue and no
-  registration question arises.
-- **Not** signal subscriptions — that is investment advice and needs
-  registration. Saying this out loud is a credibility win, not a weakness.
+**6 — Revenue model.** Three tiers, most honest first: the audit layer is the
+product; managed own-capital / prop; and **not** signal subscriptions, which is
+investment advice and needs registration. Saying that out loud is a credibility
+win.
 
 **7 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-269 tests. Next:
-expiry laddering and rolls; skew priors learned per underlying instead of
-hard-coded; a backtest harness over recorded fixtures. Then: paid feed to close
-the indicative-vs-NBBO gap; portfolio-level vega and gamma caps instead of
-per-position max loss only; the `HALT` file becomes a kill switch with paging.
+269 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+instead of hard-coded; **more backtest history** — the harness is built and has
+run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
+limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;
+portfolio-level vega and gamma caps; the `HALT` file as a paging kill switch.
 
 ---
 
 ## Cutting, if you run over 4:30
 
-In this order: the bake-off detail in §4 (keep the sentence, drop the models),
-then the friction numbers in §7, then §6's second paragraph, then §8's middle
-paragraph down to its last sentence — *"its risk budget is subtracted from the
-options book's, not added beside it, and a test asserts it"* — which is the one
-clause in it that has to survive. **Never cut §5** — the green gates and
-`--replay` are the strongest technical evidence in the submission.
+Take these **in order** — each row shows what the script drops to, and what that
+runs at both paces. Cut before recording rather than rushing the ending; §8 and
+§9 are where a rushed take does the most damage, because they are the two the
+judge remembers.
+
+| Cut | Saves | Script | @145 | @135 |
+|---|---:|---:|---:|---:|
+| §4's sizing anecdote | −21w | **608w** | 4:13 | 4:32 |
+| §2's last sentence | −13w | **595w** | 4:08 | 4:26 |
+| §3's schedule detail | −15w | **580w** | 4:02 | 4:19 |
+| §6's issue-97 detail | −14w | **566w** | 3:56 | 4:13 |
+
+1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
+2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.
+3. **§3's schedule detail** — keep "This is the live judged account, running unattended on GitHub Actions", drop the cycle timings.
+4. **§6's issue-97 detail** — keep "the MCP server can't place multi-leg orders", drop the JSON-string diagnosis. **Never cut §6's second paragraph** — the hash chain is a differentiator, not filler.
+
+**Never cut §5 or §7.** The green gates and `--replay` are the strongest
+technical evidence in the submission, and the switched-off filter is the only
+thing in it that no other team can say. If all four cuts still leave you over,
+the problem is pace, not length — re-time a take before touching either.
