@@ -8,7 +8,7 @@ Live dashboard: **[aryangorde6.github.io/contour](https://aryangorde6.github.io/
 
 A trading agent is easy to describe and hard to believe, so the first claim
 here is not about returns — it is about checkability. **Nothing below needs our
-credentials to verify.** `pytest` runs **269 tests**. `python -m contour
+credentials to verify.** `pytest` runs **272 tests**. `python -m contour
 --replay` puts a committed fixture of real SPY/QQQ/IWM quotes through the same
 measurement, selection and gate code the live agent runs, printing every gate
 reason. `python -m contour --verify` walks an append-only SHA-256 hash chain of

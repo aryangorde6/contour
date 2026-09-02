@@ -22,8 +22,8 @@ import pytest
 from contour import config as C
 
 ROOT = Path(__file__).resolve().parent.parent
-SURFACES = ("README.md", "WRITEUP.md", "TECHNICAL.md", "state.md",
-            "ops/submission.md", "dashboard/deck.html")
+SURFACES = ("README.md", "WRITEUP.md", "WRITEUP-ONEPAGE.md", "TECHNICAL.md",
+            "state.md", "ops/submission.md", "dashboard/deck.html")
 
 
 def surfaces() -> dict[str, str]:
@@ -116,3 +116,34 @@ def test_the_locked_expiry_is_published_as_the_code_locks_it():
     iso = C.EXPIRY.isoformat()
     text = " ".join(surfaces().values())
     assert iso in text, f"the locked expiry {iso} appears on no surface"
+
+
+# --- 5. the submitted write-up has to stay one page -----------------------
+def test_the_one_page_writeup_is_still_one_page():
+    """lablab's stated requirement is "One-page write-up covering your AI
+    logic, risk gates, and Alpaca infrastructure implementation". WRITEUP.md
+    grew from one page to seven without anyone deciding to; the submitted
+    copy is the one that has to hold the line, so the line is a test.
+
+    650 words plus a short code block is about a page of dense markdown. This
+    is a ceiling, not a target -- shorter is fine."""
+    raw = (ROOT / "WRITEUP-ONEPAGE.md").read_text(encoding="utf-8")
+    prose = re.sub(r"```.*?```", "", raw, flags=re.S)
+    prose = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", prose)   # links -> label only
+    words = len(prose.split())
+    assert words <= 650, f"the one-pager is {words} words; it is meant to be one page"
+
+
+def test_the_one_page_writeup_covers_the_three_required_headings():
+    """The requirement names three subjects explicitly. Missing one is the
+    cheapest possible way to lose points."""
+    text = (ROOT / "WRITEUP-ONEPAGE.md").read_text(encoding="utf-8").lower()
+    for heading in ("## ai logic", "## risk gates",
+                    "## alpaca infrastructure implementation"):
+        assert heading in text, f"the one-pager is missing {heading!r}"
+
+
+def test_the_one_page_writeup_names_the_judged_account():
+    """"Alpaca account ID -- required for judging." It appears on the one
+    document a judge is guaranteed to open."""
+    assert "PA35XVXLIO0E" in (ROOT / "WRITEUP-ONEPAGE.md").read_text(encoding="utf-8")

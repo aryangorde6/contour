@@ -24,8 +24,34 @@ Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
 | Repository | https://github.com/aryangorde6/contour |
 | Live dashboard | https://aryangorde6.github.io/contour/ |
 | Slides | https://aryangorde6.github.io/contour/deck.html |
-| Write-up | https://github.com/aryangorde6/contour/blob/main/WRITEUP.md |
+| **Write-up (the required one-pager)** | **https://github.com/aryangorde6/contour/blob/main/WRITEUP-ONEPAGE.md** |
+| Write-up (full technical version, optional extra) | https://github.com/aryangorde6/contour/blob/main/WRITEUP.md |
+| Cover image | *(see note below — not yet made)* |
 | Video | *(paste the YouTube/Loom link once recorded — unlisted is fine)* |
+
+
+---
+
+## Two requirements this draft did not previously satisfy
+
+Both checked 2026-09-02 against the live lablab page, not against memory.
+
+**1. "One-page write-up covering your AI logic, risk gates, and Alpaca
+infrastructure implementation."** `WRITEUP.md` had grown to ~2,400 words, which
+is about seven pages. **`WRITEUP-ONEPAGE.md` is the one to submit** — 584 words,
+the three required headings by name, the judged account ID on it, and a test
+holds it under 650 words so it cannot quietly grow again. Link the full version
+as supporting material, not as the requirement.
+
+**2. "Cover image" is a submission field and no image exists.** Fastest
+acceptable path: screenshot slide 1 of
+[the deck](https://aryangorde6.github.io/contour/deck.html) — it is already
+1280×720 and carries the title, the four-line rule and the account number.
+
+**There is no stated video length.** The submission form has a "Video
+presentation" field, but no minimum or maximum appears anywhere on the
+hackathon page. `ops/video.md` previously asserted a 4:30 ceiling that has no
+source; it has been corrected.
 
 ---
 
