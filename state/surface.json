@@ -1,29 +1,29 @@
 [
  {
   "underlying": "SPY",
-  "spot": 761.41,
-  "atm_iv": 12.3875,
-  "rv10": 7.855,
-  "vrp_ratio": 1.577,
-  "skew25": 3.38,
-  "skew_z": 0.717
+  "spot": 763.98,
+  "atm_iv": 11.7125,
+  "rv10": 7.7547,
+  "vrp_ratio": 1.51,
+  "skew25": 3.24,
+  "skew_z": 0.6
  },
  {
   "underlying": "QQQ",
-  "spot": 707.26,
-  "atm_iv": 17.2275,
-  "rv10": 12.9006,
-  "vrp_ratio": 1.335,
-  "skew25": 4.4,
-  "skew_z": 1.223
+  "spot": 707.45,
+  "atm_iv": 16.96,
+  "rv10": 12.7518,
+  "vrp_ratio": 1.33,
+  "skew25": 3.95,
+  "skew_z": 0.877
  },
  {
   "underlying": "IWM",
-  "spot": 290.57,
-  "atm_iv": 17.8225,
-  "rv10": 12.8218,
-  "vrp_ratio": 1.39,
-  "skew25": 3.92,
-  "skew_z": 0.547
+  "spot": 293.16,
+  "atm_iv": 16.9725,
+  "rv10": 13.6766,
+  "vrp_ratio": 1.241,
+  "skew25": 3.85,
+  "skew_z": 0.5
  }
 ]
