@@ -1,14 +1,6 @@
 {
- "position": {
-  "underlying": "QQQ",
-  "shares": 21,
-  "entry_price": 707.82,
-  "stop_price": 679.51,
-  "opened_at": "2026-09-01T10:13:25.231989-04:00",
-  "order_id": "5b46b332-d503-44fb-97d4-f0c607c24055",
-  "stop_order_id": "d14a4e82-37ca-437b-bf14-ba4058a00f6e"
- },
- "retired": false,
+ "position": null,
+ "retired": true,
  "underlying": "QQQ",
  "notional_ceiling": 30000.0,
  "stop_pct": 0.04,
@@ -19,9 +11,9 @@
   "entry_price": 707.82,
   "stop_price": 679.51,
   "stop_resting": true,
-  "spot": 717.72,
-  "unrealized": 207.9,
-  "exit": false,
-  "reason": "HOLD: 717.72 vs entry 707.82 (+1.40%), stop 679.51, LRS 1.00"
+  "spot": 717.33,
+  "unrealized": 199.6,
+  "exit": true,
+  "reason": "FLATTEN: scheduled hard flatten at 2026-09-03 15:45 ET"
  }
 }
