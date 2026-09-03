@@ -4,16 +4,5 @@
  "underlying": "QQQ",
  "notional_ceiling": 30000.0,
  "stop_pct": 0.04,
- "risk_budget_pct": 0.012,
- "exit_check": {
-  "underlying": "QQQ",
-  "shares": 21,
-  "entry_price": 707.82,
-  "stop_price": 679.51,
-  "stop_resting": true,
-  "spot": 717.33,
-  "unrealized": 199.6,
-  "exit": true,
-  "reason": "FLATTEN: scheduled hard flatten at 2026-09-03 15:45 ET"
- }
+ "risk_budget_pct": 0.012
 }
