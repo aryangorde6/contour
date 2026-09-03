@@ -1,6 +1,6 @@
 {
- "last_cycle_utc": "2026-09-03T18:18:43.282448+00:00",
- "cycle_count": 66,
+ "last_cycle_utc": "2026-09-03T18:44:08.426239+00:00",
+ "cycle_count": 67,
  "mode": "MANAGE_ONLY",
  "reason": "G11: no new entries after Thu 11:00 ET",
  "brain": "bedrock:zai.glm-5"
