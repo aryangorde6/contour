@@ -1,17 +1,55 @@
 [
  {
   "underlying": "SPY",
-  "decision": "NO_TRADE",
-  "reason": "STAND_DOWN: advisory layer returned multiplier 0 (fail-closed brain or a hard event blackout); no entries this cycle. Exits above still ran."
+  "decision": "VETOED",
+  "reason": "SKEW_NEUTRAL: SPY skew_z -0.03 inside +/-0.80 -- both sides fairly priced, selling both",
+  "gates": [
+   "G1 ok: NAV $98,991",
+   "G2 ok: session P&L $0",
+   "G3 book risk $2,068 would exceed 0% ramp cap $0 for 2026-09-03"
+  ],
+  "spot": 768.44,
+  "atm_iv": 10.8825,
+  "rv10": 7.0391,
+  "vrp_ratio": 1.546,
+  "skew25": 2.48,
+  "skew_z": -0.033,
+  "regime_weight": 1.0,
+  "regime_source": "measured",
+  "credit": 0.9,
+  "contracts": 3,
+  "max_loss_per_contract": 410.0,
+  "legs": [
+   "SPY260911P00752000",
+   "SPY260911P00747000",
+   "SPY260911C00781000",
+   "SPY260911C00786000"
+  ]
  },
  {
   "underlying": "QQQ",
   "decision": "NO_TRADE",
-  "reason": "STAND_DOWN: advisory layer returned multiplier 0 (fail-closed brain or a hard event blackout); no entries this cycle. Exits above still ran."
+  "reason": "VRP_TOO_LOW: QQQ implied/realized 1.24 < 1.30 -- not paid enough to sell",
+  "spot": 712.68,
+  "atm_iv": 15.8275,
+  "rv10": 12.7577,
+  "vrp_ratio": 1.241,
+  "skew25": 3.19,
+  "skew_z": 0.292,
+  "regime_weight": 1.0,
+  "regime_source": "measured"
  },
  {
   "underlying": "IWM",
   "decision": "NO_TRADE",
-  "reason": "STAND_DOWN: advisory layer returned multiplier 0 (fail-closed brain or a hard event blackout); no entries this cycle. Exits above still ran."
+  "reason": "VRP_TOO_LOW: IWM implied/realized 1.21 < 1.30 -- not paid enough to sell",
+  "spot": 293.65,
+  "atm_iv": 15.7975,
+  "rv10": 13.0557,
+  "vrp_ratio": 1.21,
+  "skew25": 2.78,
+  "skew_z": -0.213,
+  "regime_weight": 0.5,
+  "regime_source": "measured"
  }
 ]

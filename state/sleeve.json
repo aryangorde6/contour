@@ -19,11 +19,9 @@
   "entry_price": 707.82,
   "stop_price": 679.51,
   "stop_resting": true,
-  "spot": 711.74,
-  "unrealized": 82.32,
+  "spot": 712.63,
+  "unrealized": 101.11,
   "exit": false,
-  "reason": "HOLD: 711.74 vs entry 707.82 (+0.55%), stop 679.51, LRS 1.00"
- },
- "decision": "NO_TRADE",
- "reason": "STAND_DOWN: advisory layer returned multiplier 0 (fail-closed brain or a hard event blackout); no entries this cycle. Exits above still ran."
+  "reason": "HOLD: 712.63 vs entry 707.82 (+0.68%), stop 679.51, LRS 1.00"
+ }
 }
