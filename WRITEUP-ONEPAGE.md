@@ -78,12 +78,12 @@ re-verifies it in your browser with WebCrypto.
 ## Performance, attributed
 
 The criterion asks for the performance of *the submitted agent*; this account
-holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 10:53** UTC:
+holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 19:00** UTC:
 
 | Placed by | of start NAV |
 |---|---:|
-| **The agent** — every `contour-*` order id | **+0.03%** |
-| The operator — three discretionary tail trades | **−1.35%** |
+| **The agent** — every `contour-*` order id | **+0.15%** |
+| The operator — three discretionary tail trades | **−0.46%** |
 
 Every order this repository submits is prefixed `contour-` in `loop.py`;
 nothing else in the account carries it, so the split is a field *the broker*

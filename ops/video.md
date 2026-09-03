@@ -19,14 +19,14 @@ and effectively the project communicates its idea, **demonstrates the agent in
 action**, and presents the reasoning behind it"* — which rewards the `--replay`
 run in §5, not minutes.
 
-Narration is **703 words**, so pace decides the runtime:
+Narration is **704 words**, so pace decides the runtime:
 
 | Pace | Runtime |
 |---|---|
-| 155 wpm (brisk) | 4:32 |
+| 155 wpm (brisk) | 4:33 |
 | **145 wpm (planned)** | **4:51** |
-| 135 wpm (unhurried) | 5:12 |
-| 125 wpm (slow) | 5:37 |
+| 135 wpm (unhurried) | 5:13 |
+| 125 wpm (slow) | 5:38 |
 
 Read it deliberately and **time a full take.** Every number marked ⚠️ is live
 and will have changed — re-read it off the dashboard first.
@@ -164,7 +164,7 @@ strongest image in the video.*
 > So it's off. The code stays in the repo, because a robust signal pointed at
 > the wrong objective is still a losing feature.
 
-### 8 · The honest number — 3:36–4:35 · *slide 6: Performance, attributed* · 143w
+### 8 · The honest number — 3:36–4:35 · *slide 6: Performance, attributed* · 144w
 
 **Do not cut this either.** P&L is the criterion the organisers highlight on
 the page; this is the section that answers it.
@@ -174,14 +174,14 @@ the page; this is the section that answers it.
 > zero-point-three-seven. No edge — I won't claim a strategy works because it
 > survived one week.
 >
-> The account is down about one and a third percent ⚠️. But the criterion
-> asks for the *submitted agent*, and there are two traders in this account.
+> The account is down about a third of a percent ⚠️. But the criterion asks
+> for the *submitted agent*, and there are two traders in this account.
 >
 > Every order the agent places carries a client order ID starting `contour`.
 > Three don't — the tail trades I took against my own recorded evidence. Split
-> on that one field: the operator is minus one-point-three-five ⚠️. The
-> agent is plus zero-point-zero-three ⚠️ — flat, which is what a
-> backtest with a t of zero-point-three-seven predicts.
+> on that one field: the operator is minus zero-point-four-six ⚠️. The agent
+> is plus zero-point-one-five ⚠️ — flat, which is exactly what a backtest
+> with a t of zero-point-three-seven predicts.
 >
 > That's a field the broker stamps, not my bookkeeping. `attribution.py
 > --offline` — no credentials — reconciles it to broker equity within two
@@ -277,10 +277,10 @@ judge remembers.
 
 | Cut | Saves | Script | @145 | @135 |
 |---|---:|---:|---:|---:|
-| §4's sizing anecdote | −21w | **682w** | 4:42 | 5:03 |
-| §2's last sentence | −13w | **669w** | 4:37 | 4:57 |
-| §3's schedule detail | −15w | **654w** | 4:31 | 4:51 |
-| §6's issue-97 detail | −14w | **640w** | 4:25 | 4:44 |
+| §4's sizing anecdote | −21w | **683w** | 4:43 | 5:04 |
+| §2's last sentence | −13w | **670w** | 4:37 | 4:58 |
+| §3's schedule detail | −15w | **655w** | 4:31 | 4:51 |
+| §6's issue-97 detail | −14w | **641w** | 4:25 | 4:45 |
 
 1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
 2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.

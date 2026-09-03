@@ -19,13 +19,13 @@ rest on our word. CI runs all of it on every push, with no secrets.
 The second claim is the number, stated before the pitch rather than after it.
 The criterion asks for *"the trading performance of the **submitted agent**"*,
 and this account contains two traders: the agent, and an operator who overrode
-it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 10:53** UTC:
+it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 19:00** UTC:
 
 | Placed by | P&L | of start NAV |
 |---|---:|---:|
-| **The agent** — every `contour-*` order id | +$32.64 | **+0.03%** |
-| The operator — three discretionary tail trades | −$1,350.00 | **−1.35%** |
-| **Account total** | −$1,317.36 | −1.32% |
+| **The agent** — every `contour-*` order id | +$151.22 | **+0.15%** |
+| The operator — three discretionary tail trades | −$462.00 | **−0.46%** |
+| **Account total** | −$310.78 | −0.31% |
 
 **That split is not our bookkeeping — it is a field the broker records.** Every
 order this codebase submits is given a `client_order_id` by `order_base_id` or
