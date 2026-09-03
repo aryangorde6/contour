@@ -26,12 +26,13 @@ it *cut* P&L in the same backtest, and **switched it off**. Both the code and
 the negative result are still in the repo.
 
 What we do claim is that every statement here is checkable without our
-credentials: `pytest` runs 294 tests, `python -m contour --replay` reproduces
+credentials: `pytest` runs 295 tests, `python -m contour --replay` reproduces
 the agent's decisions from a committed quote fixture, and
 `python -m contour --verify` walks the hash chain that records them. The live
-P&L, including the two discretionary tail trades that account for the whole
-drawdown, is broken down line by line in
-**[WRITEUP.md](WRITEUP.md)**.
+P&L is split by `client_order_id` into what the agent placed and what a human
+did — the three discretionary tail trades account for the entire drawdown, and
+`python ops/attribution.py --offline` recomputes the split from committed order
+history with no credentials. Line by line in **[WRITEUP.md](WRITEUP.md)**.
 
 ## Writes through the CLI, and why
 
@@ -58,7 +59,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 294 passing
+- [x] `tests/` — 295 collected, 294 passing, 1 skipped by design
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)

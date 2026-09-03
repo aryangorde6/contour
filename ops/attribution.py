@@ -15,6 +15,7 @@ drift.
 
     .venv/bin/python ops/attribution.py             # live, needs credentials
     .venv/bin/python ops/attribution.py --offline   # from the committed export
+    .venv/bin/python ops/attribution.py --publish   # ... and update the documents
 
 `--offline` exists for the same reason `--replay` does: a reader without our
 credentials has to be able to reproduce the number. It recomputes the whole
@@ -24,6 +25,7 @@ the account has ever filled, with the client_order_id attached to each.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -162,6 +164,83 @@ def render(snap: dict, att: dict) -> str:
     return "\n".join(out)
 
 
+# --- publishing -----------------------------------------------------------
+# The split appears in three documents, and the marks move every session, so a
+# refresh means editing three tables in two markup languages by hand. That is
+# how the figures drifted the first time. `--publish` rewrites them from the
+# export instead; tests/test_attribution.py then fails if any surface still
+# disagrees, so a half-applied refresh cannot ship.
+PUBLISHED = ("WRITEUP.md", "WRITEUP-ONEPAGE.md", "dashboard/deck.html")
+
+# Every table names the same three rows. The label cell is matched and kept;
+# the numeric cells are rebuilt -- however many of them a surface carries (the
+# one-pager has room for the percentage only).
+ROW_LABELS = (("The agent", "agent_pnl"), ("The operator", "human_pnl"),
+              ("Account total", "total_pnl"))
+STAMP = re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}")
+
+
+def _cells(pnl: float, start: float, minus: str) -> list[str]:
+    money = f"{'-' if pnl < 0 else '+'}${abs(pnl):,.2f}"
+    return [money.replace("-", minus), f"{pnl / start:+.2%}".replace("-", minus)]
+
+
+def _publish_line(line: str, fills: list[str], html: bool) -> str:
+    """Rewrite the numeric cells of one table row, keeping the label and
+    whatever emphasis each cell already carried."""
+    if html:
+        seen = [0]
+
+        def repl(m: re.Match) -> str:
+            i, seen[0] = seen[0], seen[0] + 1
+            if i == 0:                                   # the label cell
+                return m.group(0)
+            bold = m.group(2).strip().startswith("<b>")
+            value = fills[i - 1]
+            return f"{m.group(1)}<b>{value}</b></td>" if bold else \
+                f"{m.group(1)}{value}</td>"
+
+        return re.sub(r"(<td[^>]*>)(.*?)</td>", repl, line)
+
+    cells = line.rstrip("\n").strip().strip("|").split("|")
+    out = [cells[0]]
+    for cell, value in zip(cells[1:], fills):
+        out.append(f" **{value}** " if cell.strip().startswith("**")
+                   else f" {value} ")
+    return "|" + "|".join(out) + "|\n"
+
+
+def publish(snap: dict, att: dict) -> list[str]:
+    """Push this export's stamp and figures into every document that quotes
+    them. Returns the files that changed."""
+    stamp, start = snap["captured_at"][:16], snap["start_equity"]
+    changed = []
+    for rel in PUBLISHED:
+        path = ROOT / rel
+        before = path.read_text(encoding="utf-8")
+        html = path.suffix == ".html"
+        minus = "&minus;" if html else "\u2212"
+        lines = before.splitlines(keepends=True)
+        for i, line in enumerate(lines):
+            if "ATTRIBUTION-SNAPSHOT" in line:
+                lines[i] = STAMP.sub(stamp, line)
+                continue
+            if not (line.lstrip().startswith("|") or "<td" in line):
+                continue
+            for label, key in ROW_LABELS:
+                if label in line:
+                    fills = _cells(att[key], start, minus)
+                    n = (len(re.findall(r"<td[^>]*>", line)) if html
+                         else len(line.strip().strip("|").split("|"))) - 1
+                    lines[i] = _publish_line(line, fills[-n:], html)
+                    break
+        after = "".join(lines)
+        if after != before:
+            path.write_text(after, encoding="utf-8")
+            changed.append(rel)
+    return changed
+
+
 def main(argv: list[str]) -> int:
     offline = "--offline" in argv
     if offline:
@@ -185,6 +264,10 @@ def main(argv: list[str]) -> int:
     if not offline:
         print(f"\nwrote {EXPORT.relative_to(ROOT)} -- rerun with --offline to "
               f"reproduce this table with no credentials")
+    if "--publish" in argv:
+        changed = publish(snap, att)
+        print("\nupdated " + (", ".join(changed) if changed
+                              else "nothing -- the documents already agree"))
     return 0
 
 

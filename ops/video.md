@@ -19,14 +19,14 @@ and effectively the project communicates its idea, **demonstrates the agent in
 action**, and presents the reasoning behind it"* — which rewards the `--replay`
 run in §5, not minutes.
 
-Narration is **690 words**, so pace decides the runtime:
+Narration is **703 words**, so pace decides the runtime:
 
 | Pace | Runtime |
 |---|---|
-| 155 wpm (brisk) | 4:27 |
-| **145 wpm (planned)** | **4:46** |
-| 135 wpm (unhurried) | 5:07 |
-| 125 wpm (slow) | 5:31 |
+| 155 wpm (brisk) | 4:32 |
+| **145 wpm (planned)** | **4:51** |
+| 135 wpm (unhurried) | 5:12 |
+| 125 wpm (slow) | 5:37 |
 
 Read it deliberately and **time a full take.** Every number marked ⚠️ is live
 and will have changed — re-read it off the dashboard first.
@@ -50,7 +50,7 @@ and `--check` fails if they have drifted. Hand-estimates were 40% light.
 ## Before you record
 
 ```bash
-git pull && .venv/bin/python -m pytest -q          # expect 294 passed
+git pull && .venv/bin/python -m pytest -q          # expect 294 passed, 1 skipped
 .venv/bin/python -m contour --replay               # the money shot, rehearse it
 ```
 
@@ -164,7 +164,7 @@ strongest image in the video.*
 > So it's off. The code stays in the repo, because a robust signal pointed at
 > the wrong objective is still a losing feature.
 
-### 8 · The honest number — 3:36–4:29 · *slide 6: Performance, attributed* · 130w
+### 8 · The honest number — 3:36–4:35 · *slide 6: Performance, attributed* · 143w
 
 **Do not cut this either.** P&L is the criterion the organisers highlight on
 the page; this is the section that answers it.
@@ -174,19 +174,20 @@ the page; this is the section that answers it.
 > zero-point-three-seven. No edge — I won't claim a strategy works because it
 > survived one week.
 >
-> The account is down about one and a half percent ⚠️. But the criterion asks
-> for the *submitted agent*, and there are two traders in this account.
+> The account is down about one and a third percent ⚠️. But the criterion
+> asks for the *submitted agent*, and there are two traders in this account.
 >
 > Every order the agent places carries a client order ID starting `contour`.
 > Three don't — the tail trades I took against my own recorded evidence. Split
-> on that one field: the operator is minus one-point-four-eight ⚠️; the agent
-> is minus zero-point-zero-eight ⚠️.
+> on that one field: the operator is minus one-point-three-five ⚠️. The
+> agent is plus zero-point-zero-three ⚠️ — flat, which is what a
+> backtest with a t of zero-point-three-seven predicts.
 >
 > That's a field the broker stamps, not my bookkeeping. `attribution.py
 > --offline` — no credentials — reconciles it to broker equity within two
 > dollars.
 
-### 9 · Close — 4:29–4:46 · *slide 7, then the final card* · 39w
+### 9 · Close — 4:35–4:51 · *slide 7, then the final card* · 39w
 
 > So the sellable asset isn't the alpha — it's the audit trail. A broker or an
 > RIAs need a defensible record of why an automated system did what it did.
@@ -202,8 +203,8 @@ the page; this is the section that answers it.
 The first six sections earn the right to be believed; §7 and §8 spend it. A
 judge who has just watched nineteen gates go green in a terminal they could run
 themselves is primed to accept a negative result as rigour rather than as
-weakness — and §8's "down one and a half percent" lands very differently after
-§7 than it would cold at 0:30. Never move §8 earlier to "get it out of the
+weakness — and §8's "the account is down" lands very differently after §7
+than it would cold at 0:30. Never move §8 earlier to "get it out of the
 way": without §7 in front of it, it reads as an apology.
 
 ---
@@ -249,8 +250,9 @@ capture timestamp on the slide. `tests/test_attribution.py` pins the
 `contour-` prefix the split rests on, and asserts this slide quotes the same
 capture as `ops/order_history.json` — so a stale figure fails the suite rather
 than ageing quietly. **Regenerate before you record:**
-`python ops/attribution.py`, then update this slide, `WRITEUP.md` and
-`WRITEUP-ONEPAGE.md` with the new stamp and figures.
+`python ops/attribution.py --publish` refreshes the export *and* rewrites the
+stamp and figures in this slide, `WRITEUP.md` and `WRITEUP-ONEPAGE.md`. Then
+re-read §8 — the spoken numbers there are hand-written and marked ⚠️.
 
 **7 — Revenue model.** Three tiers, most honest first: the audit layer is the
 product; managed own-capital / prop; and **not** signal subscriptions, which is
@@ -258,7 +260,7 @@ investment advice and needs registration. Saying that out loud is a credibility
 win.
 
 **8 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-294 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+295 tests. Next: expiry laddering and rolls; skew priors learned per underlying
 instead of hard-coded; **more backtest history** — the harness is built and has
 run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
 limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;
@@ -275,10 +277,10 @@ judge remembers.
 
 | Cut | Saves | Script | @145 | @135 |
 |---|---:|---:|---:|---:|
-| §4's sizing anecdote | −21w | **669w** | 4:37 | 4:57 |
-| §2's last sentence | −13w | **656w** | 4:31 | 4:52 |
-| §3's schedule detail | −15w | **641w** | 4:25 | 4:45 |
-| §6's issue-97 detail | −14w | **627w** | 4:19 | 4:39 |
+| §4's sizing anecdote | −21w | **682w** | 4:42 | 5:03 |
+| §2's last sentence | −13w | **669w** | 4:37 | 4:57 |
+| §3's schedule detail | −15w | **654w** | 4:31 | 4:51 |
+| §6's issue-97 detail | −14w | **640w** | 4:25 | 4:44 |
 
 1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
 2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.

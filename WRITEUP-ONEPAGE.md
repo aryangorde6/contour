@@ -78,12 +78,12 @@ re-verifies it in your browser with WebCrypto.
 ## Performance, attributed
 
 The criterion asks for the performance of *the submitted agent*; this account
-holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-02 09:26** UTC:
+holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 10:53** UTC:
 
 | Placed by | of start NAV |
 |---|---:|
-| **The agent** — every `contour-*` order id | **−0.08%** |
-| The operator — three discretionary tail trades | **−1.48%** |
+| **The agent** — every `contour-*` order id | **+0.03%** |
+| The operator — three discretionary tail trades | **−1.35%** |
 
 Every order this repository submits is prefixed `contour-` in `loop.py`;
 nothing else in the account carries it, so the split is a field *the broker*
@@ -92,6 +92,6 @@ order history with no credentials, reconciling to broker equity within $1.65.
 
 ---
 
-**Checkable without our credentials.** `pytest` runs 294 tests; `--replay`
+**Checkable without our credentials.** `pytest` runs 295 tests; `--replay`
 reproduces every decision from a committed quote fixture. We claim no edge: a
 387-cycle backtest returned **+0.93% over 2.5 years, t = +0.37**.

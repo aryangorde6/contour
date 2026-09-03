@@ -126,3 +126,21 @@ def test_a_published_attribution_matches_the_export(rel):
         assert f"{value:+.2%}" in text or f"{value:.2%}" in text, (
             f"{rel} does not carry the {label} figure {value:.2%} from the "
             f"export")
+
+
+# --- 4. the refresh path itself -------------------------------------------
+def test_publishing_the_committed_export_changes_nothing():
+    """`--publish` rewrites three tables in two markup languages, and it gets
+    run once more after the final flatten -- late, and under time pressure. If
+    the rewriter does not reproduce the committed documents byte for byte on
+    input it has already published, it is reformatting as well as updating, and
+    that would land unreviewed."""
+    snap = json.loads(attribution.EXPORT.read_text(encoding="utf-8"))
+    before = {rel: (ROOT / rel).read_text(encoding="utf-8")
+              for rel in attribution.PUBLISHED}
+    try:
+        changed = attribution.publish(snap, attribution.attribute(snap))
+    finally:                       # it writes in place; never leave a mess
+        for rel, text in before.items():
+            (ROOT / rel).write_text(text, encoding="utf-8")
+    assert changed == [], f"publish() would reformat {changed} with no new data"

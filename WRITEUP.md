@@ -8,7 +8,7 @@ Live dashboard: **[aryangorde6.github.io/contour](https://aryangorde6.github.io/
 
 A trading agent is easy to describe and hard to believe, so the first claim
 here is not about returns — it is about checkability. **Nothing below needs our
-credentials to verify.** `pytest` runs **294 tests**. `python -m contour
+credentials to verify.** `pytest` runs **295 tests**. `python -m contour
 --replay` puts a committed fixture of real SPY/QQQ/IWM quotes through the same
 measurement, selection and gate code the live agent runs, printing every gate
 reason. `python -m contour --verify` walks an append-only SHA-256 hash chain of
@@ -19,13 +19,13 @@ rest on our word. CI runs all of it on every push, with no secrets.
 The second claim is the number, stated before the pitch rather than after it.
 The criterion asks for *"the trading performance of the **submitted agent**"*,
 and this account contains two traders: the agent, and an operator who overrode
-it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-02 09:26** UTC:
+it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 10:53** UTC:
 
 | Placed by | P&L | of start NAV |
 |---|---:|---:|
-| **The agent** — every `contour-*` order id | −$77.48 | **−0.08%** |
-| The operator — three discretionary tail trades | −$1,476.00 | **−1.48%** |
-| **Account total** | −$1,553.48 | −1.55% |
+| **The agent** — every `contour-*` order id | +$32.64 | **+0.03%** |
+| The operator — three discretionary tail trades | −$1,350.00 | **−1.35%** |
+| **Account total** | −$1,317.36 | −1.32% |
 
 **That split is not our bookkeeping — it is a field the broker records.** Every
 order this codebase submits is given a `client_order_id` by `order_base_id` or
