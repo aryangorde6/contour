@@ -42,6 +42,7 @@ array as a JSON string and fails pydantic validation
 ([alpacahq/alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97),
 open since 2026-07-01). A direct REST POST of the identical payload returns 200,
 and the CLI's generated `--order-class mleg --legs` path handles it correctly.
+We sent the fix upstream as [#118](https://github.com/alpacahq/alpaca-mcp-server/pull/118).
 
 So Contour writes every order through the Alpaca CLI, and reads the market
 through the official `alpaca-py` SDK — option chain snapshots merged with

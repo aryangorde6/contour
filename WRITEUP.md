@@ -243,7 +243,11 @@ preference.** We tried the MCP server first: it cannot place multi-leg orders,
 because the `legs` array arrives as a JSON string and fails pydantic validation
 ([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97),
 open since 2026-07-01). The CLI places the identical order correctly — a live
-4-leg SPY condor returned `status: accepted, order_class: mleg`. Market reads
+4-leg SPY condor returned `status: accepted, order_class: mleg`. We did not
+stop at the workaround: [#118](https://github.com/alpacahq/alpaca-mcp-server/pull/118) sends the fix upstream, coercing in a
+pydantic `BeforeValidator` so the advertised tool schema stays an array —
+widening it to a string union would tell every well-behaved client that a
+string is acceptable, which is the opposite of the intent. Market reads
 go through the official `alpaca-py` SDK (option chain snapshots merged with
 Trading API contract objects, since snapshots carry Greeks but no
 `open_interest`). Entries go out as a three-rung limit

@@ -60,9 +60,9 @@ edit.
 **Writes go through the Alpaca CLI, and that is a finding.** The MCP server
 cannot place multi-leg option orders: the `legs` array arrives as a JSON string
 and fails pydantic validation
-([alpaca-mcp-server#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97),
-open since 2026-07-01). The CLI places the identical order correctly — a live
-4-leg SPY condor returned `status: accepted, order_class: mleg`.
+([#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97), open since 2026-07-01 — we sent
+the fix as [#118](https://github.com/alpacahq/alpaca-mcp-server/pull/118)). The CLI places it correctly: a live 4-leg SPY
+condor returned `status: accepted, order_class: mleg`.
 
 Reads go through **`alpaca-py`**, merging chain snapshots with contract
 objects — snapshots carry Greeks but no `open_interest`, which G5 screens on.

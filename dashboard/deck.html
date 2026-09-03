@@ -151,7 +151,8 @@ tr:last-child td{border-bottom:none}
       <li class="hi"><b>Orders go through the CLI, and that is a finding.</b> The MCP server
         cannot place multi-leg orders — the <code>legs</code> array arrives as a JSON string
         and fails validation. <span class="mono dim">alpaca-mcp-server#97</span>, open since
-        July. The CLI places the identical 4-leg order correctly.</li>
+        July. The CLI places the identical 4-leg order correctly &mdash; and we sent the
+        fix upstream as <span class="mono dim">#118</span>.</li>
       <li>Reads are <code>alpaca-py</code>: chain snapshots carry Greeks but no
         <code>open_interest</code>, so they are merged with Trading API contract objects.</li>
       <li>Entries are a <b>three-rung limit ladder</b> from mid toward the bid, never a
