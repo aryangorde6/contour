@@ -38,7 +38,7 @@ Both checked 2026-09-02 against the live lablab page, not against memory.
 
 **1. "One-page write-up covering your AI logic, risk gates, and Alpaca
 infrastructure implementation."** `WRITEUP.md` had grown to ~2,400 words, which
-is about seven pages. **`WRITEUP-ONEPAGE.md` is the one to submit** — 645 words,
+is about seven pages. **`WRITEUP-ONEPAGE.md` is the one to submit** — 649 words,
 the three required headings by name, the judged account ID on it, and a test
 holds it under 650 words so it cannot quietly grow again. Link the full version
 as supporting material, not as the requirement.
@@ -115,7 +115,8 @@ differentiator first, the safety argument second, the proof third.
 > half size on hard-coded blackouts. A brain configured but failing → fail
 > closed, an explicit `STAND_DOWN` journaled per underlying.
 >
-> **Twelve risk gates.** Pure functions, zero I/O, fixed order, evaluated
+> **Nineteen risk gates** — twelve for the options book, seven for the sleeve
+> below. Pure functions, zero I/O, fixed order, evaluated
 > before every order — NAV floors, session loss limit, a book-risk ramp,
 > concentration caps, liquidity and quote-staleness, non-null Greeks on every
 > leg, delta bands, an expiry lock, a structure-aware credit floor, event
@@ -127,7 +128,9 @@ differentiator first, the safety argument second, the proof third.
 > CLI because the MCP server cannot currently place multi-leg option orders —
 > the `legs` array arrives as a JSON string and fails pydantic validation
 > (alpacahq/alpaca-mcp-server#97, open since July). The CLI places the
-> identical 4-leg order correctly. Reads go through `alpaca-py`: option
+> identical 4-leg order correctly, and we sent the fix upstream as
+> alpacahq/alpaca-mcp-server#118 (https://github.com/alpacahq/alpaca-mcp-server/pull/118) — coerced in a pydantic
+> `BeforeValidator` so the advertised tool schema stays an array. Reads go through `alpaca-py`: option
 > snapshots carry Greeks and quotes but no open interest, which lives on the
 > Trading API contract object, so both are merged. Entries go out as a
 > three-rung price ladder and fills are reconciled from actual per-leg fill
@@ -163,8 +166,11 @@ differentiator first, the safety argument second, the proof third.
 >
 > **And one trade that broke my own rule, named rather than buried — then
 > closed.** On 2026-09-01 I bought 11 QQQ Sep-11 720 calls for $4,433 and sold
-> them the same day at $2.83 for $3,113, realising **−$1,320**: the entire
-> drawdown. It came off because a backtest over 387 cycles found no edge in the
+> them the same day at $2.83 for $3,113, realising **−$1,320**. A second tail
+> position, 6 TQQQ Sep-11 70 calls, is still open. Neither carries a
+> `contour-` client order id, so `ops/attribution.py` charges both to me and
+> not to the agent — the operator's column is the drawdown, and the agent's
+> book is separately reported. It came off because a backtest over 387 cycles found no edge in the
 > book worth paying ~15% over fair value to lever. It is *long* premium
 > — it pays the variance risk premium the rest of this agent harvests, 15.2%
 > implied against 12.07% realised, about **−0.32% of NAV in expectation**. It
@@ -199,8 +205,9 @@ brain runs on Bedrock.)*
 ## Pre-flight, the morning of
 
 ```bash
-git pull && .venv/bin/python -m pytest -q      # expect 171 passed
+git pull && .venv/bin/python -m pytest -q      # expect 294 passed, 1 skipped
 .venv/bin/python -m contour --verify           # hash chain intact
+.venv/bin/python ops/attribution.py --publish  # refresh the P&L split
 curl -s -o /dev/null -w '%{http_code}\n' https://aryangorde6.github.io/contour/
 ```
 
