@@ -19,9 +19,9 @@
   "entry_price": 707.82,
   "stop_price": 679.51,
   "stop_resting": true,
-  "spot": 717.62,
-  "unrealized": 205.9,
+  "spot": 717.72,
+  "unrealized": 207.9,
   "exit": false,
-  "reason": "HOLD: 717.62 vs entry 707.82 (+1.39%), stop 679.51, LRS 1.00"
+  "reason": "HOLD: 717.72 vs entry 707.82 (+1.40%), stop 679.51, LRS 1.00"
  }
 }
