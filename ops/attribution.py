@@ -63,26 +63,29 @@ def fetch() -> dict:
 
     orders: list[dict] = []
 
-    def take(order, client_order_id: str) -> None:
+    def take(order, client_order_id: str, root_id: str) -> None:
         # A multi-leg parent carries the client_order_id and no symbol; its
         # legs carry the symbols. Attribute each leg to the parent's id, which
-        # is the id the agent actually chose.
+        # is the id the agent actually chose. root_id is the BROKER's id for
+        # that parent -- exits are named after it, so it is what links a close
+        # back to the entry it closed.
         if order.symbol and order.filled_qty and float(order.filled_qty) \
                 and order.filled_avg_price is not None:
             orders.append({
                 "submitted_at": str(order.submitted_at),
                 "client_order_id": client_order_id,
+                "order_id": root_id,
                 "symbol": order.symbol,
                 "side": "sell" if "sell" in str(order.side).lower() else "buy",
                 "qty": float(order.filled_qty),
                 "price": float(order.filled_avg_price),
             })
         for leg in (order.legs or []):
-            take(leg, client_order_id)
+            take(leg, client_order_id, root_id)
 
     for order in client.get_orders(GetOrdersRequest(
             status=QueryOrderStatus.ALL, limit=500, nested=True)):
-        take(order, order.client_order_id)
+        take(order, order.client_order_id, str(order.id))
 
     return {
         "account": account.account_number,
@@ -97,9 +100,28 @@ def fetch() -> dict:
     }
 
 
+def agent_ids(snap: dict) -> set[str]:
+    """The broker order ids of orders the agent placed.
+
+    Exits are named `contour-x<bucket>-<broker id of the entry>`, but every
+    exit placed BEFORE that prefix was added is named `<broker id>-x<bucket>`
+    and carries no prefix at all. Those are already on the record and cannot
+    be renamed, so an exit is also recognised by the entry it points at.
+    """
+    return {o["order_id"] for o in snap["orders"]
+            if (o.get("client_order_id") or "").startswith(AGENT_PREFIX)
+            and o.get("order_id")}
+
+
+def placed_by_agent(coid: str, roots: set[str]) -> bool:
+    return coid.startswith(AGENT_PREFIX) or any(
+        coid.startswith(root) for root in roots)
+
+
 def attribute(snap: dict) -> dict:
     """Per-symbol P&L = net cash from every fill + what the position is worth
     now. Closed positions have no mark and net cash IS the realised P&L."""
+    roots = agent_ids(snap)
     cash: dict[str, float] = {}
     agent: dict[str, bool] = {}
     ids: dict[str, set] = {}
@@ -113,7 +135,7 @@ def attribute(snap: dict) -> dict:
         # A symbol touched by ANY non-agent order is not cleanly the agent's,
         # so it is attributed to the human. This rounds against us on purpose:
         # the number we publish should be the pessimistic one.
-        agent[sym] = agent.get(sym, True) and coid.startswith(AGENT_PREFIX)
+        agent[sym] = agent.get(sym, True) and placed_by_agent(coid, roots)
 
     rows = []
     for sym in sorted(cash, key=lambda s: cash[s] + snap["marks"].get(s, 0.0)):
@@ -150,7 +172,7 @@ def render(snap: dict, att: dict) -> str:
                    f"{', '.join(r['ids'])[:52]}")
     out += [
         "",
-        f"{'THE AGENT  (contour-* order ids)':40}"
+        f"{'THE AGENT  (ids this repo chose)':40}"
         f"{att['agent_pnl']:>11,.2f}{att['agent_pnl'] / start:>10.2%}",
         f"{'A HUMAN    (everything else)':40}"
         f"{att['human_pnl']:>11,.2f}{att['human_pnl'] / start:>10.2%}",

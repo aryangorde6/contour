@@ -88,8 +88,13 @@ def close_base_id(pos: ManagedPosition, now: datetime) -> str:
     and close_position only special-cases the uncovered-leg rejection -- so a
     constant base id means the first failed close attempt poisons every later
     one, including Thursday's flatten. The 15-minute bucket keeps a retried
-    cron idempotent while letting the next cycle try again."""
-    return f"{pos.order_id}-x{cycle_bucket(now)}"
+    cron idempotent while letting the next cycle try again.
+
+    The `contour-` prefix is not decoration: attribution partitions the account
+    on it. pos.order_id is the BROKER's order id, not the client id we chose,
+    so without the prefix an exit the agent placed is indistinguishable from a
+    human one -- and the position it closes gets charged to the operator."""
+    return f"contour-x{cycle_bucket(now)}-{pos.order_id}"
 
 
 def _reprice(pos: ManagedPosition, chain: Sequence[Leg]) -> tuple[Leg, ...] | None:

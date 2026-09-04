@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from contour import config as C
-from contour.loop import order_base_id, sleeve_base_id
+from contour.loop import close_base_id, order_base_id, sleeve_base_id
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -46,15 +46,33 @@ def test_the_sleeve_order_id_is_attributable_to_the_agent():
     assert sleeve_base_id(NOW).startswith(attribution.AGENT_PREFIX)
 
 
-def test_close_ids_inherit_the_prefix_from_the_entry_they_close():
-    """close_base_id builds on pos.order_id, so an exit is attributable only
-    because its entry was. If that ever stops being true, an agent-opened
-    position closed by the agent lands in the human bucket."""
-    src = (ROOT / "contour/loop.py").read_text(encoding="utf-8")
-    body = src.split("def close_base_id")[1].split("\ndef ")[0]
-    assert "pos.order_id" in body, (
-        "close_base_id no longer derives from the entry id; exits will be "
-        "misattributed")
+class _Pos:
+    """close_base_id only reads .order_id."""
+    order_id = "1b003d45-9655-4dd8-bb69-adcee798ff44"
+
+
+def test_close_ids_carry_the_prefix_too():
+    """The original version of this test asserted that close_base_id mentions
+    `pos.order_id`, and passed while the bug was live -- because pos.order_id
+    is the BROKER's order id, not the client id the agent chose, so the exit
+    carried no prefix at all. The flatten then closed the SPY condor and the
+    whole symbol moved into the operator's column, overstating the agent.
+
+    Assert the property that actually matters instead of a proxy for it."""
+    assert close_base_id(_Pos(), NOW).startswith(attribution.AGENT_PREFIX)
+
+
+def test_an_exit_named_after_an_agent_entry_is_still_the_agents():
+    """Exits placed before the prefix existed are on the record and cannot be
+    renamed, so attribution resolves them through the entry they point at."""
+    entry = "b7c1e0aa-0000-4000-8000-000000000001"
+    snap = {"orders": [
+        {"client_order_id": "contour-spy-abc123-r0", "order_id": entry},
+        {"client_order_id": f"{entry}-x20260903T1503-0", "order_id": "other"},
+    ]}
+    roots = attribution.agent_ids(snap)
+    assert attribution.placed_by_agent(f"{entry}-x20260903T1503-0", roots)
+    assert not attribution.placed_by_agent("tail-178827825", roots)
 
 
 # --- 2. the export a reader without credentials reproduces ----------------

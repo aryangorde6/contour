@@ -60,8 +60,7 @@ edit.
 **Writes go through the Alpaca CLI, and that is a finding.** The MCP server
 cannot place multi-leg option orders: the `legs` array arrives as a JSON string
 and fails pydantic validation
-([#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97), open since 2026-07-01 — we sent
-the fix as [#118](https://github.com/alpacahq/alpaca-mcp-server/pull/118)). The CLI places it correctly: a live 4-leg SPY
+([#97](https://github.com/alpacahq/alpaca-mcp-server/issues/97), open since 2026-07-01 — fix sent as [#118](https://github.com/alpacahq/alpaca-mcp-server/pull/118)). The CLI places it correctly: a live 4-leg SPY
 condor returned `status: accepted, order_class: mleg`.
 
 Reads go through **`alpaca-py`**, merging chain snapshots with contract
@@ -78,20 +77,20 @@ re-verifies it in your browser with WebCrypto.
 ## Performance, attributed
 
 The criterion asks for the performance of *the submitted agent*; this account
-holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 19:00** UTC:
+holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 04:01** UTC:
 
 | Placed by | of start NAV |
 |---|---:|
 | **The agent** — every `contour-*` order id | **+0.15%** |
-| The operator — three discretionary tail trades | **−0.46%** |
+| The operator — three discretionary tail trades | **−0.64%** |
 
-Every order this repository submits is prefixed `contour-` in `loop.py`;
-nothing else in the account carries it, so the split is a field *the broker*
-records. `python ops/attribution.py --offline` recomputes it from committed
-order history with no credentials, reconciling to broker equity within $1.65.
+Entries are prefixed `contour-`; exits are named after the entry they close.
+Nothing else in the account is, so the split is a field *the broker* records.
+`python ops/attribution.py --offline` rebuilds it from committed order history
+with no credentials, reconciling to broker equity within $1.85.
 
 ---
 
-**Checkable without our credentials.** `pytest` runs 295 tests; `--replay`
+**Checkable without our credentials.** `pytest` runs 296 tests; `--replay`
 reproduces every decision from a committed quote fixture. We claim no edge: a
 387-cycle backtest returned **+0.93% over 2.5 years, t = +0.37**.

@@ -8,7 +8,7 @@ Live dashboard: **[aryangorde6.github.io/contour](https://aryangorde6.github.io/
 
 A trading agent is easy to describe and hard to believe, so the first claim
 here is not about returns — it is about checkability. **Nothing below needs our
-credentials to verify.** `pytest` runs **295 tests**. `python -m contour
+credentials to verify.** `pytest` runs **296 tests**. `python -m contour
 --replay` puts a committed fixture of real SPY/QQQ/IWM quotes through the same
 measurement, selection and gate code the live agent runs, printing every gate
 reason. `python -m contour --verify` walks an append-only SHA-256 hash chain of
@@ -19,20 +19,29 @@ rest on our word. CI runs all of it on every push, with no secrets.
 The second claim is the number, stated before the pitch rather than after it.
 The criterion asks for *"the trading performance of the **submitted agent**"*,
 and this account contains two traders: the agent, and an operator who overrode
-it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-03 19:00** UTC:
+it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 04:01** UTC:
 
 | Placed by | P&L | of start NAV |
 |---|---:|---:|
-| **The agent** — every `contour-*` order id | +$151.22 | **+0.15%** |
-| The operator — three discretionary tail trades | −$462.00 | **−0.46%** |
-| **Account total** | −$310.78 | −0.31% |
+| **The agent** — every `contour-*` order id | +$147.55 | **+0.15%** |
+| The operator — three discretionary tail trades | −$642.00 | **−0.64%** |
+| **Account total** | −$494.45 | −0.49% |
 
 **That split is not our bookkeeping — it is a field the broker records.** Every
-order this codebase submits is given a `client_order_id` by `order_base_id` or
-`sleeve_base_id` in `loop.py`, both of which hard-prefix `contour-`; exits
-derive from the entry id and inherit it. An order without that prefix cannot
-have come from this repository. `tests/test_attribution.py` pins the invariant,
-so the prefix cannot quietly disappear in the flattering direction.
+order this codebase submits is given a `client_order_id` by `order_base_id`,
+`sleeve_base_id` or `close_base_id` in `loop.py`. An order carrying none of
+those cannot have come from this repository.
+
+This is also where we got caught, so it is worth stating plainly. The earlier
+version of this paragraph claimed exits "derive from the entry id and inherit
+it" — they did not. `close_base_id` was built on `pos.order_id`, which is
+*Alpaca's* order id rather than the client id we chose, so exits carried no
+prefix. It went unnoticed until Thursday's flatten actually closed the SPY
+condor, at which point the whole symbol moved into the operator's column and
+overstated the agent by 5bp. The test meant to prevent it asserted a proxy —
+that the function mentions `pos.order_id` — and passed throughout. It now
+asserts that a close id starts with the prefix, and exits already on the
+record are resolved through the entry they point at.
 
 Reproduce it without our credentials:
 
@@ -43,7 +52,7 @@ python ops/attribution.py --offline
 That reads `ops/order_history.json` — every fill the account has ever taken,
 with the `client_order_id` attached to each — recomputes the table above, and
 **reconciles it against broker equity**, which it currently does to within
-$1.65 of fees and rounding. Where a symbol was touched by both an agent order
+$1.85 of fees and rounding. Where a symbol was touched by both an agent order
 and a manual one, it is attributed to the operator: the published number is
 deliberately the pessimistic one.
 

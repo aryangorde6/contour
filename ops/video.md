@@ -19,14 +19,14 @@ and effectively the project communicates its idea, **demonstrates the agent in
 action**, and presents the reasoning behind it"* — which rewards the `--replay`
 run in §5, not minutes.
 
-Narration is **704 words**, so pace decides the runtime:
+Narration is **697 words**, so pace decides the runtime:
 
 | Pace | Runtime |
 |---|---|
-| 155 wpm (brisk) | 4:33 |
-| **145 wpm (planned)** | **4:51** |
-| 135 wpm (unhurried) | 5:13 |
-| 125 wpm (slow) | 5:38 |
+| 155 wpm (brisk) | 4:30 |
+| **145 wpm (planned)** | **4:48** |
+| 135 wpm (unhurried) | 5:10 |
+| 125 wpm (slow) | 5:35 |
 
 Read it deliberately and **time a full take.** Every number marked ⚠️ is live
 and will have changed — re-read it off the dashboard first.
@@ -164,7 +164,7 @@ strongest image in the video.*
 > So it's off. The code stays in the repo, because a robust signal pointed at
 > the wrong objective is still a losing feature.
 
-### 8 · The honest number — 3:36–4:35 · *slide 6: Performance, attributed* · 144w
+### 8 · The honest number — 3:36–4:32 · *slide 6: Performance, attributed* · 137w
 
 **Do not cut this either.** P&L is the criterion the organisers highlight on
 the page; this is the section that answers it.
@@ -174,20 +174,20 @@ the page; this is the section that answers it.
 > zero-point-three-seven. No edge — I won't claim a strategy works because it
 > survived one week.
 >
-> The account is down about a third of a percent ⚠️. But the criterion asks
-> for the *submitted agent*, and there are two traders in this account.
+> The account is down about half a percent ⚠️. But the criterion asks for
+> the *submitted agent*, and there are two traders in this account.
 >
-> Every order the agent places carries a client order ID starting `contour`.
-> Three don't — the tail trades I took against my own recorded evidence. Split
-> on that one field: the operator is minus zero-point-four-six ⚠️. The agent
-> is plus zero-point-one-five ⚠️ — flat, which is exactly what a backtest
-> with a t of zero-point-three-seven predicts.
+> Every order the agent places carries an ID it chose. The tail trades I took
+> against my own recorded evidence don't. Split on that field: the operator is
+> minus zero-point-six-four ⚠️; the agent is plus zero-point-one-five ⚠️ —
+> flat, which is exactly what a backtest with a t of zero-point-three-seven
+> predicts.
 >
 > That's a field the broker stamps, not my bookkeeping. `attribution.py
 > --offline` — no credentials — reconciles it to broker equity within two
 > dollars.
 
-### 9 · Close — 4:35–4:51 · *slide 7, then the final card* · 39w
+### 9 · Close — 4:32–4:48 · *slide 7, then the final card* · 39w
 
 > So the sellable asset isn't the alpha — it's the audit trail. A broker or an
 > RIAs need a defensible record of why an automated system did what it did.
@@ -260,7 +260,7 @@ investment advice and needs registration. Saying that out loud is a credibility
 win.
 
 **8 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-295 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+296 tests. Next: expiry laddering and rolls; skew priors learned per underlying
 instead of hard-coded; **more backtest history** — the harness is built and has
 run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
 limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;
@@ -277,10 +277,10 @@ judge remembers.
 
 | Cut | Saves | Script | @145 | @135 |
 |---|---:|---:|---:|---:|
-| §4's sizing anecdote | −21w | **683w** | 4:43 | 5:04 |
-| §2's last sentence | −13w | **670w** | 4:37 | 4:58 |
-| §3's schedule detail | −15w | **655w** | 4:31 | 4:51 |
-| §6's issue-97 detail | −14w | **641w** | 4:25 | 4:45 |
+| §4's sizing anecdote | −21w | **676w** | 4:40 | 5:00 |
+| §2's last sentence | −13w | **663w** | 4:34 | 4:55 |
+| §3's schedule detail | −15w | **648w** | 4:28 | 4:48 |
+| §6's issue-97 detail | −14w | **634w** | 4:22 | 4:42 |
 
 1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
 2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.
