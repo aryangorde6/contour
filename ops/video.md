@@ -260,7 +260,7 @@ investment advice and needs registration. Saying that out loud is a credibility
 win.
 
 **8 — Roadmap.** Now: 3 ETFs, one expiry, 15-minute cycle, the $30k QQQ sleeve,
-296 tests. Next: expiry laddering and rolls; skew priors learned per underlying
+297 tests. Next: expiry laddering and rolls; skew priors learned per underlying
 instead of hard-coded; **more backtest history** — the harness is built and has
 run over 387 cycles, and Alpaca's option data starting 2024-01-18 is the binding
 limit, not the code. Then: paid feed to close the indicative-vs-NBBO gap;

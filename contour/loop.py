@@ -340,6 +340,16 @@ def run_cycle(
                                  "reason": b.reason} for b in adv.blackouts]}
             journal.append({"event": "plan", **plan})
             state.write("plan", plan)
+        # The dashboard's headline NAV reads off this series, and a non-TRADE
+        # cycle wrote only a heartbeat -- so the moment trading stopped, the
+        # published P&L froze at the last TRADE cycle. On the Friday the judges
+        # read it that meant the dashboard showing -1.06% while the write-up,
+        # computed from the same broker, said -0.49%. A day whose whole job is
+        # to publish and verify has to publish the number it is verifying.
+        acct = broker.account()
+        state.point("equity", {"nav": round(float(acct.get("equity", 0)), 2),
+                               "mode": phase.mode, "cycle": cycle,
+                               "open": len(live)})
         journal.append({"event": "cycle_end", "cycle": cycle,
                         "mode": phase.mode, "entries": 0})
         state.heartbeat(cycle, phase.mode, phase.reason,

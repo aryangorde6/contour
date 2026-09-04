@@ -547,3 +547,19 @@ def test_a_stand_down_does_not_blank_the_published_sizing(isolated_state):
 
     kept = json.loads((isolated_state / "regime.json").read_text())
     assert kept == [{"underlying": "SPY"}], "the last real reading was erased"
+
+
+def test_a_non_trading_cycle_still_publishes_the_nav(isolated_state,
+                                                     monkeypatch):
+    """The dashboard's headline P&L comes from the equity series, and only
+    TRADE cycles appended to it -- so from the flatten onwards the published
+    number froze while the account kept moving. On the verify-only Friday that
+    put the dashboard and the write-up in open disagreement, which is the one
+    thing a submission built on "check it yourself" cannot afford."""
+    patch_chains(monkeypatch, {})
+    cycle(isolated_state, now_et=PREOPEN, market_open=False, mind=StubMind())
+
+    points = json.loads((isolated_state / "equity.json").read_text())
+    assert points, "a non-TRADE cycle published no NAV at all"
+    assert points[-1]["mode"] == "CLOSED"
+    assert points[-1]["nav"] > 0

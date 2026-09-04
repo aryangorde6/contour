@@ -26,7 +26,7 @@ it *cut* P&L in the same backtest, and **switched it off**. Both the code and
 the negative result are still in the repo.
 
 What we do claim is that every statement here is checkable without our
-credentials: `pytest` runs 296 tests, `python -m contour --replay` reproduces
+credentials: `pytest` runs 297 tests, `python -m contour --replay` reproduces
 the agent's decisions from a committed quote fixture, and
 `python -m contour --verify` walks the hash chain that records them. The live
 P&L is split by `client_order_id` into what the agent placed and what a human
@@ -60,7 +60,7 @@ Risk layer first, strategy second — deliberately.
 - [x] `contour/surface.py` — atm_iv, rv10, vrp_ratio, skew25, skew_z
 - [x] `contour/select.py` — the four-branch structure map
 - [x] `contour/structures.py` — strike selection, sizing, signed limit price
-- [x] `tests/` — 296 collected, 294 passing, 1 skipped by design
+- [x] `tests/` — 297 collected, 296 passing, 1 skipped by design
 - [x] `contour/execute.py` — CLI broker, 3-rung ladder, fill reconciliation
 - [x] `contour/manage.py` — exits, shorts-first legout, escalation
 - [x] `contour/data.py` — DataSource seam (snapshots + contracts merged)
