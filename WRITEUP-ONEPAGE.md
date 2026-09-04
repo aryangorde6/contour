@@ -91,6 +91,6 @@ with no credentials, reconciling to broker equity within $1.85.
 
 ---
 
-**Checkable without our credentials.** `pytest` runs 297 tests; `--replay`
+**Checkable without our credentials.** `pytest` runs 298 tests; `--replay`
 reproduces every decision from a committed quote fixture. We claim no edge: a
 387-cycle backtest returned **+0.93% over 2.5 years, t = +0.37**.

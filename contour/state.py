@@ -8,8 +8,26 @@ from typing import Any
 
 ROOT = Path("state")
 
+# Set by --dev. The workflow publishes state/ to the branch the dashboard
+# reads, so without this a throwaway account's NAV lands in the judged
+# account's series -- observed once, as a $99,999.94 spike against a real
+# $99,503.70. A dev cycle should be able to run the whole loop and prove
+# itself without editing what the public sees.
+_SUPPRESSED: str | None = None
+
+
+def suppress_publishing(reason: str) -> None:
+    global _SUPPRESSED
+    _SUPPRESSED = reason
+
+
+def publishing() -> bool:
+    return _SUPPRESSED is None
+
 
 def write(name: str, payload: Any) -> Path:
+    if _SUPPRESSED is not None:
+        return ROOT / f"{name}.json"      # never written; the caller ignores it
     ROOT.mkdir(parents=True, exist_ok=True)
     p = ROOT / f"{name}.json"
     p.write_text(json.dumps(payload, indent=1, default=str) + "\n")

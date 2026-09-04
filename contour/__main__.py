@@ -114,6 +114,12 @@ def main(argv=None) -> int:
                   f"account {got}", file=sys.stderr)
             return 3
         broker.expected_account = got
+        # A dev cycle still writes to state/, and the workflow publishes state/
+        # to the branch the dashboard reads -- so a throwaway account's NAV
+        # lands in the judged account's series and draws a spike on the public
+        # chart. Observed: a manual dispatch defaults dev=true, and cycle 76
+        # published $99,999.94 from PA35MRNGUR91 against a real $99,503.70.
+        state.suppress_publishing("dev account -- not the judged series")
         print(f"[dev] trading account {got}")
     else:
         print(f"[judged] trading account {broker.assert_account()}")

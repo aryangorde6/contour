@@ -563,3 +563,29 @@ def test_a_non_trading_cycle_still_publishes_the_nav(isolated_state,
     assert points, "a non-TRADE cycle published no NAV at all"
     assert points[-1]["mode"] == "CLOSED"
     assert points[-1]["nav"] > 0
+
+
+def test_a_dev_cycle_publishes_nothing_to_the_judged_series(tmp_path,
+                                                            monkeypatch):
+    """--dev exists so the whole loop can be exercised without touching the
+    judged account. But state/ is published to the branch the dashboard reads,
+    so a dev cycle used to edit what the public sees: a manual dispatch
+    defaults dev=true, and one published $99,999.94 from the throwaway account
+    into a series whose real value was $99,503.70 -- a spike on the public
+    chart, sourced from a different account entirely."""
+    from contour import state
+
+    monkeypatch.setattr(state, "ROOT", tmp_path / "state")
+    monkeypatch.setattr(state, "_SUPPRESSED", None)
+    state.write("heartbeat", {"cycle_count": 1})
+    assert (tmp_path / "state" / "heartbeat.json").exists()
+
+    monkeypatch.setattr(state, "_SUPPRESSED", "dev account")
+    state.point("equity", {"nav": 99_999.94})
+    state.write("heartbeat", {"cycle_count": 2})
+
+    assert not (tmp_path / "state" / "equity.json").exists(), (
+        "a dev cycle wrote into the published equity series")
+    published = json.loads(
+        (tmp_path / "state" / "heartbeat.json").read_text())
+    assert published["cycle_count"] == 1, "a dev cycle overwrote the heartbeat"
