@@ -23,7 +23,7 @@ it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 04:01** UTC:
 
 | Placed by | P&L | of start NAV |
 |---|---:|---:|
-| **The agent** — every `contour-*` order id | +$147.55 | **+0.15%** |
+| **The agent** — every id it chose | +$147.55 | **+0.15%** |
 | The operator — three discretionary tail trades | −$642.00 | **−0.64%** |
 | **Account total** | −$494.45 | −0.49% |
 

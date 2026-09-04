@@ -81,7 +81,7 @@ holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 04:01** UTC:
 
 | Placed by | of start NAV |
 |---|---:|
-| **The agent** — every `contour-*` order id | **+0.15%** |
+| **The agent** — every id it chose | **+0.15%** |
 | The operator — three discretionary tail trades | **−0.64%** |
 
 Entries are prefixed `contour-`; exits are named after the entry they close.
