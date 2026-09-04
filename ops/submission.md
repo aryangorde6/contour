@@ -12,6 +12,12 @@ unrecoverable failure mode this week is the form not being open when
 
 Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
 
+**Where.** There is no separate submission URL. Sign in as `aryangorde6`,
+open https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon, and
+scroll to the **Submit project** button on the event page itself — enrolled,
+and in a team, or the button does not appear. The form is three steps: project
+information, media, then technical details.
+
 ---
 
 ## Fixed facts to paste
@@ -27,7 +33,9 @@ Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
 | **Write-up (the required one-pager)** | **https://github.com/aryangorde6/contour/blob/main/WRITEUP-ONEPAGE.md** |
 | Write-up (full technical version, optional extra) | https://github.com/aryangorde6/contour/blob/main/WRITEUP.md |
 | Cover image | **`dashboard/cover.png`** — 1280×720, in the repo |
-| Video | *(paste the YouTube/Loom link once recorded — unlisted is fine)* |
+| Video | **https://youtu.be/L7vQRn4SRZc** — unlisted, 5:06, captions attached |
+| Slide presentation | https://aryangorde6.github.io/contour/deck.html · file: `dashboard/contour-deck.pdf` |
+| Demo platform / URL | GitHub Pages · https://aryangorde6.github.io/contour/ |
 
 
 ---
@@ -68,7 +76,25 @@ source; it has been corrected.
 > minutes and lets the measurement pick the structure — put spread, call
 > spread, condor, or nothing.
 
-## Short description (~50 words)
+## Field limits, and what fits them
+
+lablab's own submission guide sets three that bite: **title ≤ 50 characters**,
+**short description ≤ 255 characters**, long description **≥ 100 words**. The
+short description below was 301 characters and would have been rejected; the
+253-character version is the one to paste. The event page's "WHAT TO SUBMIT"
+list sets **no video length**, so 5:06 is fine — the five-minute figure in the
+generic platform tutorial is not a rule of this hackathon.
+
+**Title (45 chars):** `Contour — the measurement picks the structure`
+
+## Short description (253 chars — paste this one)
+
+> Everyone sells iron condors — both wings, unconditionally, so half the time
+> you sell the side that isn't rich. Contour measures 25-delta skew first and
+> sells only the rich side, on SPY, QQQ and IWM, behind nineteen risk gates
+> and a hash-chained journal.
+
+## Short description, long form (301 chars — over the limit, kept for reuse)
 
 > Everyone sells iron condors. A condor sells both wings unconditionally, so
 > half the time you are selling the side that isn't rich. Contour measures
