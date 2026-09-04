@@ -213,3 +213,19 @@ curl -s -o /dev/null -w '%{http_code}\n' https://aryangorde6.github.io/contour/
 
 Then confirm on the form itself: **account ID present**, video link resolves
 in a private window, and the repo is still public.
+
+---
+
+## Slides as a file
+
+Judging lists a slides presentation, and the presentation field may want an
+upload rather than a URL. `dashboard/contour-deck.pdf` is the deck at
+13.333in × 7.5in — PowerPoint widescreen — regenerated with:
+
+```bash
+google-chrome --headless --no-pdf-header-footer \
+  --print-to-pdf=dashboard/contour-deck.pdf dashboard/deck.html
+```
+
+Give the form the hosted deck when it takes a URL; upload the PDF when it
+takes a file. Both are the same eight slides.
