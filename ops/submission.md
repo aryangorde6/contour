@@ -78,10 +78,11 @@ source; it has been corrected.
 
 ## Field limits, and what fits them
 
-lablab's own submission guide sets three that bite: **title ≤ 50 characters**,
-**short description ≤ 255 characters**, long description **≥ 100 words**. The
-short description below was 301 characters and would have been rejected; the
-253-character version is the one to paste. The event page's "WHAT TO SUBMIT"
+Three of them bite, and the form does not warn you until you paste:
+**title ≤ 50 characters**, **short description ≤ 255**, **long description ≤
+2000**. The short description below was 301 and the one-pager is 3,020 — both
+would have been rejected. The 253-character short description and the
+1,962-character long description below are the ones to paste. The event page's "WHAT TO SUBMIT"
 list sets **no video length**, so 5:06 is fine — the five-minute figure in the
 generic platform tutorial is not a rule of this hackathon.
 
@@ -102,7 +103,35 @@ generic platform tutorial is not a rule of this hackathon.
 > behind nineteen deterministic risk gates and an append-only hash-chained
 > journal.
 
-## Full description
+## Long description (1,962 chars — paste this one)
+
+The one-pager does not fit this field and nothing short of rewriting it will
+make it. This is the same argument compressed: the four-line rule, all three
+required headings by name, the attributed P&L, the account ID, and a link to
+the full page for a judge who wants it. The requirement itself is still
+satisfied — the event page allows the one-pager to live in the repo or on a
+slide, and it does both.
+
+> Everyone sells iron condors — both wings, unconditionally, so half the time you sell the underpriced side. Contour measures the surface first — is implied rich at all, and which side holds it — then sells only that side. SPY, QQQ, IWM, one expiry:
+>
+> vrp_ratio under 1.30 → NO_TRADE, implied not rich enough
+> skew_z at or above +0.8 → PUT SPREAD, puts rich
+> skew_z at or below −0.8 → CALL SPREAD, calls rich
+> otherwise → IRON CONDOR, both sides fair
+>
+> AI LOGIC. GLM-5 on Amazon Bedrock. Every model output can only make the agent trade less, structurally: execute.py never imports the model layer, so none reaches an order. It may name blackouts, veto a structure, or stand the book down; never choose a strike, size, or price one. No brain: half size. Off-schema: fail closed.
+>
+> RISK GATES. Nineteen pure functions: twelve for the options book, seven for the sleeve. Zero I/O, fixed order, and the reason is journaled whether a gate passes or fails, so a no-trade cycle is as auditable as a trade. Book 1.678% + sleeve 1.200% + tail 1.122% = exactly the 4% halt distance, asserted as an equality.
+>
+> ALPACA. Writes go through the Alpaca CLI, and that is a finding: the MCP server cannot place multi-leg option orders — legs arrives as a JSON string and fails validation (alpaca-mcp-server#97; fix sent as #118). Reads use alpaca-py, merging snapshots with contracts for open interest. Three-rung limit ladder, per-leg fill reconciliation. GitHub Actions every 15 minutes; the journal is an append-only SHA-256 hash chain, verified in your browser.
+>
+> P&L. Account PA35XVXLIO0E holds two traders. The agent, every id it chose: +0.15%. The operator, three tail trades: −0.64%. Agent entries carry a contour- prefix, so the split is a field the broker records.
+>
+> No edge claimed: a 387-cycle backtest returned +0.93%, t = 0.37. 298 tests pass; --replay reproduces every decision from a committed fixture.
+>
+> One-pager: github.com/aryangorde6/contour/blob/main/WRITEUP-ONEPAGE.md
+
+## Full description (3,020 chars — over the 2000 limit, kept for the repo page)
 
 Paste this, then trim to whatever the field allows. Order matters: the
 differentiator first, the safety argument second, the proof third.
