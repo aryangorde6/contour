@@ -1,7 +1,7 @@
 {
- "last_cycle_utc": "2026-09-03T19:56:13.898897+00:00",
- "cycle_count": 73,
- "mode": "FLATTEN",
- "reason": "G11: hard flatten at 15:45 ET",
+ "last_cycle_utc": "2026-09-04T04:16:50.905399+00:00",
+ "cycle_count": 74,
+ "mode": "VERIFY_ONLY",
+ "reason": "G11: Fri Sep 4 publishes a no-trade decision and verifies",
  "brain": "bedrock:zai.glm-5"
 }
