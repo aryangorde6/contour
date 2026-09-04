@@ -544,5 +544,12 @@
   "mode": "VERIFY_ONLY",
   "cycle": 98,
   "open": 0
+ },
+ {
+  "t": "2026-09-04T19:38:38.999423+00:00",
+  "nav": 99431.17,
+  "mode": "VERIFY_ONLY",
+  "cycle": 99,
+  "open": 0
  }
 ]
