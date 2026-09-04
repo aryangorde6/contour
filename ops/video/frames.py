@@ -89,20 +89,20 @@ def main() -> None:
 
     replay = (BUILD / "replay.txt").read_text(encoding="utf-8").splitlines()
     seq = sequence("replay", "python -m contour --replay", replay,
-                   frames=16, window=32)
+                   frames=16, window=26)
     print(f"  replay   {len(seq)} frames")
 
     bt = (REPO / "research/strategy_backtest.txt").read_text(
         encoding="utf-8").splitlines()
     seq = sequence("bt", "cat research/strategy_backtest.txt", bt,
-                   frames=6, window=26, size=21)
+                   frames=6, window=22, size=21)
     print(f"  backtest {len(seq)} frames")
 
     att = subprocess.run(
         [str(REPO / ".venv/bin/python"), "ops/attribution.py", "--offline"],
         cwd=REPO, capture_output=True, text=True).stdout.splitlines()
     seq = sequence("att", "python ops/attribution.py --offline", att,
-                   frames=5, window=24, size=21)
+                   frames=5, window=20, size=21)
     print(f"  attribution {len(seq)} frames")
 
 

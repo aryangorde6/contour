@@ -61,9 +61,12 @@ code,.mono{font-family:var(--mono)}
 .two li{font-size:19px;margin-bottom:11px}
 .never{background:var(--sunk)}
 .tight .lede{font-size:25px}
-.tight li{font-size:21px;margin-bottom:10px;line-height:1.42}
+.tight li{font-size:21px;margin-bottom:6px;line-height:1.38}
+/* The roadmap is the only slide with two full columns of list, so it
+   needs a step down from even the dense style to clear the footer. */
+.roadmap li{font-size:18px;margin-bottom:7px;line-height:1.4}
 .tight li::before{top:10px}
-.foot{position:absolute;left:76px;right:76px;bottom:34px;display:flex;
+.foot{position:absolute;left:76px;right:76px;bottom:26px;display:flex;
   justify-content:space-between;align-items:center;font-family:var(--mono);
   font-size:14px;color:var(--faint)}
 .pill{border:1px solid var(--line);background:var(--sunk);border-radius:999px;
@@ -167,13 +170,13 @@ tr:last-child td{border-bottom:none}
       <li class="hi"><b>Orders go through the CLI, and that is a finding.</b> The MCP server
         cannot place multi-leg orders — the <code>legs</code> array arrives as a JSON string
         and fails validation. <span class="mono dim">alpaca-mcp-server#97</span>, open since
-        July. The CLI places the identical 4-leg order correctly &mdash; and we sent the
-        fix upstream as <span class="mono dim">#118</span>.</li>
+        July. The CLI places the identical 4-leg order correctly; our fix is upstream
+        as <span class="mono dim">#118</span>.</li>
       <li>Reads are <code>alpaca-py</code>: chain snapshots carry Greeks but no
         <code>open_interest</code>, so they are merged with Trading API contract objects.</li>
       <li>Entries are a <b>three-rung limit ladder</b> from mid toward the bid, never a
         market order. <code>reconcile()</code> reads actual per-leg fills: paper issues
-        random partials, and trusting the request puts condor legs out of ratio.</li>
+        random partials, and trusting the request puts legs out of ratio.</li>
       <li class="hi">The journal is an <b>append-only SHA-256 hash chain</b>. The dashboard
         recomputes it in your browser and prints the same verdict the CLI does.</li>
       <li>Autonomy is GitHub Actions: pre-open planning, a cycle every 15 minutes, a
@@ -283,7 +286,7 @@ tr:last-child td{border-bottom:none}
   </section>
 
   <!-- 8 -->
-  <section class="slide">
+  <section class="slide tight roadmap">
     <h2>Roadmap</h2>
     <div class="cols">
       <div>
@@ -294,14 +297,13 @@ tr:last-child td{border-bottom:none}
             edge — funded <i>out of</i> the same −4% floor, not beside it</li>
           <li><b>A $4.4k long-call tail</b>, added <i>and closed</i> 2026-09-01 —
             the one negative-EV trade here, labelled as such. Sold for $3,113,
-            realising <b>−$1,320</b>: the entire drawdown. Closed once a 387-cycle
-            backtest found no edge in the book worth paying ~15% over fair value
-            to lever, and the write-up says that too</li>
+            realising <b>−$1,320</b>: the entire drawdown. A 387-cycle backtest
+            found no edge worth paying ~15% over fair value to lever</li>
           <li><b>A $1.1k TQQQ call tail</b>, placed on instruction after the
             evidence against it was recorded — a gap-down bounce tests as noise
-            (t = +0.42). It breaks no gate, but it used the last room in front of
-            the floor, so the entry ramp is <i>closed to zero</i> for the rest of
-            the contest. The floor was kept by stopping, not by moving it</li>
+            (t = +0.42). It breaks no gate, but used the last room in front of the
+            floor: the entry ramp is <i>closed to zero</i> for the rest of the
+            contest</li>
           <li>Twelve gates plus seven, 298 tests, chain verified in CI</li>
           <li>Record / replay: a fixture reruns the pipeline with no credentials</li>
           <li>Sizing from three published trend systems, after an audit caught
@@ -318,9 +320,8 @@ tr:last-child td{border-bottom:none}
           <li>Skew priors <b>learned</b> per underlying instead of hard-coded</li>
           <li><b>More backtest history.</b> The harness is built and has run —
             387 cycles against real historical option prices, importing the
-            agent's own selection and gate code rather than a reimplementation.
-            Alpaca's option history starts 2024-01-18, so 2.5 years is the
-            entire available sample, and t = +0.37 is what that sample supports</li>
+            agent's own selection and gate code. Alpaca's history starts
+            2024-01-18, so 2.5 years is the entire available sample</li>
           <li>Portfolio vega and gamma caps, not per-position max loss alone</li>
           <li>Paid feed to close the indicative-vs-NBBO gap</li>
         </ul>

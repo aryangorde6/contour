@@ -21,8 +21,10 @@ SP = Path(os.environ.get("CONTOUR_VIDEO_BUILD", REPO / "build/video"))
 BUILD = SP / "build"
 SHOTS = BUILD / "shots"
 
-# panel index -> what it is, in DOM order inside .wrap
-PANELS = ["map+surface", "sizing", "sleeve", "decisions", "equity", "journal"]
+# Direct children of .wrap, in DOM order. The structure map and the surface
+# are NOT in this list: they live inside the .grid2, so `.wrap > .panel` never
+# selects them and every index below would be off by one if they were counted.
+PANELS = ["sizing", "sleeve", "decisions", "equity", "journal"]
 
 VARIANTS = {
     # name: (JS that hides what we do not want, extra zoom)
@@ -46,7 +48,7 @@ VARIANTS = {
     "decisions": ("""
         document.querySelectorAll('.wrap .grid2').forEach(function(e){
           e.style.display='none'; });
-        var keep = 3;
+        var keep = 2;          // "Decisions this cycle"
         document.querySelectorAll('.wrap > .panel').forEach(function(e,i){
           if (i !== keep) e.style.display='none'; });
         document.querySelector('header').style.display='none';
@@ -57,7 +59,7 @@ VARIANTS = {
         document.querySelectorAll('.wrap .grid2').forEach(function(e){
           e.style.display='none'; });
         document.querySelectorAll('.wrap > .panel').forEach(function(e,i){
-          if (i !== 5) e.style.display='none'; });
+          if (i !== 4) e.style.display='none'; });   // "Journal"
         document.querySelector('header').style.display='none';
         document.querySelector('.stats').style.display='none';
         document.body.style.zoom = 1.4;

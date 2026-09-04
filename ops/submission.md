@@ -243,8 +243,10 @@ python ops/video/narrate.py && python ops/video/shots.py \
   && python ops/video/frames.py && python ops/video/assemble.py
 ```
 
-Current render: **4:22**, 1080p, `build/video/contour-demo.mp4`. Upload it
-unlisted and paste the link into the submission's video field.
+Current render: **5:06**, 1080p, `build/video/contour-demo.mp4`, with
+captions burned in and `build/video/contour-demo.srt` alongside it. Upload the
+video unlisted, attach the `.srt` as the caption track if the host takes one,
+and paste the link into the submission's video field.
 
 If you would rather present it yourself, the cue-by-cue shooting script in
 `ops/video.md` is unchanged and still the better option for a judge who values
