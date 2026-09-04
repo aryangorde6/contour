@@ -12,3 +12,4 @@ logs/
 *.sqlite3
 .pytest_cache/
 .bt_cache/
+build/

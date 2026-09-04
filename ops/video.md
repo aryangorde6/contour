@@ -19,14 +19,14 @@ and effectively the project communicates its idea, **demonstrates the agent in
 action**, and presents the reasoning behind it"* — which rewards the `--replay`
 run in §5, not minutes.
 
-Narration is **697 words**, so pace decides the runtime:
+Narration is **700 words**, so pace decides the runtime:
 
 | Pace | Runtime |
 |---|---|
-| 155 wpm (brisk) | 4:30 |
-| **145 wpm (planned)** | **4:48** |
-| 135 wpm (unhurried) | 5:10 |
-| 125 wpm (slow) | 5:35 |
+| 155 wpm (brisk) | 4:31 |
+| **145 wpm (planned)** | **4:50** |
+| 135 wpm (unhurried) | 5:11 |
+| 125 wpm (slow) | 5:36 |
 
 Read it deliberately and **time a full take.** Every number marked ⚠️ is live
 and will have changed — re-read it off the dashboard first.
@@ -100,16 +100,16 @@ the stopwatch, cut inside that section rather than borrowing from §5 or §7.
 > enough, nothing. On screen, SPY and QQQ disagree today ⚠️ — same market,
 > opposite decisions.
 
-### 3 · It is actually running — 0:48–1:09 · *dashboard top, then Alpaca tab* · 51w
+### 3 · It is actually running — 0:48–1:10 · *dashboard top, then Alpaca tab* · 54w
 
 > This is the live judged account, running unattended on GitHub Actions — a
 > pre-open cycle that parses the day's event windows, then every fifteen
 > minutes to the close.
 >
-> A SPY condor on the book right now ⚠️, and here it is in Alpaca's own order
-> history. Nothing here is a mock.
+> A SPY condor the agent opened and closed this week ⚠️, and here it is in the
+> account's own order history. Nothing here is a mock.
 
-### 4 · The AI, and its leash — 1:09–1:48 · *slide 2: the may / may-never table* · 95w
+### 4 · The AI, and its leash — 1:10–1:50 · *slide 2: the may / may-never table* · 95w
 
 > GLM-5 on Amazon Bedrock. Every wired output can only make the agent trade
 > **less** — structural, not a promise: `execute.py` never imports the model
@@ -122,7 +122,7 @@ the stopwatch, cut inside that section rather than borrowing from §5 or §7.
 > Sizing sat in that left column until I measured it — sixteen identical
 > answers in a row. It went to trend systems instead.
 
-### 5 · Nineteen gates, and proof — 1:48–2:30 · *terminal: run `--replay` live* · 101w
+### 5 · Nineteen gates, and proof — 1:50–2:31 · *terminal: run `--replay` live* · 101w
 
 > Nineteen risk gates — twelve for the options book, seven for the sleeve.
 > Pure functions, no I/O, evaluated before every order. The reason is journaled
@@ -139,7 +139,7 @@ strongest image in the video.*
 
 > All twelve pass on a SPY condor. QQQ and IWM refused: not paid enough.
 
-### 6 · Alpaca, and one real finding — 2:30–2:52 · *slide 3* · 52w
+### 6 · Alpaca, and one real finding — 2:31–2:53 · *slide 3* · 52w
 
 > Every order goes through the Alpaca CLI, and that's a finding, not a
 > preference: the MCP server can't place multi-leg orders. The legs array
@@ -148,7 +148,7 @@ strongest image in the video.*
 > And the journal is a SHA-256 hash chain the dashboard re-verifies in your
 > browser.
 
-### 7 · An edge I measured, shipped, and switched off — 2:52–3:36 · *terminal: `research/`* · 106w
+### 7 · An edge I measured, shipped, and switched off — 2:53–3:37 · *terminal: `research/`* · 106w
 
 **This is the section that differentiates the submission. Do not cut it.**
 
@@ -164,7 +164,7 @@ strongest image in the video.*
 > So it's off. The code stays in the repo, because a robust signal pointed at
 > the wrong objective is still a losing feature.
 
-### 8 · The honest number — 3:36–4:32 · *slide 6: Performance, attributed* · 137w
+### 8 · The honest number — 3:37–4:34 · *slide 6: Performance, attributed* · 137w
 
 **Do not cut this either.** P&L is the criterion the organisers highlight on
 the page; this is the section that answers it.
@@ -187,7 +187,7 @@ the page; this is the section that answers it.
 > --offline` — no credentials — reconciles it to broker equity within two
 > dollars.
 
-### 9 · Close — 4:32–4:48 · *slide 7, then the final card* · 39w
+### 9 · Close — 4:34–4:50 · *slide 7, then the final card* · 39w
 
 > So the sellable asset isn't the alpha — it's the audit trail. A broker or an
 > RIAs need a defensible record of why an automated system did what it did.
@@ -277,10 +277,10 @@ judge remembers.
 
 | Cut | Saves | Script | @145 | @135 |
 |---|---:|---:|---:|---:|
-| §4's sizing anecdote | −21w | **676w** | 4:40 | 5:00 |
-| §2's last sentence | −13w | **663w** | 4:34 | 4:55 |
-| §3's schedule detail | −15w | **648w** | 4:28 | 4:48 |
-| §6's issue-97 detail | −14w | **634w** | 4:22 | 4:42 |
+| §4's sizing anecdote | −21w | **679w** | 4:41 | 5:02 |
+| §2's last sentence | −13w | **666w** | 4:36 | 4:56 |
+| §3's schedule detail | −15w | **651w** | 4:29 | 4:49 |
+| §6's issue-97 detail | −14w | **637w** | 4:24 | 4:43 |
 
 1. **§4's sizing anecdote** — the whole "Sizing sat in that left column…" paragraph. The leash table is the point; the anecdote is supporting colour.
 2. **§2's last sentence** — "On screen, SPY and QQQ disagree today…" — the map is already on screen saying it.

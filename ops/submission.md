@@ -229,3 +229,23 @@ google-chrome --headless --no-pdf-header-footer \
 
 Give the form the hosted deck when it takes a URL; upload the PDF when it
 takes a file. Both are the same eight slides.
+
+---
+
+## The video
+
+`ops/video/` generates it from `ops/video.md` — narration synthesised per cue,
+dashboard and terminal frames captured live, segments timed by the audio.
+Re-running it after a script edit takes minutes and needs no re-shoot.
+
+```bash
+python ops/video/narrate.py && python ops/video/shots.py \
+  && python ops/video/frames.py && python ops/video/assemble.py
+```
+
+Current render: **4:22**, 1080p, `build/video/contour-demo.mp4`. Upload it
+unlisted and paste the link into the submission's video field.
+
+If you would rather present it yourself, the cue-by-cue shooting script in
+`ops/video.md` is unchanged and still the better option for a judge who values
+a human voice — the two are the same content.
