@@ -77,7 +77,7 @@ re-verifies it in your browser with WebCrypto.
 ## Performance, attributed
 
 The criterion asks for the performance of *the submitted agent*; this account
-holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 04:01** UTC:
+holds two. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 05:50** UTC:
 
 | Placed by | of start NAV |
 |---|---:|

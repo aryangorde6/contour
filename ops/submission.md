@@ -205,7 +205,7 @@ brain runs on Bedrock.)*
 ## Pre-flight, the morning of
 
 ```bash
-git pull && .venv/bin/python -m pytest -q      # expect 294 passed, 1 skipped
+git pull && .venv/bin/python -m pytest -q      # expect 297 passed, 1 skipped
 .venv/bin/python -m contour --verify           # hash chain intact
 .venv/bin/python ops/attribution.py --publish  # refresh the P&L split
 curl -s -o /dev/null -w '%{http_code}\n' https://aryangorde6.github.io/contour/
