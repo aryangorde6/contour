@@ -1,16 +1,27 @@
 # The lablab submission — every field, ready to paste
 
-**Nothing is submitted yet.** That is the single largest open risk on this
-project: the code, the dashboard, the deck and the write-up are all finished
-and none of it counts until a submission exists on lablab.ai.
+**Filed 2026-09-04, and live:**
+https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon/fluffymargins/contour-the-measurement-picks-the-structure
 
-**File a draft as soon as you read this.** lablab lets you edit a submission
-until the deadline, so a draft filed Monday with a placeholder video link is
-strictly better than a perfect submission filed Friday morning — the only
-unrecoverable failure mode this week is the form not being open when
-2026-09-04 11:00 ET arrives.
+Deadline was **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST**; lablab allows
+edits until it passes. Verified on the published page rather than on the form:
+the video and the presentation PDF are byte-identical to the local files
+(14,439,819 and 142,007 bytes), the account ID and demo URL resolve clean, and
+a fresh clone of the public repo runs `--replay` through all nineteen gates
+with the chain intact.
 
-Deadline: **2026-09-04 15:00 UTC = 11:00 ET = 20:30 IST.**
+**Three things the form got wrong on the way in, all fixed.** Two were
+whitespace: the account ID went in as `\tPA35XVXLIO0E` and the demo URL as
+`https://<TAB>https://aryangorde6.github.io/contour/`, which resolved to
+nothing at all — the form prepends a scheme and the pasted value brought its
+own. The third was ours: **lablab renders the description in a single `<p>`
+with `white-space: normal`**, so every stored newline collapses and a
+blank-line layout becomes one wall of text. The four-line structure rule — the
+whole pitch in three seconds — was unreadable. It is now written as prose with
+`▪` anchors, which is what survives.
+
+The lesson for any future form: paste nothing without reading it back off the
+rendered page. Neither whitespace bug is visible in the form field.
 
 **Where.** There is no separate submission URL. Sign in as `aryangorde6`,
 open https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon, and

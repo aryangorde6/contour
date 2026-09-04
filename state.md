@@ -528,8 +528,9 @@ which read as a market-data problem rather than a brain outage.
    scaled to the window so it reads the same at 1080p and on a laptop. Its
    market-analysis slide fetches the agent's own published VRP rather than
    quoting a stale number, falling back to the last known values so it never
-   renders an em-dash on stage. **What remains is recording it, which needs
-   the operator.**
+   renders an em-dash on stage. **The video is built and submitted** --
+   `ops/video/` generates it from `ops/video.md`, 5:06 at 1080p with captions
+   burned in, so a script edit is a re-run rather than a re-shoot.
 5. **Social** — 5 posts on X/LinkedIn tagging `@lablabai` and `@AlpacaHQ` **in
    the body**. Only 18 total likes across all 23 submissions; two $500 prizes
    are nearly uncontested. Reddit links likely do not qualify. **All five are
@@ -543,18 +544,17 @@ which read as a market-data problem rather than a brain outage.
 7. ~~**Audit findings not yet fixed**~~ — **all six done, 2026-08-31.** See
    "The six audit findings, and what each one turned into" below.
 
-8. **The lablab submission itself** — **nothing is filed yet, and that is the
-   largest single risk on the project.** Everything else is finished and none
-   of it scores until a submission exists. `ops/submission.md` holds every
-   form field written out: tagline, short description, the full description in
-   judging order, the tech tags (and which ones *not* to claim -- MCP is a
-   documented blocker, not a dependency), the fixed facts table, and a
-   morning-of pre-flight. **File a draft immediately with a placeholder video
-   link** -- lablab allows edits until the deadline, so the only unrecoverable
-   failure this week is the form not being open at 11:00 ET Friday.
+8. ~~**The lablab submission itself**~~ — **filed 2026-09-04 and verified on
+   the published page**, not on the form: title, one-pager-bearing description,
+   cover, video, deck PDF, repo, dashboard, account ID, category and track all
+   present and resolving. `ops/submission.md` holds every field as submitted,
+   plus the three defects the filing exposed -- two invisible leading tabs, and
+   lablab collapsing newlines so the structure rule had to be rewritten as
+   prose. Three caps the form never warns about: title 50, short description
+   255, long description 2000.
 
-**Schedule:** hard code freeze Wednesday. Thu/Fri are packaging and
-verification only. File a draft submission Wednesday night.
+**Schedule:** hard code freeze Wednesday, Thu/Fri packaging and verification
+only. Held. The submission went in on Friday and was corrected in place.
 
 ### Live state as of 2026-08-31 close
 
