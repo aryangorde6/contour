@@ -19,7 +19,7 @@ rest on our word. CI runs all of it on every push, with no secrets.
 The second claim is the number, stated before the pitch rather than after it.
 The criterion asks for *"the trading performance of the **submitted agent**"*,
 and this account contains two traders: the agent, and an operator who overrode
-it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 05:50** UTC:
+it three times. <!-- ATTRIBUTION-SNAPSHOT --> At **2026-09-04 07:40** UTC:
 
 | Placed by | P&L | of start NAV |
 |---|---:|---:|
