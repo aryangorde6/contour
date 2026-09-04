@@ -103,33 +103,35 @@ generic platform tutorial is not a rule of this hackathon.
 > behind nineteen deterministic risk gates and an append-only hash-chained
 > journal.
 
-## Long description (1,962 chars — paste this one)
+## Long description (1,976 chars — paste this one)
 
-The one-pager does not fit this field and nothing short of rewriting it will
-make it. This is the same argument compressed: the four-line rule, all three
-required headings by name, the attributed P&L, the account ID, and a link to
-the full page for a judge who wants it. The requirement itself is still
-satisfied — the event page allows the one-pager to live in the repo or on a
-slide, and it does both.
+**lablab collapses your line breaks.** The description renders inside a single
+`<p>` with `white-space: normal`, so stored newlines are eaten and a blank-line
+layout becomes one wall of text — verified against the published page, not
+assumed. The version below is written to survive that: `▪` markers give a
+reader scannable anchors in continuous prose, and the structure rule reads as a
+sentence rather than a code block that will not survive.
 
-> Everyone sells iron condors — both wings, unconditionally, so half the time you sell the underpriced side. Contour measures the surface first — is implied rich at all, and which side holds it — then sells only that side. SPY, QQQ, IWM, one expiry:
+The one-pager does not fit this 2000-character field and nothing short of
+rewriting it will. The requirement is still satisfied — the event page allows
+the one-pager to live in the repo or on a slide, and it does both.
+
+The P&L line says "at the last refresh" deliberately, so a cycle that trades
+after you paste does not make the sentence false.
+
+> Everyone sells iron condors — both wings, unconditionally, so half the time you sell the underpriced side. Contour measures the surface first and sells only the rich side: SPY, QQQ, IWM.
 >
-> vrp_ratio under 1.30 → NO_TRADE, implied not rich enough
-> skew_z at or above +0.8 → PUT SPREAD, puts rich
-> skew_z at or below −0.8 → CALL SPREAD, calls rich
-> otherwise → IRON CONDOR, both sides fair
+> ▪ THE RULE — vrp_ratio under 1.30: trade nothing, implied is not rich enough. skew_z at or above +0.8: sell a put spread. At or below −0.8: sell a call spread. In between: sell the condor. vrp_ratio is ATM implied over 10-day realized; skew_z is the 25-delta put/call IV gap against a prior.
 >
-> AI LOGIC. GLM-5 on Amazon Bedrock. Every model output can only make the agent trade less, structurally: execute.py never imports the model layer, so none reaches an order. It may name blackouts, veto a structure, or stand the book down; never choose a strike, size, or price one. No brain: half size. Off-schema: fail closed.
+> ▪ AI LOGIC — GLM-5 on Amazon Bedrock. Every model output can only make the agent trade less, structurally: execute.py never imports the model layer, so none reaches an order. It may name blackouts, veto a structure, or stand the book down; never a strike, size, or price. No brain: half size. Off-schema: fail closed.
 >
-> RISK GATES. Nineteen pure functions: twelve for the options book, seven for the sleeve. Zero I/O, fixed order, and the reason is journaled whether a gate passes or fails, so a no-trade cycle is as auditable as a trade. Book 1.678% + sleeve 1.200% + tail 1.122% = exactly the 4% halt distance, asserted as an equality.
+> ▪ RISK GATES — nineteen pure functions: twelve for the book, seven for the sleeve. Zero I/O, fixed order, and the reason is journaled whether a gate passes or fails — a no-trade cycle is as auditable as a trade. Book 1.678% + sleeve 1.200% + tail 1.122% = exactly the 4% halt distance, asserted as an equality.
 >
-> ALPACA. Writes go through the Alpaca CLI, and that is a finding: the MCP server cannot place multi-leg option orders — legs arrives as a JSON string and fails validation (alpaca-mcp-server#97; fix sent as #118). Reads use alpaca-py, merging snapshots with contracts for open interest. Three-rung limit ladder, per-leg fill reconciliation. GitHub Actions every 15 minutes; the journal is an append-only SHA-256 hash chain, verified in your browser.
+> ▪ ALPACA — writes go through the Alpaca CLI, and that is a finding: the MCP server cannot place multi-leg option orders — legs arrives as a JSON string and fails validation (alpaca-mcp-server#97; fix sent as #118). Reads use alpaca-py, merging snapshots with contracts for open interest. Three-rung limit ladder, per-leg fill reconciliation, GitHub Actions every 15 minutes, an append-only SHA-256 journal verified in your browser.
 >
-> P&L. Account PA35XVXLIO0E holds two traders. The agent, every id it chose: +0.15%. The operator, three tail trades: −0.64%. Agent entries carry a contour- prefix, so the split is a field the broker records.
+> ▪ P&L — account PA35XVXLIO0E holds two traders. Agent orders carry a contour- prefix; the rest are the operator's tail trades. At the last refresh: +0.15% for the agent, −0.64% for the operator — a field the broker records, not our bookkeeping.
 >
-> No edge claimed: a 387-cycle backtest returned +0.93%, t = 0.37. 298 tests pass; --replay reproduces every decision from a committed fixture.
->
-> One-pager: github.com/aryangorde6/contour/blob/main/WRITEUP-ONEPAGE.md
+> ▪ CHECK IT — no edge claimed: a 387-cycle backtest returned +0.93%, t = 0.37. 298 tests pass; --replay reproduces every decision from a committed fixture. One-pager: WRITEUP-ONEPAGE.md.
 
 ## Full description (3,020 chars — over the 2000 limit, kept for the repo page)
 
