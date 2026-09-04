@@ -1,6 +1,6 @@
 {
- "last_cycle_utc": "2026-09-04T18:53:10.705284+00:00",
- "cycle_count": 96,
+ "last_cycle_utc": "2026-09-04T19:10:28.469922+00:00",
+ "cycle_count": 97,
  "mode": "VERIFY_ONLY",
  "reason": "G11: Fri Sep 4 publishes a no-trade decision and verifies",
  "brain": "bedrock:zai.glm-5"
