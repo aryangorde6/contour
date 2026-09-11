@@ -823,6 +823,38 @@ def test_an_acknowledged_leg_is_not_reported_as_an_orphan(monkeypatch):
     assert _acknowledged_legs(held) == {ack}
 
 
+def test_an_exercised_call_is_acknowledged_as_the_stock_it_became(monkeypatch):
+    """2026-09-11: the acknowledged TQQQ 70C expired $0.98 in the money, and
+    Alpaca turns that into 600 TQQQ shares. The holding did not change, only
+    its form -- so the acknowledgement must follow it, or the account holds
+    ~$42,000 of stock the journal never mentions."""
+    from contour.__main__ import _acknowledged_legs, _option_legs
+
+    monkeypatch.setattr(C, "ACKNOWLEDGED_SYMBOLS", ("TQQQ260911C00070000", "TQQQ"))
+    at_broker = {"TQQQ", "QQQ", "SPY260911C00781000"}   # after exercise
+    assert _acknowledged_legs(at_broker) == {"TQQQ"}, \
+        "the stock is reported; the sleeve's QQQ and the book's leg are not"
+    # Before exercise the same config acknowledged the option instead.
+    assert _acknowledged_legs({"TQQQ260911C00070000", "QQQ"}) == \
+        {"TQQQ260911C00070000"}
+    # But acknowledging stock must not have widened the orphan check to it.
+    assert _option_legs(at_broker) == {"SPY260911C00781000"}
+
+
+def test_stock_never_reaches_the_orphan_check(monkeypatch):
+    """The sleeve holds QQQ shares by design and an exercise leaves TQQQ
+    shares by accident; neither is an unmanaged option leg. Feeding stock to
+    the orphan check would report every share as a discrepancy, every cycle."""
+    from contour.__main__ import _option_legs, _orphan_legs
+
+    monkeypatch.setattr(C, "ACKNOWLEDGED_SYMBOLS", ())
+    at_broker = {"QQQ", "TQQQ", "IWM260911P00282000"}
+    legs = _option_legs(at_broker)
+    assert legs == {"IWM260911P00282000"}
+    assert _orphan_legs(legs, tracked=set()) == {"IWM260911P00282000"}, \
+        "the genuine orphan still fires; the stock never entered"
+
+
 def test_a_genuine_orphan_still_surfaces_alongside_an_acknowledged_one(monkeypatch):
     """Subtracting the acknowledged set must not blind the check. This is the
     property that keeps it a control rather than decoration."""

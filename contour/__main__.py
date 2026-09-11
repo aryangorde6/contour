@@ -139,7 +139,8 @@ def main(argv=None) -> int:
     # was written down. Without this, every exit rule is dead code.
     open_positions = P.load()
     sleeve_pos = _reconcile_sleeve(broker, P.load_sleeve(), journal, now_et)
-    held = _held_symbols(broker)
+    at_broker = _broker_symbols(broker)
+    held = _option_legs(at_broker)
     tracked = {l.symbol for p in open_positions for l in p.candidate.legs}
     print(f"[book] {len(open_positions)} tracked position(s), "
           f"{len(held)} option leg(s) at the broker")
@@ -150,11 +151,13 @@ def main(argv=None) -> int:
     else:
         print(f"[sleeve] flat ({C.SLEEVE_UNDERLYING}, "
               f"${C.SLEEVE_NOTIONAL:,.0f} ceiling)")
-    acknowledged = _acknowledged_legs(held)
+    # From everything at the broker, not only option legs: an exercised call
+    # turns into stock, and the stock is the same deliberate holding.
+    acknowledged = _acknowledged_legs(at_broker)
     if acknowledged:
         # Held on purpose and outside the book's management, so it is reported
         # rather than warned about. See C.ACKNOWLEDGED_SYMBOLS for the why.
-        print(f"[book] {len(acknowledged)} acknowledged non-book leg(s): "
+        print(f"[book] {len(acknowledged)} acknowledged non-book holding(s): "
               f"{sorted(acknowledged)}")
         journal.append({"event": "acknowledged_holding",
                         "symbols": sorted(acknowledged),
@@ -457,7 +460,8 @@ def _run_replay(fx: Replay) -> int:
 
 
 def _acknowledged_legs(held: set[str]) -> set[str]:
-    """Broker legs we hold on purpose and outside the book's management."""
+    """Broker holdings -- option legs or stock -- kept on purpose and outside
+    the book's management. Give it everything the broker holds."""
     return held & set(C.ACKNOWLEDGED_SYMBOLS)
 
 
@@ -471,16 +475,29 @@ def _orphan_legs(held: set[str], tracked: set[str]) -> set[str]:
     return held - tracked - set(C.ACKNOWLEDGED_SYMBOLS)
 
 
-def _held_symbols(broker) -> set[str]:
-    """Option legs the broker actually holds. Never fatal: a failed position
-    read must not stop a cycle that could otherwise manage exits."""
+OPTION_PREFIXES = ("SPY2", "QQQ2", "IWM2", "TQQQ2")
+
+
+def _broker_symbols(broker) -> set[str]:
+    """Every symbol the broker holds, stock included. Never fatal: a failed
+    position read must not stop a cycle that could otherwise manage exits."""
     try:
-        return {str(p.get("symbol")) for p in broker.positions()
-                if str(p.get("symbol", "")).startswith(
-                    ("SPY2", "QQQ2", "IWM2", "TQQQ2"))}
+        return {str(p.get("symbol")) for p in broker.positions()}
     except Exception as exc:                                 # noqa: BLE001
         print(f"[book] could not read broker positions: {exc}", file=sys.stderr)
         return set()
+
+
+def _option_legs(symbols: set[str]) -> set[str]:
+    """The option legs among a set of symbols. The orphan check is about
+    legs: stock -- the sleeve's QQQ, an exercised call -- must never reach it,
+    or every share held would be reported as an unmanaged position."""
+    return {s for s in symbols if s.startswith(OPTION_PREFIXES)}
+
+
+def _held_symbols(broker) -> set[str]:
+    """Option legs the broker actually holds."""
+    return _option_legs(_broker_symbols(broker))
 
 
 def _market_open(key: str, sec: str) -> bool:

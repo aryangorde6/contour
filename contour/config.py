@@ -376,4 +376,12 @@ DEGRADED_BRAIN_SIZE = 0.5
 # The mechanism stays because it is the honest way to hold an unmanaged leg:
 # an acknowledged symbol is excluded from the orphan check but still counted
 # and reported, so the book never silently disowns something it holds.
-ACKNOWLEDGED_SYMBOLS: tuple[str, ...] = ("TQQQ260911C00070000",)
+#
+# 2026-09-11: TQQQ closed at 70.98, so the 70C expired $0.98 in the money, and
+# Alpaca auto-exercises long ITM options -- 6 contracts become 600 TQQQ shares
+# at $70. That stock is the same operator position in a new form: still not
+# the book's, still not managed by it. It is acknowledged by symbol so the
+# exercise is reported the cycle it lands. The orphan check only ever looked
+# at option legs, so without this the account would hold ~$42,000 of TQQQ and
+# the journal would say nothing about it.
+ACKNOWLEDGED_SYMBOLS: tuple[str, ...] = ("TQQQ260911C00070000", "TQQQ")
