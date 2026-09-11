@@ -262,6 +262,43 @@ def test_a_closed_day_does_not_wake_the_brain(isolated_state, monkeypatch):
     assert not [r for r in recs if r["event"] == "plan"]
 
 
+def test_a_broker_that_cannot_say_whether_the_market_is_open_means_closed(
+        monkeypatch, capsys):
+    """The clock is the first broker call of every cycle, so an outage there
+    used to be an unhandled traceback and a red run -- two of them on
+    2026-09-11, when /v2/clock returned 500 for twenty minutes. Standing down
+    is the right response; crashing is the wrong shape for it."""
+    import alpaca.trading.client as tc
+    from contour.__main__ import _market_open
+
+    class Down:
+        def __init__(self, *a, **k): pass
+        def get_clock(self):
+            raise RuntimeError('{"message":"Internal Server Error"}')
+
+    monkeypatch.setattr(tc, "TradingClient", Down)
+    assert _market_open("k", "s") is False
+    err = capsys.readouterr().err
+    assert "[broker] clock unavailable" in err
+    assert "Internal Server Error" in err, "the broker's own words are kept"
+
+
+def test_a_healthy_clock_is_passed_through_unchanged(monkeypatch):
+    """The guard must not turn a real answer into a stand-down."""
+    import alpaca.trading.client as tc
+    from contour.__main__ import _market_open
+
+    class Clock:
+        def __init__(self, is_open): self.is_open = is_open
+
+    for answer in (True, False):
+        class Up:
+            def __init__(self, *a, **k): pass
+            def get_clock(self, _a=answer): return Clock(_a)
+        monkeypatch.setattr(tc, "TradingClient", Up)
+        assert _market_open("k", "s") is answer
+
+
 def test_a_mid_session_manage_only_cycle_does_not_plan(isolated_state,
                                                        monkeypatch):
     patch_chains(monkeypatch, {})

@@ -484,8 +484,17 @@ def _held_symbols(broker) -> set[str]:
 
 
 def _market_open(key: str, sec: str) -> bool:
+    """Ask the broker's clock. A broker that cannot answer is a closed market:
+    the cycle stands down rather than guessing, and says so in one line
+    instead of a traceback. Observed 2026-09-11: two consecutive cycles got
+    HTTP 500 from /v2/clock while every other cycle that day was fine."""
     from alpaca.trading.client import TradingClient
-    return bool(TradingClient(key, sec, paper=True).get_clock().is_open)
+    try:
+        return bool(TradingClient(key, sec, paper=True).get_clock().is_open)
+    except Exception as exc:                                 # noqa: BLE001
+        print(f"[broker] clock unavailable ({exc}) -- standing down this "
+              "cycle", file=sys.stderr)
+        return False
 
 
 if __name__ == "__main__":
