@@ -8,20 +8,20 @@ name: record fixture
 # stale and G5 refused SPY for staleness on every replay -- an honest refusal,
 # but a demonstration of the staleness gate rather than of the pipeline.
 #
-# Schedule + manual only, exactly like agent.yml: this repo is public, and a
+# Manual only, exactly like agent.yml: this repo is public, and a
 # workflow that can be triggered from a fork is a workflow that can exfiltrate
 # its secrets. This one only ever holds the THROWAWAY account's credentials,
 # and runs --dry, and --dev refuses outright if they resolve to the judged
 # account -- but the discipline is the point.
 on:
+  # The Tuesday schedule ("20,50 14 * * 2" UTC -- 10:20 and 10:50 ET, the
+  # earliest capture that resolved to a TRADE phase plus one retry) came out
+  # on 2026-10-01, once judging was over. The gate below reads the contest
+  # window out of config.py rather than a date written here, so it had already
+  # been standing the recording down since 2026-09-05; the cron was booting a
+  # runner every Tuesday to be told no. Dispatch stays, and stands down on the
+  # same gate until that window moves.
   workflow_dispatch:
-  schedule:
-    # 10:20 and 10:50 ET on Tuesday. The entry window opens at 10:05 ET, so
-    # the first is the earliest capture that resolves to a TRADE phase; the
-    # second is a retry that does nothing if the first already succeeded.
-    # Once a day, one day: code freeze is Wednesday, and a judged repo does
-    # not want a drawer full of near-identical fixtures.
-    - cron: "20,50 14 * * 2"
 
 permissions:
   contents: write

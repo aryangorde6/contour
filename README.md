@@ -7,6 +7,14 @@ spread, call credit spread, iron condor, or nothing — on SPY, QQQ and IWM.
 Built for the [Alpaca AI Trading Agents Hackathon](https://lablab.ai/ai-hackathons/alpaca-ai-trading-agents-hackathon),
 28 Aug – 4 Sep 2026. Paper trading only.
 
+> **Status — 2026-10-01.** Judging is over and Contour was not one of the three
+> winners. The agent is parked: both workflows that used to run on a schedule
+> are manual-only now, and the contest window in `contour/config.py` closes
+> 2026-09-04, so every cycle from 2026-09-05 resolved `CLOSED` before it ever
+> reached the market clock. Everything below describes the system as it was
+> judged, and `--replay` still runs the whole pipeline against a committed
+> fixture without an Alpaca account.
+
 ## The idea in one sentence
 
 Everyone sells iron condors. An iron condor sells *both* wings unconditionally,

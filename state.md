@@ -443,20 +443,24 @@ which read as a market-data problem rather than a brain outage.
 
 ### CI / cron
 
-- `agent.yml` — schedule + `workflow_dispatch` **only**. Never `pull_request`:
-  this is a public repo holding live trading credentials.
+- `agent.yml` — `workflow_dispatch` **only**. The schedule came out on
+  2026-10-01, once judging was over; `git log` has the three crons. Never
+  `pull_request`: this is a public repo holding live trading credentials.
 - `pages.yml` — publishes `dashboard/` to GitHub Pages on push to `main`.
   **No secrets**, no `pull_request` trigger, and it guards against
   root-relative URLs, which would work on Vercel's root but 404 under Pages'
   `/contour/` project path.
 - `fixture.yml` — records a live replay fixture and commits it to `main`.
-  Schedule + dispatch only, **dev account only**, `--dry`, and it verifies the
-  recording replays with non-stale quotes before committing. A `GITHUB_TOKEN`
+  Dispatch only since 2026-10-01, **dev account only**, `--dry`, and it
+  verifies the recording replays with non-stale quotes before committing. A `GITHUB_TOKEN`
   push does not trigger other workflows, which is why it verifies in-job.
 - `ci.yml` — runs on PRs, **no secrets**. Tests + grep-block on
   `close-all`/`cancel-all` + chain verify + import-without-credentials.
-- Cron (UTC): `20 13 * * 1-5` pre-open · `*/15 14-19 * * 1-5` cycle ·
-  `50 19 * * 4` Thursday flatten escalation · `20,50 14 * * 2` fixture.
+- Cron (UTC), **removed 2026-10-01**: `20 13 * * 1-5` pre-open ·
+  `*/15 14-19 * * 1-5` cycle · `50 19 * * 4` Thursday flatten escalation ·
+  `20,50 14 * * 2` fixture. The contest window closes 2026-09-04, so from
+  2026-09-05 every firing resolved `CLOSED` and exited — 26 runners a weekday
+  to print one line. Both workflows are dispatch-only now.
 - Concurrency group, `cancel-in-progress: false` — two writers would fork the
   hash chain. A long cycle therefore queues the next rather than racing it.
 - **`timeout-minutes: 25`**, not 12. Three entry ladders at 3 rungs x 90s is
@@ -474,8 +478,10 @@ which read as a market-data problem rather than a brain outage.
   stayed in the tree and the checkout aborted. It also refuses to push an empty
   tree: a publish that wipes the audit trail is worse than one that fails.
 - Journal and state publish to the orphan **`agent-state`** branch.
-- **Scheduled runs are LIVE on the judged account** — `workflow_dispatch` inputs
-  are empty on a schedule trigger, so `ARGS` is just `--once`.
+- **A schedule trigger was LIVE on the judged account** — `workflow_dispatch`
+  inputs are empty on a schedule trigger, so `ARGS` was just `--once`. With the
+  cron gone the only entry point is dispatch, which defaults to `--dry --dev`;
+  reaching the judged account now takes a human turning both toggles off.
 
 ---
 

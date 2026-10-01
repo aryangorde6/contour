@@ -1,17 +1,19 @@
 name: contour agent
 
-# schedule + manual only. NEVER add pull_request or pull_request_target: this
-# repo is public and this workflow holds live trading credentials, so a PR from
-# a fork would be able to exfiltrate them.
+# Manual only. NEVER add pull_request or pull_request_target: this repo is
+# public and this workflow holds live trading credentials, so a PR from a fork
+# would be able to exfiltrate them.
+#
+# The schedule came out on 2026-10-01, once judging was over. It was three
+# crons in UTC -- "20 13 * * 1-5" for the 09:20 ET pre-open, "*/15 14-19 * * 1-5"
+# for the 10:00-15:45 ET cycle, and "50 19 * * 4" for the Thursday 15:50 ET
+# flatten escalation; `git log` has them if they are ever wanted back. The
+# contest window in config.py closes 2026-09-04, so from 2026-09-05 every
+# firing woke a runner, resolved CLOSED, printed one line and exited. What is
+# left is the safer shape anyway: dispatch defaults to `--dry --dev`, so with
+# no schedule nothing can reach the judged account unless a human turns both
+# of those toggles off by hand.
 on:
-  schedule:
-    # Times are UTC. EDT is UTC-4, so 13:30-20:00 UTC is the 09:30-16:00 ET
-    # session. Cron here is best-effort and routinely runs late under load --
-    # every cycle is idempotent and resolves its own phase from the market
-    # clock rather than trusting when it fired.
-    - cron: "20 13 * * 1-5"      # 09:20 ET  pre-open: parse event blackouts
-    - cron: "*/15 14-19 * * 1-5" # 10:00-15:45 ET  the trading cycle
-    - cron: "50 19 * * 4"        # 15:50 ET Thu  flatten escalation to market
   workflow_dispatch:
     inputs:
       dry:
